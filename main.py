@@ -6,18 +6,21 @@ import re
 from PIL import Image
 
 
-
+COUNTRIES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "countries"))
 DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "province_data"))
+MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "map"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
-EU4_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "map"))
+TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "country_tags"))
+
+OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "output"))
 
 
-def get_provinces_block(savefile_path: str):
-    with open(savefile_path, "r", encoding="utf-8") as file:
+def extract_provinces_block(savefile: str):
+    with open(savefile, "r", encoding="utf-8") as file:
         lines = iter(file)
         inside = False
         depth = 0
-        data = []
+        data: list[str] = []
 
         for line in file:
             line = line.strip()
@@ -38,102 +41,92 @@ def get_provinces_block(savefile_path: str):
     return data
 
 
-def get_country_provinces(datafile_path: str):
-    with open(datafile_path, "r", encoding="utf-8") as file:
+def map_provinces_to_countries(provfile: str):
+    with open(provfile, "r", encoding="utf-8") as file:
         lines = file.readlines()
 
-    countries: dict[str, list[str]] = {}
+    provinces: dict[str, list[int]] = {}
     for i in range(len(lines)):
         line = lines[i]
-        if is_province_subblock(line):
+        if is_province_section(line):
             j = i
 
             key = ""
             while not key:
                 if j >= len(lines):
-                    return countries
+                    return provinces
 
                 search_line = lines[j].strip()
-                key = get_country_id(search_line)
-                if key:
+                country_tag = get_country_tag(search_line)
+                if country_tag:
                     prov_id = get_prov_id(line)
-                    if key in countries:
-                        countries[key].append(prov_id)
-                    else:
-                        countries[key] = [prov_id]
+                    provinces[prov_id] = country_tag
                     i = j
+                    break
                 else:
                     j += 1
 
-    return countries
+    return provinces
+
 
 def get_prov_id(line: str):
     pattern = r"^-(\d+)={"
     match = re.match(pattern, line)
-    return match.group(1) if match else None
+    return int(match.group(1)) if match else None
 
-def is_province_subblock(line: str):
+def is_province_section(line: str):
     pattern = r"^-\d+={$"
     return bool(re.match(pattern, line))
 
-def get_country_id(line: str):
+def get_country_tag(line: str):
     pattern = r'^owner="(\w+)"'
     match = re.match(pattern, line)
     return match.group(1) if match else None
 
 
-def display_map(bmpath: str):
-    bmp = Image.open(bmpath).convert(mode="RGB")
-    bmp.show()
-    input("Press any key to close")
-
-def main():
-    options = [f"{i}. {filename}" for i, filename in enumerate(os.listdir(SAVES_FOLDER), start=1)]
-
-    file_option = None
-    while not file_option:
-        try:
-            print("\n".join(options) + "\n")
-            filenum = int(input("Enter savefile number to open: \n"))
-
-            if not 1 <= filenum <= len(options):
-                raise IndexError
-
-            file_option = options[filenum - 1]
-        except ValueError:
-            print("Please enter a number.\n")
-        except IndexError:
-            print("Not a valid option.\n")
-
-
-    savefile_path = file_option.split()[-1]
-    filepath = os.path.join(SAVES_FOLDER, savefile_path)
-    if filepath.endswith(".prov"):
-        pass
-
-    defpath = os.path.join(EU4_FOLDER, "definition.csv")
-    province_colors = get_province_colors(defpath=defpath)
-
-    bmppath = os.path.join(EU4_FOLDER, "provinces.bmp")
-    bmp = Image.open(bmppath).convert("RGB")
-    color_provinces(bmp, province_colors)
-
-def color_provinces(bmp: Image.Image, province_colors: dict[str, tuple[int]]):
-    provinces = {1}
-    country_color = (8,  82,  165)
-    pixels = bmp.load()
-    width, height = bmp.size
-    for x in range(width):
-        for y in range(height):
-            pixel_color = pixels[x, y]
-            if pixel_color in province_colors and province_colors[pixel_color] in provinces:
-                pixels[x, y] = country_color
-                print(x, y)
-
-    bmp.save("new.png")
-
-def get_province_colors(defpath: str):
+def load_tag_colors(tag_files: list[str]):
+    missing = 0
+    tags: dict[str, str] = {}
     colors: dict[str, tuple[int]] = {}
+
+    tag_pattern = r"(\w{3})\s*=\s*\"([^\"]+)\""
+    for tag_file in tag_files:
+        with open(os.path.join(TAGS_FOLDER, tag_file), "r", encoding="utf-8") as file:
+            for line in file:
+                if not line:
+                    continue
+
+                match = re.match(tag_pattern, line)
+                if match:
+                    tag = match.group(1)
+                    filename = match.group(2)
+                    tags[tag] = filename
+                else:
+                    print(f"Unable to find file or tag for {line}?")
+                    missing += 1
+
+    color_pattern = r"color\s*=\s*\{\s*(\d+)\s*(\d+)\s*(\d+)\s*\}"
+    for tag, filename in tags.items():
+        try:
+            with open(filename, "r", encoding="latin-1") as file:
+                for line in file:
+                    if not line:
+                        continue
+
+                    match = re.match(color_pattern, line)
+                    if match:
+                        r = int(match.group(1))
+                        g = int(match.group(2))
+                        b = int(match.group(3))
+                        colors[tag] = (r, g, b)
+                        break
+        except FileNotFoundError:
+            print(f"Unable to find country file {filename}")
+
+    return colors
+
+def load_province_colors(defpath: str):
+    colors: dict[tuple[int], int] = {}
     with open(defpath, "r", encoding="latin-1") as file:
         reader = csv.reader(file, delimiter=";")
         for row in reader:
@@ -145,6 +138,103 @@ def get_province_colors(defpath: str):
                 continue
 
     return colors
+
+def get_water_provinces(terrain_bmp: Image.Image):
+    water_provinces: set[tuple] = set()
+
+    ocean_color = (8, 31, 130)
+    sea_color = (55, 90, 220)
+    pixels = terrain_bmp.load()
+    width, height = terrain_bmp.size
+    
+    for x in range(width):
+        for y in range(height):
+            pixel_color = pixels[x, y]
+            if pixel_color in [ocean_color, sea_color]:
+                water_provinces.add((x, y))
+
+    return water_provinces
+
+def apply_colors_to_map(
+    country_provinces: dict[int, str],
+    water_provinces: set[tuple[int]],
+    country_colors: dict[str, tuple[int]], 
+    province_colors: dict[tuple[int], int], 
+    map_bmp: Image.Image):
+
+    pixels = map_bmp.load()
+    width, height = map_bmp.size
+
+    for x in range(width):
+        for y in range(height):
+            if (x, y) in water_provinces:
+                pixels[x, y] = (55, 90, 220)
+                continue
+
+            pixel_color = pixels[x, y]
+
+            if pixel_color in province_colors:
+                province_id = province_colors[pixel_color]
+                country_tag = country_provinces[province_id]
+
+                if country_tag and country_tag in country_colors:
+                    pixels[x, y] = country_colors[country_tag]
+
+    return map_bmp
+
+
+def get_savefile_input():
+    options = [f"{i}. {filename}" for i, filename in enumerate(os.listdir(SAVES_FOLDER), start=1)]
+
+    option = None
+    while not option:
+        try:
+            print("\n".join(options) + "\n")
+            filenum = int(input("Enter savefile number to open: \n"))
+
+            if not 1 <= filenum <= len(options):
+                raise IndexError
+
+            option = options[filenum - 1]
+        except ValueError:
+            print("Please enter a number.\n")
+        except IndexError:
+            print("Not a valid option.\n")
+
+    return option.split()[1]
+
+
+def main():
+    savefile = get_savefile_input()
+
+    block_data = extract_provinces_block(os.path.join(SAVES_FOLDER, savefile))
+
+    provfile = f"{savefile[:-4]}.prov"
+    provfile_path = os.path.join(DATA_FOLDER, provfile)
+    with open(provfile_path, "w", encoding="utf-8") as file:
+        file.writelines(block_data)
+
+    print("Getting provinces....")
+    provinces = map_provinces_to_countries(provfile=provfile_path)
+
+    print("Getting colors for country....")
+    tag_files = os.listdir(TAGS_FOLDER)
+    country_colors = load_tag_colors(tag_files=tag_files)
+
+    print("Getting province bmp colors....")
+    def_path = os.path.join(MAP_FOLDER, "definition.csv")
+    province_colors = load_province_colors(defpath=def_path)
+
+    print("Getting sea and ocean provinces....")
+    terrain_path = os.path.join(MAP_FOLDER, "terrain.bmp")
+    terrain_bmp = Image.open(terrain_path).convert("RGB")
+    water_provinces = get_water_provinces(terrain_bmp)
+    
+    print("Filling in map....")
+    bmp_path = os.path.join(MAP_FOLDER, "provinces.bmp")
+    map_bmp = Image.open(bmp_path).convert("RGB")
+    colored_map = apply_colors_to_map(provinces, water_provinces, country_colors, province_colors, map_bmp)
+    colored_map.save(os.path.join(OUTPUT_FOLDER, "new_map.png"))
 
 if __name__ == "__main__":
     main()
