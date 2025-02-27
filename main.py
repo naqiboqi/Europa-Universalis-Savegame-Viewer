@@ -1,27 +1,25 @@
-import csv
-import json
+import csv  
 import os
 import re
 
 from PIL import Image
 
 
-COUNTRIES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "countries"))
-DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "province_data"))
-MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "map"))
+PROVINCE_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "province_data"))
+MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "map"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
-TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "country_tags"))
+TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "country_tags"))
 
 OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "output"))
 
 
 def extract_provinces_block(savefile: str):
     with open(savefile, "r", encoding="utf-8") as file:
-        lines = iter(file)
+        data: list[str] = []
         inside = False
         depth = 0
-        data: list[str] = []
 
+        lines = iter(file)
         for line in file:
             line = line.strip()
             if not inside and line == "provinces={":
@@ -41,47 +39,113 @@ def extract_provinces_block(savefile: str):
     return data
 
 
-def map_provinces_to_countries(provfile: str):
-    with open(provfile, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-
-    provinces: dict[str, list[int]] = {}
-    for i in range(len(lines)):
-        line = lines[i]
-        if is_province_section(line):
-            j = i
-
-            key = ""
-            while not key:
-                if j >= len(lines):
-                    return provinces
-
-                search_line = lines[j].strip()
-                country_tag = get_country_tag(search_line)
-                if country_tag:
-                    prov_id = get_prov_id(line)
-                    provinces[prov_id] = country_tag
-                    i = j
-                    break
-                else:
-                    j += 1
-
-    return provinces
-
+def is_province_section(line: str):
+    pattern = r"^-\d+={$"
+    return bool(re.match(pattern, line))
 
 def get_prov_id(line: str):
     pattern = r"^-(\d+)={"
     match = re.match(pattern, line)
     return int(match.group(1)) if match else None
 
-def is_province_section(line: str):
-    pattern = r"^-\d+={$"
-    return bool(re.match(pattern, line))
-
 def get_country_tag(line: str):
     pattern = r'^owner="(\w+)"'
     match = re.match(pattern, line)
     return match.group(1) if match else None
+
+def is_native_province(line: str):
+    patterns = [
+        r"native_size=\d+",
+        r"native_ferocity=\d+",
+        r"native_hostileness=\d+"
+    ]
+    return any(re.search(pattern, line) for pattern in patterns)
+
+def is_water_province(line: str):
+    pattern = r"patrol=\d+"
+    return re.search(pattern, line) is not None
+
+def map_provinces_to_countries(provfile: str):
+    with open(provfile, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+
+    provinces: dict[int, list[int]] = {}
+    prov_id = None
+    owner_tag = None
+    is_native = False
+    is_water = False
+
+    for line in lines:
+        line = line.strip()
+
+        # Check for new province ID
+        new_prov_id = get_prov_id(line)
+        if new_prov_id:
+            # Store the previous province before moving to the next one
+            if prov_id is not None:
+                if is_water:
+                    provinces[prov_id] = "WATER"
+                elif is_native:
+                    provinces[prov_id] = "NAT"
+                else:
+                    provinces[prov_id] = owner_tag
+
+            # Start a new province block
+            prov_id = new_prov_id
+            owner_tag = None
+            is_native = False
+            is_water = False
+            continue
+
+        # Check for owner tag
+        if owner_tag is None:
+            tag = get_country_tag(line)
+            if tag:
+                owner_tag = tag
+
+        # Check if it's a native province
+        if is_native_province(line):
+            is_native = True
+
+        # Check if it's a water province
+        if is_water_province(line):
+            is_water = True
+
+    # Store the last province after looping
+    if prov_id is not None:
+        if is_water:
+            provinces[prov_id] = "WATER"
+        elif is_native:
+            provinces[prov_id] = "NAT"
+        else:
+            provinces[prov_id] = owner_tag
+
+    return provinces
+        
+        # if is_province_section(line):
+        #     j = i
+
+        #     key = ""
+        #     prov_id = 0
+        #     while not key:
+        #         if j >= len(lines):
+        #             return provinces
+
+        #         search_line = lines[j].strip()
+        #         owner_country_tag = get_country_tag(search_line)
+        #         if owner_country_tag:
+        #             prov_id = get_prov_id(line)
+        #             provinces[prov_id] = owner_country_tag
+        #             i = j
+        #             break
+        #         elif is_province_section(line):
+        #             provinces[prov_id] = owner_country_tag
+        #             i = j
+        #             break
+        #         else:
+        #             j += 1  
+
+    # return provinces
 
 
 def load_tag_colors(tag_files: list[str]):
@@ -106,9 +170,10 @@ def load_tag_colors(tag_files: list[str]):
                     missing += 1
 
     color_pattern = r"color\s*=\s*\{\s*(\d+)\s*(\d+)\s*(\d+)\s*\}"
-    for tag, filename in tags.items():
+    for tag, country_file in tags.items():
         try:
-            with open(filename, "r", encoding="latin-1") as file:
+            country_path = os.path.join("data", country_file)
+            with open(country_path, "r", encoding="latin-1") as file:
                 for line in file:
                     if not line:
                         continue
@@ -146,7 +211,7 @@ def get_water_provinces(terrain_bmp: Image.Image):
     sea_color = (55, 90, 220)
     pixels = terrain_bmp.load()
     width, height = terrain_bmp.size
-    
+
     for x in range(width):
         for y in range(height):
             pixel_color = pixels[x, y]
@@ -167,18 +232,15 @@ def apply_colors_to_map(
 
     for x in range(width):
         for y in range(height):
-            if (x, y) in water_provinces:
-                pixels[x, y] = (55, 90, 220)
-                continue
-
             pixel_color = pixels[x, y]
-
             if pixel_color in province_colors:
                 province_id = province_colors[pixel_color]
                 country_tag = country_provinces[province_id]
 
                 if country_tag and country_tag in country_colors:
                     pixels[x, y] = country_colors[country_tag]
+                elif country_tag == "WATER":
+                    pixels[x, y] = (55, 90, 220)
 
     return map_bmp
 
@@ -210,13 +272,13 @@ def main():
     block_data = extract_provinces_block(os.path.join(SAVES_FOLDER, savefile))
 
     provfile = f"{savefile[:-4]}.prov"
-    provfile_path = os.path.join(DATA_FOLDER, provfile)
+    provfile_path = os.path.join(PROVINCE_FOLDER, provfile)
     with open(provfile_path, "w", encoding="utf-8") as file:
         file.writelines(block_data)
 
     print("Getting provinces....")
     provinces = map_provinces_to_countries(provfile=provfile_path)
-
+    print(provinces)
     print("Getting colors for country....")
     tag_files = os.listdir(TAGS_FOLDER)
     country_colors = load_tag_colors(tag_files=tag_files)
