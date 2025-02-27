@@ -7,9 +7,9 @@ from PIL import Image
 
 
 
-DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "province_data"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
-EU4_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "eu4"))
+EU4_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "map"))
 
 
 def get_provinces_block(savefile_path: str):
