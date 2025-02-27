@@ -1,12 +1,15 @@
+import csv
 import json
 import os
 import re
+
+from PIL import Image
 
 
 
 DATA_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
-
+EU4_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "eu4"))
 
 
 def get_provinces_block(savefile_path: str):
@@ -40,7 +43,6 @@ def get_country_provinces(datafile_path: str):
         lines = file.readlines()
 
     countries: dict[str, list[str]] = {}
-
     for i in range(len(lines)):
         line = lines[i]
         if is_province_subblock(line):
@@ -80,6 +82,11 @@ def get_country_id(line: str):
     return match.group(1) if match else None
 
 
+def display_map(bmpath: str):
+    bmp = Image.open(bmpath).convert(mode="RGB")
+    bmp.show()
+    input("Press any key to close")
+
 def main():
     options = [f"{i}. {filename}" for i, filename in enumerate(os.listdir(SAVES_FOLDER), start=1)]
 
@@ -98,17 +105,46 @@ def main():
         except IndexError:
             print("Not a valid option.\n")
 
+
     savefile_path = file_option.split()[-1]
     filepath = os.path.join(SAVES_FOLDER, savefile_path)
-    data = get_provinces_block(filepath)
+    if filepath.endswith(".prov"):
+        pass
 
-    data_filename = f"{savefile_path[:-4]}.prov"
-    data_path = os.path.join(DATA_FOLDER, data_filename)
-    with open(data_path, "w", encoding="utf-8") as file:
-        file.writelines(data)
+    defpath = os.path.join(EU4_FOLDER, "definition.csv")
+    province_colors = get_province_colors(defpath=defpath)
 
-    provinces = get_country_provinces(data_path)
-    print(provinces)
+    bmppath = os.path.join(EU4_FOLDER, "provinces.bmp")
+    bmp = Image.open(bmppath).convert("RGB")
+    color_provinces(bmp, province_colors)
+
+def color_provinces(bmp: Image.Image, province_colors: dict[str, tuple[int]]):
+    provinces = {1}
+    country_color = (8,  82,  165)
+    pixels = bmp.load()
+    width, height = bmp.size
+    for x in range(width):
+        for y in range(height):
+            pixel_color = pixels[x, y]
+            if pixel_color in province_colors and province_colors[pixel_color] in provinces:
+                pixels[x, y] = country_color
+                print(x, y)
+
+    bmp.save("new.png")
+
+def get_province_colors(defpath: str):
+    colors: dict[str, tuple[int]] = {}
+    with open(defpath, "r", encoding="latin-1") as file:
+        reader = csv.reader(file, delimiter=";")
+        for row in reader:
+            try:
+                prov_id = int(row[0])
+                prov_color = tuple(map(int, row[1:4]))
+                colors[prov_color] = prov_id
+            except ValueError:
+                continue
+
+    return colors
 
 if __name__ == "__main__":
     main()
