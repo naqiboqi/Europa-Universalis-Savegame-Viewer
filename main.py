@@ -90,9 +90,6 @@ def main():
                 print("\nExiting...")
                 exit()
 
-    
-    # areas = calculate_all_country_area(colored_map, country_colors)
-    # print(areas)
 
 if __name__ == "__main__":
     main()
