@@ -38,11 +38,6 @@ def extract_provinces_block(savefile: str):
 
     return data
 
-
-def is_province_section(line: str):
-    pattern = r"^-\d+={$"
-    return bool(re.match(pattern, line))
-
 def get_prov_id(line: str):
     pattern = r"^-(\d+)={"
     match = re.match(pattern, line)
@@ -65,15 +60,22 @@ def is_water_province(line: str):
     pattern = r"patrol=\d+"
     return re.search(pattern, line) is not None
 
+def is_wasteland_province(line: str):
+    """Check if the province is wasteland (empty discovered_by)."""
+    # Check for discovered_by={} line with optional spaces
+    pattern = r"discovered_by\s*=\s*\{\s*\}"
+    return re.search(pattern, line) is not None
+
 def map_provinces_to_countries(provfile: str):
+    provinces: dict[int, list[int]] = {}
     with open(provfile, "r", encoding="utf-8") as file:
         lines = file.readlines()
 
-    provinces: dict[int, list[int]] = {}
     prov_id = None
     owner_tag = None
     is_native = False
     is_water = False
+    is_wasteland = False
 
     for line in lines:
         line = line.strip()
@@ -83,10 +85,13 @@ def map_provinces_to_countries(provfile: str):
         if new_prov_id:
             # Store the previous province before moving to the next one
             if prov_id is not None:
+                # Ensure to only assign the correct value based on the flags
                 if is_water:
                     provinces[prov_id] = "WATER"
                 elif is_native:
                     provinces[prov_id] = "NAT"
+                elif is_wasteland:
+                    provinces[prov_id] = "WASTE"
                 else:
                     provinces[prov_id] = owner_tag
 
@@ -95,6 +100,7 @@ def map_provinces_to_countries(provfile: str):
             owner_tag = None
             is_native = False
             is_water = False
+            is_wasteland = False
             continue
 
         # Check for owner tag
@@ -105,11 +111,24 @@ def map_provinces_to_countries(provfile: str):
 
         # Check if it's a native province
         if is_native_province(line):
+            # Mark as native and reset the other flags
             is_native = True
+            is_water = False
+            is_wasteland = False
 
         # Check if it's a water province
-        if is_water_province(line):
+        elif is_water_province(line):
+            # Mark as water and reset the other flags
             is_water = True
+            is_native = False
+            is_wasteland = False
+        
+        # Check if it's a wasteland province, but only if it's not already marked as water
+        elif is_wasteland_province(line) and not is_water:
+            # Mark as wasteland and reset the other flags
+            is_wasteland = True
+            is_native = False
+            is_water = False
 
     # Store the last province after looping
     if prov_id is not None:
@@ -117,35 +136,13 @@ def map_provinces_to_countries(provfile: str):
             provinces[prov_id] = "WATER"
         elif is_native:
             provinces[prov_id] = "NAT"
+        elif is_wasteland:
+            provinces[prov_id] = "WASTE"
         else:
             provinces[prov_id] = owner_tag
 
     return provinces
-        
-        # if is_province_section(line):
-        #     j = i
 
-        #     key = ""
-        #     prov_id = 0
-        #     while not key:
-        #         if j >= len(lines):
-        #             return provinces
-
-        #         search_line = lines[j].strip()
-        #         owner_country_tag = get_country_tag(search_line)
-        #         if owner_country_tag:
-        #             prov_id = get_prov_id(line)
-        #             provinces[prov_id] = owner_country_tag
-        #             i = j
-        #             break
-        #         elif is_province_section(line):
-        #             provinces[prov_id] = owner_country_tag
-        #             i = j
-        #             break
-        #         else:
-        #             j += 1  
-
-    # return provinces
 
 
 def load_tag_colors(tag_files: list[str]):
@@ -204,25 +201,8 @@ def load_province_colors(defpath: str):
 
     return colors
 
-def get_water_provinces(terrain_bmp: Image.Image):
-    water_provinces: set[tuple] = set()
-
-    ocean_color = (8, 31, 130)
-    sea_color = (55, 90, 220)
-    pixels = terrain_bmp.load()
-    width, height = terrain_bmp.size
-
-    for x in range(width):
-        for y in range(height):
-            pixel_color = pixels[x, y]
-            if pixel_color in [ocean_color, sea_color]:
-                water_provinces.add((x, y))
-
-    return water_provinces
-
 def apply_colors_to_map(
     country_provinces: dict[int, str],
-    water_provinces: set[tuple[int]],
     country_colors: dict[str, tuple[int]], 
     province_colors: dict[tuple[int], int], 
     map_bmp: Image.Image):
@@ -239,6 +219,8 @@ def apply_colors_to_map(
 
                 if country_tag and country_tag in country_colors:
                     pixels[x, y] = country_colors[country_tag]
+                elif country_tag == "WASTE":
+                    pixels[x, y] = (128, 128, 128)
                 elif country_tag == "WATER":
                     pixels[x, y] = (55, 90, 220)
 
@@ -278,7 +260,7 @@ def main():
 
     print("Getting provinces....")
     provinces = map_provinces_to_countries(provfile=provfile_path)
-    print(provinces)
+
     print("Getting colors for country....")
     tag_files = os.listdir(TAGS_FOLDER)
     country_colors = load_tag_colors(tag_files=tag_files)
@@ -287,15 +269,10 @@ def main():
     def_path = os.path.join(MAP_FOLDER, "definition.csv")
     province_colors = load_province_colors(defpath=def_path)
 
-    print("Getting sea and ocean provinces....")
-    terrain_path = os.path.join(MAP_FOLDER, "terrain.bmp")
-    terrain_bmp = Image.open(terrain_path).convert("RGB")
-    water_provinces = get_water_provinces(terrain_bmp)
-    
     print("Filling in map....")
     bmp_path = os.path.join(MAP_FOLDER, "provinces.bmp")
     map_bmp = Image.open(bmp_path).convert("RGB")
-    colored_map = apply_colors_to_map(provinces, water_provinces, country_colors, province_colors, map_bmp)
+    colored_map = apply_colors_to_map(provinces, country_colors, province_colors, map_bmp)
     colored_map.save(os.path.join(OUTPUT_FOLDER, "new_map.png"))
 
 if __name__ == "__main__":
