@@ -4,7 +4,7 @@ import re
 
 
 
-def load_province_colors(defpath: str):
+def extract_province_colors(defpath: str):
     colors: dict[tuple[int], int] = {}
     with open(defpath, "r", encoding="latin-1") as file:
         reader = csv.reader(file, delimiter=";")
@@ -18,7 +18,7 @@ def load_province_colors(defpath: str):
 
     return colors
 
-def load_tag_colors(tag_files: list[str], tags_folder: str):
+def extract_tag_colors(tag_files: list[str], tags_folder: str):
     missing = 0
     tags: dict[str, str] = {}
 
