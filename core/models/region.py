@@ -6,6 +6,7 @@ from . import EUArea
 
 @dataclass
 class EURegion:
+    region_id: str
     name: str
     areas: dict[str, EUArea]
 

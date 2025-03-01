@@ -2,7 +2,7 @@ import os
 import re
 
 from core.colors import extract_province_colors
-from core.models import EUArea, EUProvince, ProvinceType
+from core.models import EUArea, EUProvince, ProvinceType, EURegion
 
 
 
@@ -102,10 +102,10 @@ def load_world_provinces(map_folder: str):
 def load_world_areas(map_folder: str, world_provinces: dict[int, EUProvince]):
     area_path = os.path.join(map_folder, "area.txt")
     areas: dict[str, EUArea] = {}
-    
-    pattern = re.compile(r"(\w+)_area\s*=\s*\{")
-    current_area_name = None
-    area_provinces = []
+
+    pattern = re.compile(r'(\w+)_area\s*=\s*\{')
+    area_id = None
+    area_provinces: list[int] = []
 
     with open(area_path, "r", encoding="latin-1") as file:
         for line in file:
@@ -113,30 +113,46 @@ def load_world_areas(map_folder: str, world_provinces: dict[int, EUProvince]):
 
             match = pattern.match(line)
             if match:
-                if current_area_name:
-                    areas[current_area_name] = EUArea(
-                        current_area_name, 
-                        {pid: world_provinces[pid] for pid in area_provinces
+                if area_id:
+                    areas[area_id] = EUArea(
+                        area_id=area_id,
+                        name=area_id.replace("_", " ").capitalize(),
+                        provinces={pid: world_provinces[pid] for pid in area_provinces
                             if pid in world_provinces})
 
-                current_area_name = match.group(1).replace("_", " ").capitalize()
+                area_id = match.group(1)
                 area_provinces = []
                 continue
 
             if line == "}":
-                if current_area_name:
-                    areas[current_area_name] = EUArea(
-                        current_area_name, 
-                        {pid: world_provinces[pid] for pid in area_provinces 
+                if area_id:
+                    areas[area_id] = EUArea(
+                        area_id=area_id,
+                        name=area_id.replace("_", " ").capitalize(),
+                        provinces={pid: world_provinces[pid] for pid in area_provinces 
                             if pid in world_provinces})
 
-                    current_area_name = None
+                    area_id = None
                 continue
 
             area_provinces.extend(map(int, re.findall(r"\b\d+\b", line)))
 
     return areas
 
+def load_world_regions(map_folder: str, areas: dict[str, EUArea]):
+    region_path = os.path.join(map_folder, "region.txt")
+    regions = {}
+
+    with open(region_path, "r", encoding="latin-1") as file:
+        region_pattern = r"(\w+_region)\s*=\s*\{.*?areas\s*=\s*\{([^}]+)\}\s*\}"  # Capture the region and its areas
+        region_data = file.read()  # Read the entire content to search for matches
+
+        matches = re.findall(region_pattern, region_data, flags=re.DOTALL)
+        for region_name, areas_str in matches:
+            area_names = [area.strip() for area in areas_str.splitlines() if area.strip()]  # Get area names
+            regions[region_name] = area_names
+
+    return regions
 
 def load_world_data(map_folder: str):
     print("Loading EU4 world data....")
@@ -145,9 +161,10 @@ def load_world_data(map_folder: str):
 
     print("Loading areas....")
     areas = load_world_areas(map_folder, provinces)
-    for name, area in areas.items():
-        print(str(area))
 
+    print("Loading regions....")
+    regions = load_world_regions(map_folder, areas)
+    print(regions)
 
 
 

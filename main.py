@@ -1,7 +1,6 @@
 import os
 
 from PIL import Image
-
 from core import *
 
 
@@ -53,6 +52,7 @@ def select_main_menu_option():
 
 def main():
     print("Getting colors for country tag....")
+    load_world_data(MAP_FOLDER)
     country_tag_files = os.listdir(TAGS_FOLDER)
     country_colors = extract_tag_colors(tag_files=country_tag_files, tags_folder=TAGS_FOLDER)
 
