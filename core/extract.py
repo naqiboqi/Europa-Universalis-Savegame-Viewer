@@ -2,10 +2,11 @@ import os
 import re
 
 from core.colors import extract_province_colors
+from core.models import EUArea, EUProvince, ProvinceType
 
 
 
-def extract_provinces_block(savefile: str):
+def load_provinces_from_save(savefile: str):
     with open(savefile, "r", encoding="utf-8") as file:
         data: list[str] = []
         inside = False
@@ -30,105 +31,136 @@ def extract_provinces_block(savefile: str):
 
     return data
 
-def get_prov_id(line: str):
-    pattern = r"^-(\d+)={"
-    match = re.match(pattern, line)
+
+def try_extract_prov_id(line: str):
+    match = re.match(r"^-(\d+)={", line)
     return int(match.group(1)) if match else None
 
-def get_country_tag(line: str):
-    pattern = r'^owner="(\w+)"'
-    match = re.match(pattern, line)
-    return match.group(1) if match else None
+def load_world_provinces(map_folder: str):
+    province_data_path = os.path.join(map_folder, "province.txt")
+    provinces: dict[int, EUProvince] = {}
 
-def is_native_province(line: str):
-    patterns = [
-        r"native_size=\d+",
-        r"native_ferocity=\d+",
-        r"native_hostileness=\d+"
-    ]
-    return any(re.search(pattern, line) for pattern in patterns)
+    with open(province_data_path, "r", encoding="latin-1") as file:
+        patterns = {
+            "name": r'name="([^"]+)"',
+            "owner": r'owner="([^"]+)"',
+            "capital": r'capital="([^"]+)"',
+            "culture": r'culture=([\w]+)',
+            "religion": r'religion=([\w]+)',
+            "base_tax": r'base_tax=([\d.]+)',
+            "base_production": r'base_production=([\d.]+)',
+            "base_manpower": r'base_manpower=([\d.]+)',
+            "native_size" : r"native_size=(\d+)",
+            "patrol" : r"patrol=(\d+)"
+        }
 
-def is_water_province(line: str):
-    pattern = r"patrol=\d+"
-    return re.search(pattern, line) is not None
+        line = file.readline().strip()
+        while line:
+            prov_id = try_extract_prov_id(line)
+            if prov_id:
+                prov_data = {"province_id" : prov_id}
+                prov_type = None
 
-def is_wasteland_province(line: str):
-    pattern = r"discovered_by\s*=\s*\{\s*\}"
-    return re.search(pattern, line) is not None
+                while True:
+                    line = file.readline()
+                    if not line:
+                        break
 
-def map_provinces_to_countries(block_data: list[str]):
-    provinces: dict[int, list[int]] = {}
+                    line = line.strip()
+                    if not line:
+                        continue
 
-    prov_id = None
-    owner_tag = None
-    is_native = False
-    is_water = False
-    is_wasteland = False
+                    if try_extract_prov_id(line):
+                        break
 
-    for line in block_data:
-        line = line.strip()
+                    for key, pattern in patterns.items():
+                        match = re.search(pattern, line)
+                        if match:
+                            prov_data[key] = match.group(1)
 
-        new_prov_id = get_prov_id(line)
-        if new_prov_id:
-            if prov_id is not None:
-                if is_water:
-                    provinces[prov_id] = "WATER"
-                elif is_native:
-                    provinces[prov_id] = "NAT"
-                elif is_wasteland:
-                    provinces[prov_id] = "WASTE"
-                else:
-                    provinces[prov_id] = owner_tag
+                if not any(dev in prov_data for dev in ["base_tax", "base_production", "base_manpower"]):
+                    if "patrol" in prov_data:
+                        prov_type = ProvinceType.SEA
+                    else:
+                        prov_type = ProvinceType.WASTELAND
 
-            prov_id = new_prov_id
-            owner_tag = None
-            is_native = False
-            is_water = False
-            is_wasteland = False
-            continue
+                elif "owner" in prov_data:
+                    prov_type = ProvinceType.OWNED
 
-        if owner_tag is None:
-            tag = get_country_tag(line)
-            if tag:
-                owner_tag = tag
+                elif "native_size" in prov_data:
+                    prov_type = ProvinceType.NATIVE
 
-        if is_native_province(line):
-            is_native = True
-            is_water = False
-            is_wasteland = False
+                prov_data["province_type"] = prov_type
+                new_prov = EUProvince.from_dict(prov_data)
+                provinces[prov_id] = new_prov
 
-        elif is_water_province(line):
-            is_water = True
-            is_native = False
-            is_wasteland = False
-
-        elif is_wasteland_province(line) and not is_water:
-            is_wasteland = True
-            is_native = False
-            is_water = False
-
-    if prov_id is not None:
-        if is_water:
-            provinces[prov_id] = "WATER"
-        elif is_native:
-            provinces[prov_id] = "NAT"
-        elif is_wasteland:
-            provinces[prov_id] = "WASTE"
-        else:
-            provinces[prov_id] = owner_tag
+            line = file.readline()
 
     return provinces
+
+
+def load_world_areas(map_folder: str, world_provinces: dict[int, EUProvince]):
+    area_path = os.path.join(map_folder, "area.txt")
+    areas: dict[str, EUArea] = {}
+    
+    pattern = re.compile(r"(\w+)_area\s*=\s*\{")
+    current_area_name = None
+    area_provinces = []
+
+    with open(area_path, "r", encoding="latin-1") as file:
+        for line in file:
+            line = line.strip()
+
+            match = pattern.match(line)
+            if match:
+                if current_area_name:
+                    areas[current_area_name] = EUArea(
+                        current_area_name, 
+                        {pid: world_provinces[pid] for pid in area_provinces
+                            if pid in world_provinces})
+
+                current_area_name = match.group(1).replace("_", " ").capitalize()
+                area_provinces = []
+                continue
+
+            if line == "}":
+                if current_area_name:
+                    areas[current_area_name] = EUArea(
+                        current_area_name, 
+                        {pid: world_provinces[pid] for pid in area_provinces 
+                            if pid in world_provinces})
+
+                    current_area_name = None
+                continue
+
+            area_provinces.extend(map(int, re.findall(r"\b\d+\b", line)))
+
+    return areas
+
+
+def load_world_data(map_folder: str):
+    print("Loading EU4 world data....")
+    print("Loading provinces....")
+    provinces = load_world_provinces(map_folder)
+
+    print("Loading areas....")
+    areas = load_world_areas(map_folder, provinces)
+    for name, area in areas.items():
+        print(str(area))
+
+
+
 
 def extract_save_data(
     savefile: str,
     map_folder: str,
     save_folder: str):
 
-    block_data = extract_provinces_block(os.path.join(save_folder, savefile))
+    block_data = load_provinces_from_save(os.path.join(save_folder, savefile))
     print("Getting provinces....")
-    country_provinces = map_provinces_to_countries(block_data)
+    #country_provinces = map_provinces_to_countries(block_data)
 
     print("Getting province bmp colors....")
     def_path = os.path.join(map_folder, "definition.csv")
     province_colors = extract_province_colors(defpath=def_path)
-    return country_provinces, province_colors
+    #return country_provinces, province_colors

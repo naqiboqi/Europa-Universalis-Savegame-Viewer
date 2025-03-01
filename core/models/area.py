@@ -1,11 +1,13 @@
-from core.models import EUProvince
+from dataclasses import dataclass
+
+from . import EUProvince
 
 
 
+@dataclass
 class EUArea:
-    def __init__(self, name: str, provinces: dict[int, EUProvince]|list[int]):
-        self.name = name
-        self.provinces = provinces
+    name: str
+    provinces: dict[int, EUProvince]|list[int]
 
     def __str__(self):
-        return f"Area: {self.name} containing provinces: {self.provinces}"
+        return f"The area: {self.name}, containing the provinces: {self.provinces}"
