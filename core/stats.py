@@ -19,10 +19,12 @@ def calculate_all_country_area(
 
     return country_area
 
-def sort_by_area(country_areas: dict[str, int]):
+def sort_by_country_area(country_areas: dict[str, int]):
     return sorted(country_areas.items(), key=lambda item: item[1], reverse=True)
 
 def analyze_map(map_path: str, country_colors: dict[str, tuple[int]]):
-    map_img = Image.open(map_path).convert("RGB")
-    areas = sort_by_area(calculate_all_country_area(map_img, country_colors))
-    print(areas)
+    # map_img = Image.open(map_path).convert("RGB")
+    # areas = sort_by_country_area(calculate_all_country_area(map_img, country_colors))
+    # print(areas)
+    
+    pass
