@@ -1,2 +1,2 @@
-from .province import EUProvince
+from .province import EUProvince, ProvinceType
 from .area import EUArea
