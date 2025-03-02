@@ -1,6 +1,8 @@
 import os
 import re
 
+from PIL import Image
+
 from . import EUArea, EUProvince, ProvinceType, EURegion
 
 
@@ -14,6 +16,7 @@ class EUWorldData:
         self.regions = regions
         self.areas = areas
         self.provinces = provinces
+        self.world_image: Image.Image = None 
 
     @classmethod
     def load_world_data(cls, map_folder: str):
@@ -92,8 +95,7 @@ class EUWorldData:
             return ProvinceType.OWNED
         if "native_size" in prov_data:
             return ProvinceType.NATIVE
-        return None  # Default case (if something is missing)
-
+        return None
 
     def load_world_areas(self, map_folder: str, world_provinces: dict[int, EUProvince]):
         area_path = os.path.join(map_folder, "area.txt")

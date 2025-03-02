@@ -12,6 +12,7 @@ TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "c
 
 
 def get_file_input(name: str, filetypes: tuple[str], folder: str):
+    print("\nAvailable files:")
     options = [
         f"{i}. {filename}" for i, filename in enumerate(os.listdir(folder), start=1)
         if filename.endswith(filetypes)]
@@ -22,8 +23,8 @@ def get_file_input(name: str, filetypes: tuple[str], folder: str):
     option = None
     while not option:
         try:
-            print("\n".join(options) + "\n")
-            filenum = int(input(f"Enter {name} number to open: \n"))
+            print("\n".join(options))
+            filenum = int(input(f"\nEnter {name}'s number to open: "))
 
             if not 1 <= filenum <= len(options):
                 raise IndexError
@@ -38,21 +39,20 @@ def get_file_input(name: str, filetypes: tuple[str], folder: str):
 
 def select_main_menu_option():
     options = [
-        "1. Load processed map image.",
+        "\n1. Load processed map image.",
         "2. Load save file.", 
-        "3. Close program."]
+        "3. Close program.\n"]
 
-    print("\n".join(options) + "\n")
-    option = int(input("Select an option!\n"))
+    print("\n".join(options))
+    option = int(input("Select an option: "))
     if not 1 <= option <= len(options):
         raise IndexError
     return option
 
-
 def main():
     world = EUWorldData.load_world_data(MAP_FOLDER)
-    print(world.provinces)
     colors = EUColors.load_colors(MAP_FOLDER, TAGS_FOLDER)
+    world_painter = WorldPainter(colors=colors, world_data=world)
 
     while True:
         try:
@@ -69,7 +69,7 @@ def main():
                     continue
 
                 map_path = os.path.join(OUTPUT_FOLDER, mapfile)
-                analyze_map(map_path, colors.country_colors)
+                map_bmp = Image.open(map_path).convert("RGB")
             case 2:
                 savefile = get_file_input("savefile", (".eu4"), SAVES_FOLDER)
                 if not savefile:
@@ -77,13 +77,13 @@ def main():
                     continue
 
                 save_path = os.path.join(SAVES_FOLDER, savefile)
-                country_provinces = world.load_savefile_provinces(MAP_FOLDER, save_path)
+                print(f"Loading savefile {savefile}....")
+                world.provinces = world.load_savefile_provinces(MAP_FOLDER, save_path)
 
-                print("Filling in map....")
-                bmp_path = os.path.join(MAP_FOLDER, "provinces.bmp")
-                map_bmp = Image.open(bmp_path).convert("RGB")
-                colored_map = apply_colors_to_map(country_provinces, colors.country_colors, colors.default_colors, map_bmp)
-                colored_map.save(os.path.join(OUTPUT_FOLDER, "new_map.png"))
+                map_path = os.path.join(MAP_FOLDER, "provinces.bmp")
+                map_bmp = Image.open(map_path).convert("RGB")
+                world.world_image = map_bmp
+                world_painter.draw_map()
             case 3:
                 print("\nExiting...")
                 exit()

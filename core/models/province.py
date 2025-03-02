@@ -3,11 +3,19 @@ from enum import Enum
 from typing import Optional
 
 
+
 class ProvinceType(Enum):
     OWNED = "owned"
     NATIVE = "native"
     SEA = "sea"
     WASTELAND = "wasteland"
+
+class ProvinceTypeColor(Enum):
+    OWNED: tuple[int] = ()
+    NATIVE = (203, 164, 103)
+    SEA = (55, 90, 220)
+    WASTELAND = (128, 128, 128)
+
 
 
 @dataclass

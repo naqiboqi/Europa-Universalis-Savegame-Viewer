@@ -5,15 +5,15 @@ import re
 
 
 class EUColors:
-    def __init__(self, default_colors: dict[int, tuple[int]], tag_colors: dict[str, tuple[int]]):
-        self.default_colors = default_colors
-        self.tag_colors: dict[tuple[int]] = tag_colors
+    def __init__(self, default_province_colors: dict[int, tuple[int]], tag_colors: dict[str, tuple[int]]):
+        self.default_province_colors = default_province_colors
+        self.tag_colors = tag_colors
 
     @classmethod
     def load_colors(cls, map_data_folder: str, tag_data_folder: str):
         color = cls({}, {})
         print("Loading province definitions....")
-        color.default_colors = color.load_default_province_colors(map_data_folder)
+        color.default_province_colors = color.load_default_province_colors(map_data_folder)
 
         print("Loading tag colors....")
         color.tag_colors = color.load_tag_colors(tag_data_folder)
