@@ -4,11 +4,10 @@ from PIL import Image
 from core import *
 
 
-
 MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "map"))
+OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "output"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
 TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "country_tags"))
-OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "output"))
 
 
 
@@ -51,10 +50,9 @@ def select_main_menu_option():
 
 
 def main():
-    print("Getting colors for country tag....")
-    load_world_data(MAP_FOLDER)
-    country_tag_files = os.listdir(TAGS_FOLDER)
-    country_colors = extract_tag_colors(tag_files=country_tag_files, tags_folder=TAGS_FOLDER)
+    world = EUWorldData.load_world_data(MAP_FOLDER)
+    print(world.provinces)
+    colors = EUColors.load_colors(MAP_FOLDER, TAGS_FOLDER)
 
     while True:
         try:
@@ -71,7 +69,7 @@ def main():
                     continue
 
                 map_path = os.path.join(OUTPUT_FOLDER, mapfile)
-                analyze_map(map_path, country_colors)
+                analyze_map(map_path, colors.country_colors)
             case 2:
                 savefile = get_file_input("savefile", (".eu4"), SAVES_FOLDER)
                 if not savefile:
@@ -79,12 +77,12 @@ def main():
                     continue
 
                 save_path = os.path.join(SAVES_FOLDER, savefile)
-                country_provinces, province_colors = extract_save_data(save_path, MAP_FOLDER, SAVES_FOLDER)
+                country_provinces = world.load_savefile_provinces(MAP_FOLDER, save_path)
 
                 print("Filling in map....")
                 bmp_path = os.path.join(MAP_FOLDER, "provinces.bmp")
                 map_bmp = Image.open(bmp_path).convert("RGB")
-                colored_map = apply_colors_to_map(country_provinces, country_colors, province_colors, map_bmp)
+                colored_map = apply_colors_to_map(country_provinces, colors.country_colors, colors.default_colors, map_bmp)
                 colored_map.save(os.path.join(OUTPUT_FOLDER, "new_map.png"))
             case 3:
                 print("\nExiting...")
