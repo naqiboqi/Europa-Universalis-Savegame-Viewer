@@ -1,3 +1,4 @@
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -106,7 +107,7 @@ class WorldPainter:
                     province.pixel_locations.append((x, y))
 
     def draw_map(self):
-        map_pixels = self.draw_map_area()
+        map_pixels = self.draw_map_development()
         
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
@@ -161,8 +162,31 @@ class WorldPainter:
     def draw_map_region(self):
         pass
 
+    def development_to_color(self, development: float, max_development: float=200.000):
+        normalized = math.log(max(1, development)) / math.log(max(1, max_development))
+        intensity = int(255 * normalized)
+        return (0, intensity, 0)
+
     def draw_map_development(self):
-        pass
+        world_provinces = self.world_data.provinces
+        map_pixels = np.array(self.world_image)
+
+        max_development = max(province.development for province in world_provinces.values())
+
+        for province in world_provinces.values():
+            province_type = province.province_type
+            if province_type == ProvinceType.SEA:
+                province_color = ProvinceTypeColor.SEA.value
+            elif province_type == ProvinceType.WASTELAND:
+                province_color = ProvinceTypeColor.WASTELAND.value
+            else:
+                development = province.development
+                province_color = self.development_to_color(development, max_development)
+
+            for x, y in province.pixel_locations:
+                map_pixels[y, x] = province_color
+
+        return map_pixels
 
     def draw_map_religion(self):
         pass

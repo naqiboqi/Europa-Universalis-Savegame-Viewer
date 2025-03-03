@@ -10,13 +10,12 @@ class ProvinceType(Enum):
     SEA = "sea"
     WASTELAND = "wasteland"
 
+
 class ProvinceTypeColor(Enum):
     OWNED: tuple[int] = ()
     NATIVE = (203, 164, 103)
     SEA = (55, 90, 220)
     WASTELAND = (128, 128, 128)
-
-
 
 
 @dataclass
@@ -28,16 +27,19 @@ class EUProvince:
     capital: Optional[str] = None
     culture: Optional[str] = None
     religion: Optional[str] = None
-    base_tax: Optional[int] = None
-    base_production: Optional[int] = None
-    base_manpower: Optional[int] = None
+    base_tax: Optional[float] = None
+    base_production: Optional[float] = None
+    base_manpower: Optional[float] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: list[tuple] = field(default_factory=list)
 
     @property
     def development(self):
-        return self.base_manpower + self.base_production + self.base_tax
+        if not (self.province_type == ProvinceType.SEA or self.province_type == ProvinceType.WASTELAND):
+            return float(self.base_manpower) + float(self.base_production) + float(self.base_tax)
+
+        return 0.000
 
     @classmethod
     def from_dict(cls, data: dict[str, str]):
