@@ -6,6 +6,7 @@ import re
 
 class EUColors:
     def __init__(self, default_province_colors: dict[int, tuple[int]], tag_colors: dict[str, tuple[int]]):
+        self.current_province_colors: dict[int, tuple[int]] = default_province_colors.copy()
         self.default_province_colors = default_province_colors
         self.tag_colors = tag_colors
 
