@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
@@ -18,6 +18,7 @@ class ProvinceTypeColor(Enum):
 
 
 
+
 @dataclass
 class EUProvince:
     province_id: int
@@ -32,6 +33,11 @@ class EUProvince:
     base_manpower: Optional[int] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
+    pixel_locations: list[tuple] = field(default_factory=list)
+
+    @property
+    def development(self):
+        return self.base_manpower + self.base_production + self.base_tax
 
     @classmethod
     def from_dict(cls, data: dict[str, str]):
