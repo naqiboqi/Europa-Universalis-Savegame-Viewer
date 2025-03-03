@@ -32,7 +32,7 @@ class EUProvince:
     base_manpower: Optional[float] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
-    pixel_locations: list[tuple] = field(default_factory=list)
+    pixel_locations: set[tuple] = field(default_factory=set)
 
     @property
     def development(self):

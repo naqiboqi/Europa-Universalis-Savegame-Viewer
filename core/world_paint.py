@@ -45,31 +45,59 @@ class MapModeSelector:
 class MapInteractor:
     def __init__(
         self, 
-        ax: axes.Axes, 
+        ax: axes.Axes,
+        fig: figure.Figure,
         province_colors: dict[tuple[int], int], 
-        world_provinces: dict[int, EUProvince]):
+        world_provinces: dict[int, EUProvince],
+        map_mode: MapMode):
         self.ax = ax
-        self.fig = ax.figure
+        self.fig = fig
         self.province_colors = province_colors
         self.world_provinces = world_provinces
+        self.map_mode = map_mode
 
         self.fig.canvas.mpl_connect("motion_notify_event", self.on_cursor_move)
 
+    def get_hovered_province(self, x: int, y: int):
+        for province in self.world_provinces.values():
+            if (x, y) in province.pixel_locations:
+                return province
+
+        return None
+
     def on_cursor_move(self, event: backend_bases.Event):
-        if not (event.xdata or event.ydata):
+        if event.xdata is None or event.ydata is None:
             return
 
         x, y = int(event.xdata), int(event.ydata)
+        province = self.get_hovered_province(x, y)
 
-        map_pixels = np.array(self.ax.images[0].get_array())
-        pixel_color = tuple(map_pixels[y, x][:3])
+        # If no province is found, set a default title
+        if not province:
+            self.ax.set_title("Unknown territory")
+            self.fig.canvas.draw_idle()
+            return
 
-        province_id = self.province_colors[pixel_color]
-        province = self.world_provinces[province_id]
+        province_type = province.province_type
+        self.ax.set_title(f"The province of {province.name}")
 
-        province_name = province.name if province else "Unknown"
-        self.ax.set_title(f"Province: {province_name}")
+        # map_mode = self.map_mode
+        # if map_mode == MapMode.POLITICAL:
+        #     if province_type == ProvinceType.OWNED:
+        #         self.ax.set_title(f"The nation of {province.owner}")
+        #     else:
+        #         self.ax.set_title(f"The province of {province.name}")
+
+        # elif map_mode == MapMode.DEVELOPMENT:
+        #     if province_type in {ProvinceType.OWNED, ProvinceType.NATIVE}:
+        #         self.ax.set_title(f"The province of {province.name} with {province.development} total dev.")
+        #     else:
+        #         self.ax.set_title(f"The province of {province.name}")
+
+        print(self.ax.get_title())
         self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
+        plt.pause(0.01)
 
 
 
@@ -79,6 +107,8 @@ class WorldPainter:
         self.world_data = world_data
         self.world_image: Image.Image = None
         self.interactor: MapInteractor = None
+        self.ax = None
+        self.figure = None
         self.selector = MapModeSelector()
         self.map_modes = {
             MapMode.POLITICAL: self.draw_map_political,
@@ -104,7 +134,7 @@ class WorldPainter:
                 if pixel_color in province_colors:
                     province_id = province_colors[pixel_color]
                     province = provinces[province_id]
-                    province.pixel_locations.append((x, y))
+                    province.pixel_locations.add((x, y))
 
     def draw_map(self):
         map_pixels = self.draw_map_development()
@@ -112,11 +142,18 @@ class WorldPainter:
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
-        fig, ax = plt.subplots()
-        ax.imshow(world_image, interpolation="nearest")
-        ax.axis("off")
+        self.fig, self.ax = plt.subplots()
+        self.ax.imshow(world_image, interpolation="nearest")
 
-        plt.show()
+        self.interactor = MapInteractor(
+            ax=self.ax,
+            fig=self.fig,
+            map_mode=self.selector.map_mode, 
+            province_colors=self.colors.current_province_colors, 
+            world_provinces=self.world_data.provinces)
+
+        plt.ion()
+        plt.show(block=False)
 
     def draw_map_political(self):
         tag_colors = self.colors.tag_colors
@@ -172,7 +209,6 @@ class WorldPainter:
         map_pixels = np.array(self.world_image)
 
         max_development = max(province.development for province in world_provinces.values())
-
         for province in world_provinces.values():
             province_type = province.province_type
             if province_type == ProvinceType.SEA:
