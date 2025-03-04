@@ -1,9 +1,10 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import tkinter as tk
 
 from enum import Enum
-from PIL import Image
+from PIL import Image, ImageTk
 from matplotlib import axes, backend_bases, figure
 from .colors import EUColors
 from .models import EUArea, EUProvince, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
@@ -42,73 +43,39 @@ class MapModeSelector:
 
 
 
-class MapInteractor:
+class MapEventHandler:
     def __init__(
-        self, 
-        ax: axes.Axes,
-        fig: figure.Figure,
-        province_colors: dict[tuple[int], int], 
-        world_provinces: dict[int, EUProvince],
-        map_mode: MapMode):
-        self.ax = ax
-        self.fig = fig
-        self.province_colors = province_colors
-        self.world_provinces = world_provinces
-        self.map_mode = map_mode
+        self,
+        canvas: tk.Canvas,
+        world_image: Image.Image,
+        hover_label: tk.Label, 
+        provinces: dict[int, EUProvince]):
+        self.canvas = canvas
+        self.world_image = world_image
+        self.hover_label = hover_label
+        self.provinces = provinces
 
-        self.fig.canvas.mpl_connect("motion_notify_event", self.on_cursor_move)
+    def on_province_hover(self, event: tk.Event):
+        canvas_x = self.canvas.canvasx(event.x)
+        canvas_y = self.canvas.canvasy(event.y)
+
+        # Now calculate the province based on the scaled coordinates
+
+        # Display the province name or handle the hover action
+        self.hover_label.config(text=f"Hovering over: ({canvas_x}, {canvas_y})")
 
     def get_hovered_province(self, x: int, y: int):
-        for province in self.world_provinces.values():
+        for province in self.provinces.values():
             if (x, y) in province.pixel_locations:
                 return province
 
         return None
-
-    def on_cursor_move(self, event: backend_bases.Event):
-        if event.xdata is None or event.ydata is None:
-            return
-
-        x, y = int(event.xdata), int(event.ydata)
-        province = self.get_hovered_province(x, y)
-
-        # If no province is found, set a default title
-        if not province:
-            self.ax.set_title("Unknown territory")
-            self.fig.canvas.draw_idle()
-            return
-
-        province_type = province.province_type
-        self.ax.set_title(f"The province of {province.name}")
-
-        # map_mode = self.map_mode
-        # if map_mode == MapMode.POLITICAL:
-        #     if province_type == ProvinceType.OWNED:
-        #         self.ax.set_title(f"The nation of {province.owner}")
-        #     else:
-        #         self.ax.set_title(f"The province of {province.name}")
-
-        # elif map_mode == MapMode.DEVELOPMENT:
-        #     if province_type in {ProvinceType.OWNED, ProvinceType.NATIVE}:
-        #         self.ax.set_title(f"The province of {province.name} with {province.development} total dev.")
-        #     else:
-        #         self.ax.set_title(f"The province of {province.name}")
-
-        print(self.ax.get_title())
-        self.fig.canvas.draw_idle()
-        self.fig.canvas.flush_events()
-        plt.pause(0.01)
-
 
 
 class WorldPainter:
     def __init__(self, colors: EUColors, world_data: EUWorldData):
         self.colors = colors
         self.world_data = world_data
-        self.world_image: Image.Image = None
-        self.interactor: MapInteractor = None
-        self.ax = None
-        self.figure = None
         self.selector = MapModeSelector()
         self.map_modes = {
             MapMode.POLITICAL: self.draw_map_political,
@@ -118,16 +85,26 @@ class WorldPainter:
             MapMode.RELIGION: self.draw_map_religion
         }
 
+        self.handler: MapEventHandler = None
+        self.canvas: tk.Canvas = None
+        self.hover_label: tk.Label = None
+        self.quit_button: tk.Button = None
+        self.root: tk.Tk = None
+        self.scroll_x: tk.Scrollbar = None
+        self.scroll_y: tk.Scrollbar = None
+        self.tk_image: ImageTk.PhotoImage = None
+        self.world_image: Image.Image = None
+
     def set_province_pixel_locations(self):
         if not self.world_image:
             self.world_image = self.world_data.world_image
 
         province_colors = self.colors.default_province_colors
         provinces = self.world_data.provinces
-        
+
         map_pixels = np.array(self.world_image)
         height, width = map_pixels.shape[:2]
-        
+
         for x in range(width):
             for y in range(height):
                 pixel_color = tuple(map_pixels[y, x][:3])
@@ -137,23 +114,45 @@ class WorldPainter:
                     province.pixel_locations.add((x, y))
 
     def draw_map(self):
+        if not self.selector.map_mode:
+            self.selector.map_mode = MapMode.DEVELOPMENT
+
         map_pixels = self.draw_map_development()
-        
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
-        self.fig, self.ax = plt.subplots()
-        self.ax.imshow(world_image, interpolation="nearest")
+        if not self.root:
+            self.root = tk.Tk()
+            self.root.title("Map Viewer")
 
-        self.interactor = MapInteractor(
-            ax=self.ax,
-            fig=self.fig,
-            map_mode=self.selector.map_mode, 
-            province_colors=self.colors.current_province_colors, 
-            world_provinces=self.world_data.provinces)
+            self.canvas = tk.Canvas(self.root, width=1200, height=900)
+            self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        plt.ion()
-        plt.show(block=False)
+            self.scroll_x = tk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
+            self.scroll_y = tk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
+            self.scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
+            self.scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+            self.canvas.config(xscrollcommand=self.scroll_x.set, yscrollcommand=self.scroll_y.set)
+            
+            self.tk_image = ImageTk.PhotoImage(world_image)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+            self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
+
+            self.quit_button = tk.Button(self.root, text="Quit", command=self.root.quit)
+            self.quit_button.pack()
+
+            self.hover_label = tk.Label(self.root, text="Choose a province", bg="white")
+            self.hover_label.pack()
+
+            self.handler = MapEventHandler(
+                canvas=self.canvas,
+                world_image=self.world_image,
+                hover_label=self.hover_label, 
+                provinces=self.world_data.provinces)
+            self.canvas.bind("<Motion>", self.handler.on_province_hover)
+
+        self.root.mainloop()
 
     def draw_map_political(self):
         tag_colors = self.colors.tag_colors

@@ -78,7 +78,7 @@ class EUWorldData:
 
                 for key, pattern in patterns.items():
                     match = re.search(pattern, line)
-                    if match:
+                    if match and not key in current_province:
                         current_province[key] = match.group(1)
 
         except StopIteration:
@@ -154,7 +154,7 @@ class EUWorldData:
 
     def load_savefile_provinces(self, map_folder: str, savefile: str):
         province_data: list[str] = []
-        with open(savefile, "r", encoding="utf-8") as file:
+        with open(savefile, "r", encoding="latin-1") as file:
             inside = False
             depth = 0
 

@@ -41,7 +41,7 @@ class EUColors:
 
         tag_files = os.listdir(tag_data_folder)
         for tag_file in tag_files:
-            with open(os.path.join(tag_data_folder, tag_file), "r", encoding="utf-8") as file:
+            with open(os.path.join(tag_data_folder, tag_file), "r", encoding="latin-1") as file:
                 for line in file:
                     if not line:
                         continue
