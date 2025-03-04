@@ -63,12 +63,12 @@ class MapEventHandler:
 
         self.scaled_image = self.world_image
         self.tk_image = ImageTk.PhotoImage(self.scaled_image)
-        
-        self.canvas.create_image(self.offset_x, self.offset_y, anchor=tk.NW, image=self.tk_image)
 
-        # self.canvas.bind("<ButtonPress-1>", self.on_pan_start)
-        # self.canvas.bind("<B1-Motion>", self.on_pan_drag)
-        # self.canvas.bind("<ButtonRelease-1>", self.on_pan_end)
+        self.canvas_id = self.canvas.create_image(self.offset_x, self.offset_y, anchor=tk.NW, image=self.tk_image)
+
+        self.canvas.bind("<ButtonPress-1>", self.on_pan_start)
+        self.canvas.bind("<B1-Motion>", self.on_pan_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_pan_end)
         self.canvas.bind("<MouseWheel>", self.on_zoom)
 
     def redraw(self):
@@ -78,10 +78,94 @@ class MapEventHandler:
 
         self.tk_image = ImageTk.PhotoImage(self.scaled_image)
 
-        self.canvas.delete("all")
-        self.canvas.create_image(self.offset_x, self.offset_y, anchor=tk.NW, image=self.tk_image)
+        self.canvas.itemconfig(self.canvas_id, image=self.tk_image)
+        self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
 
         self.canvas.config(scrollregion=(0, 0, self.scaled_image.width, self.scaled_image.height))
+
+    def set_image_in_bounds(self):
+        image_width = self.scaled_image.width
+        image_height = self.scaled_image.height
+
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        # Ensure the image does not go out of bounds
+        if image_width < canvas_width:
+            self.offset_x = (canvas_width - image_width) // 2  # Center if smaller than canvas
+        else:
+            if self.offset_x > 0:
+                self.offset_x = 0
+            elif self.offset_x < canvas_width - image_width:
+                self.offset_x = canvas_width - image_width
+
+        if image_height < canvas_height:
+            self.offset_y = (canvas_height - image_height) // 2  # Center if smaller than canvas
+        else:
+            if self.offset_y > 0:
+                self.offset_y = 0
+            elif self.offset_y < canvas_height - image_height:
+                self.offset_y = canvas_height - image_height
+
+    def on_pan_start(self, event: tk.Event):
+        self.dragging = True
+        self.start_drag_x = event.x
+        self.start_drag_y = event.y
+
+    def on_pan_drag(self, event: tk.Event):
+        if self.dragging:
+            dx = event.x - self.start_drag_x
+            dy = event.y - self.start_drag_y
+
+            self.offset_x += dx
+            self.offset_y += dy
+
+            self.set_image_in_bounds()  # Ensure it doesn't go out of bounds
+
+            self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
+
+            self.start_drag_x = event.x
+            self.start_drag_y = event.y
+
+    def on_pan_end(self, event: tk.Event):
+        self.dragging = False
+
+    def on_zoom(self, event: tk.Event):
+        ZOOM_IN_FACTOR = 1.1
+        ZOOM_OUT_FACTOR = 0.9  
+
+        MIN_SCALE = 0.5  
+        MAX_SCALE = 5.0  
+
+        if event.delta > 0:  # Zoom in
+            new_scale_x = self.scale_x * ZOOM_IN_FACTOR
+            new_scale_y = self.scale_y * ZOOM_IN_FACTOR
+        else:  # Zoom out
+            new_scale_x = self.scale_x * ZOOM_OUT_FACTOR
+            new_scale_y = self.scale_y * ZOOM_OUT_FACTOR
+
+        # Ensure scale stays within limits
+        if MIN_SCALE <= new_scale_x <= MAX_SCALE:
+            # Get cursor position relative to the canvas
+            canvas_x = self.canvas.canvasx(event.x)
+            canvas_y = self.canvas.canvasy(event.y)
+
+            # Adjust offsets before applying new zoom
+            self.offset_x = canvas_x - (canvas_x - self.offset_x) * (new_scale_x / self.scale_x)
+            self.offset_y = canvas_y - (canvas_y - self.offset_y) * (new_scale_y / self.scale_y)
+
+            # Update scale
+            self.scale_x = new_scale_x
+            self.scale_y = new_scale_y
+
+            # Redraw the image
+            self.redraw()
+
+            # Ensure the image remains within bounds after zoom
+            self.set_image_in_bounds()
+
+            # Apply the corrected offsets
+            self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
 
     def get_hovered_province(self, x: int, y: int):
         for province in self.provinces.values():
@@ -97,54 +181,7 @@ class MapEventHandler:
         adjusted_x = (canvas_x - self.offset_x) / self.scale_x
         adjusted_y = (canvas_y - self.offset_y) / self.scale_y
 
-        # Update the hover label to show the adjusted coordinates (scaled and offset)
         self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f})")
-
-    def on_pan_start(self, event: tk.Event):
-        self.dragging = True
-        self.start_drag_x = event.x
-        self.start_drag_y = event.y
-
-    def on_pan_drag(self, event: tk.Event):
-        if self.dragging:
-            dx = event.x - self.start_drag_x
-            dy = event.y - self.start_drag_y
-
-            self.offset_x += dx
-            self.offset_y += dy
-            
-            self.redraw()
-            self.start_drag_x = event.x
-            self.start_drag_y = event.y
-
-    def on_pan_end(self, event: tk.Event):
-        self.dragging = False
-
-    def on_zoom(self, event: tk.Event):
-        factor = 1.1
-        if event.delta > 0:
-            self.scale_x *= factor
-            self.scale_y *= factor
-        else:
-            self.scale_x /= factor
-            self.scale_y /= factor
-
-        canvas_x = self.canvas.canvasx(event.x)
-        canvas_y = self.canvas.canvasy(event.y)
-
-        dx = canvas_x - self.offset_x
-        dy = canvas_y - self.offset_y
-
-        if event.delta > 0:
-            self.offset_x = canvas_x - dx * factor
-            self.offset_y = canvas_y - dy * factor
-        else:
-            self.offset_x = canvas_x - dx / factor
-            self.offset_y = canvas_y - dy / factor
-
-        self.set_image_in_bounds()
-        self.redraw()
-
 
 
 class WorldPainter:
