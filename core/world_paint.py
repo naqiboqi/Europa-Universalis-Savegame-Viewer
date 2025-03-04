@@ -1,11 +1,9 @@
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
 
 from enum import Enum
 from PIL import Image, ImageTk
-from matplotlib import axes, backend_bases, figure
 from .colors import EUColors
 from .models import EUArea, EUProvince, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
 
@@ -55,14 +53,35 @@ class MapEventHandler:
         self.hover_label = hover_label
         self.provinces = provinces
 
-    def on_province_hover(self, event: tk.Event):
-        canvas_x = self.canvas.canvasx(event.x)
-        canvas_y = self.canvas.canvasy(event.y)
+        self.scale_x = 1
+        self.scale_y = 1
+        self.offset_x = 0
+        self.offset_y = 0
+        self.dragging = False
+        self.start_drag_x = 0
+        self.start_drag_y = 0
 
-        # Now calculate the province based on the scaled coordinates
+        self.scaled_image = self.world_image
+        self.tk_image = ImageTk.PhotoImage(self.scaled_image)
+        
+        self.canvas.create_image(self.offset_x, self.offset_y, anchor=tk.NW, image=self.tk_image)
 
-        # Display the province name or handle the hover action
-        self.hover_label.config(text=f"Hovering over: ({canvas_x}, {canvas_y})")
+        # self.canvas.bind("<ButtonPress-1>", self.on_pan_start)
+        # self.canvas.bind("<B1-Motion>", self.on_pan_drag)
+        # self.canvas.bind("<ButtonRelease-1>", self.on_pan_end)
+        self.canvas.bind("<MouseWheel>", self.on_zoom)
+
+    def redraw(self):
+        self.scaled_image = self.world_image.resize(
+            (int(self.world_image.width * self.scale_x), int(self.world_image.height * self.scale_y)),
+            Image.Resampling.NEAREST)
+
+        self.tk_image = ImageTk.PhotoImage(self.scaled_image)
+
+        self.canvas.delete("all")
+        self.canvas.create_image(self.offset_x, self.offset_y, anchor=tk.NW, image=self.tk_image)
+
+        self.canvas.config(scrollregion=(0, 0, self.scaled_image.width, self.scaled_image.height))
 
     def get_hovered_province(self, x: int, y: int):
         for province in self.provinces.values():
@@ -70,6 +89,62 @@ class MapEventHandler:
                 return province
 
         return None
+
+    def on_province_hover(self, event: tk.Event):
+        canvas_x = self.canvas.canvasx(event.x)
+        canvas_y = self.canvas.canvasy(event.y)
+
+        adjusted_x = (canvas_x - self.offset_x) / self.scale_x
+        adjusted_y = (canvas_y - self.offset_y) / self.scale_y
+
+        # Update the hover label to show the adjusted coordinates (scaled and offset)
+        self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f})")
+
+    def on_pan_start(self, event: tk.Event):
+        self.dragging = True
+        self.start_drag_x = event.x
+        self.start_drag_y = event.y
+
+    def on_pan_drag(self, event: tk.Event):
+        if self.dragging:
+            dx = event.x - self.start_drag_x
+            dy = event.y - self.start_drag_y
+
+            self.offset_x += dx
+            self.offset_y += dy
+            
+            self.redraw()
+            self.start_drag_x = event.x
+            self.start_drag_y = event.y
+
+    def on_pan_end(self, event: tk.Event):
+        self.dragging = False
+
+    def on_zoom(self, event: tk.Event):
+        factor = 1.1
+        if event.delta > 0:
+            self.scale_x *= factor
+            self.scale_y *= factor
+        else:
+            self.scale_x /= factor
+            self.scale_y /= factor
+
+        canvas_x = self.canvas.canvasx(event.x)
+        canvas_y = self.canvas.canvasy(event.y)
+
+        dx = canvas_x - self.offset_x
+        dy = canvas_y - self.offset_y
+
+        if event.delta > 0:
+            self.offset_x = canvas_x - dx * factor
+            self.offset_y = canvas_y - dy * factor
+        else:
+            self.offset_x = canvas_x - dx / factor
+            self.offset_y = canvas_y - dy / factor
+
+        self.set_image_in_bounds()
+        self.redraw()
+
 
 
 class WorldPainter:
