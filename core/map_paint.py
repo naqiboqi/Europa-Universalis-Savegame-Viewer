@@ -158,7 +158,7 @@ class MapEventHandler:
         self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f}), {province.name}")
 
 
-class WorldPainter:
+class MapPainter:
     def __init__(self, colors: EUColors, world_data: EUWorldData):
         self.colors = colors
         self.world_data = world_data
