@@ -111,7 +111,7 @@ class EUWorldData:
 
                 match = pattern.match(line)
                 if match:
-                    if area_id:
+                    if area_id and area_provinces:
                         areas[area_id] = EUArea(
                             area_id=area_id,
                             name=area_id.replace("_", " ").capitalize(),
@@ -123,14 +123,14 @@ class EUWorldData:
                     continue
 
                 if line == "}":
-                    if area_id:
+                    if area_id and area_provinces:
                         areas[area_id] = EUArea(
                             area_id=area_id,
                             name=area_id.replace("_", " ").capitalize(),
                             provinces={pid: world_provinces[pid] for pid in area_provinces 
                                 if pid in world_provinces})
 
-                        area_id = None
+                    area_id = None
                     continue
 
                 area_provinces.extend(map(int, re.findall(r"\b\d+\b", line)))
