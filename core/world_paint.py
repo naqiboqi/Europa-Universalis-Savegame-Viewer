@@ -6,6 +6,7 @@ from enum import Enum
 from PIL import Image, ImageTk
 from .colors import EUColors
 from .models import EUArea, EUProvince, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
+from .utils import MapUtils
 
 
 
@@ -90,22 +91,14 @@ class MapEventHandler:
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
 
-        # Ensure the image does not go out of bounds
-        if image_width < canvas_width:
-            self.offset_x = (canvas_width - image_width) // 2  # Center if smaller than canvas
-        else:
-            if self.offset_x > 0:
-                self.offset_x = 0
-            elif self.offset_x < canvas_width - image_width:
-                self.offset_x = canvas_width - image_width
-
-        if image_height < canvas_height:
-            self.offset_y = (canvas_height - image_height) // 2  # Center if smaller than canvas
-        else:
-            if self.offset_y > 0:
-                self.offset_y = 0
-            elif self.offset_y < canvas_height - image_height:
-                self.offset_y = canvas_height - image_height
+        self.offset_x = MapUtils.get_bounded_offset(
+            offset=self.offset_x, 
+            image_dim=image_width, 
+            canvas_dim=canvas_width)
+        self.offset_y = MapUtils.get_bounded_offset(
+            offset=self.offset_y,
+            image_dim=image_height,
+            canvas_dim=canvas_height)
 
     def on_pan_start(self, event: tk.Event):
         self.dragging = True
@@ -120,7 +113,7 @@ class MapEventHandler:
             self.offset_x += dx
             self.offset_y += dy
 
-            self.set_image_in_bounds()  # Ensure it doesn't go out of bounds
+            self.set_image_in_bounds()
 
             self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
 
@@ -137,35 +130,25 @@ class MapEventHandler:
         MIN_SCALE = 0.5  
         MAX_SCALE = 5.0  
 
-        if event.delta > 0:  # Zoom in
-            new_scale_x = self.scale_x * ZOOM_IN_FACTOR
-            new_scale_y = self.scale_y * ZOOM_IN_FACTOR
-        else:  # Zoom out
-            new_scale_x = self.scale_x * ZOOM_OUT_FACTOR
-            new_scale_y = self.scale_y * ZOOM_OUT_FACTOR
+        new_scale = self.scale_x * (ZOOM_IN_FACTOR if event.delta > 0 else ZOOM_OUT_FACTOR)
+        if not MIN_SCALE <= new_scale <= MAX_SCALE:
+            return
 
-        # Ensure scale stays within limits
-        if MIN_SCALE <= new_scale_x <= MAX_SCALE:
-            # Get cursor position relative to the canvas
-            canvas_x = self.canvas.canvasx(event.x)
-            canvas_y = self.canvas.canvasy(event.y)
+        canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        image_x, image_y = MapUtils.canvas_to_image_coords(
+            canvas_x=canvas_x,
+            canvas_y=canvas_y,
+            offset_x=self.offset_x,
+            offset_y=self.offset_y,
+            scale_x=self.scale_x,
+            scale_y=self.scale_y)
 
-            # Adjust offsets before applying new zoom
-            self.offset_x = canvas_x - (canvas_x - self.offset_x) * (new_scale_x / self.scale_x)
-            self.offset_y = canvas_y - (canvas_y - self.offset_y) * (new_scale_y / self.scale_y)
+        self.scale_x = self.scale_y = new_scale
+        self.offset_x = canvas_x - image_x * self.scale_x
+        self.offset_y = canvas_y - image_y * self.scale_y
 
-            # Update scale
-            self.scale_x = new_scale_x
-            self.scale_y = new_scale_y
-
-            # Redraw the image
-            self.redraw()
-
-            # Ensure the image remains within bounds after zoom
-            self.set_image_in_bounds()
-
-            # Apply the corrected offsets
-            self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
+        self.redraw()
+        self.set_image_in_bounds()
 
     def get_hovered_province(self, x: int, y: int):
         for province in self.provinces.values():
@@ -202,8 +185,6 @@ class WorldPainter:
         self.hover_label: tk.Label = None
         self.quit_button: tk.Button = None
         self.root: tk.Tk = None
-        self.scroll_x: tk.Scrollbar = None
-        self.scroll_y: tk.Scrollbar = None
         self.tk_image: ImageTk.PhotoImage = None
         self.world_image: Image.Image = None
 
@@ -240,21 +221,14 @@ class WorldPainter:
             self.canvas = tk.Canvas(self.root, width=1200, height=900)
             self.canvas.pack(fill=tk.BOTH, expand=True)
 
-            self.scroll_x = tk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
-            self.scroll_y = tk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
-            self.scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
-            self.scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
-
-            self.canvas.config(xscrollcommand=self.scroll_x.set, yscrollcommand=self.scroll_y.set)
-            
             self.tk_image = ImageTk.PhotoImage(world_image)
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
             self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
-            self.quit_button = tk.Button(self.root, text="Quit", command=self.root.quit)
+            self.quit_button = tk.Button(self.root, text="Quit", command=self.root.destroy)
             self.quit_button.pack()
 
-            self.hover_label = tk.Label(self.root, text="Choose a province", bg="white")
+            self.hover_label = tk.Label(self.root, text="Choose a Province", bg="white")
             self.hover_label.pack()
 
             self.handler = MapEventHandler(
