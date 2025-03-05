@@ -2,20 +2,10 @@ import math
 import numpy as np
 import tkinter as tk
 
-from enum import Enum
 from PIL import Image, ImageTk
 from .colors import EUColors
-from .models import EUArea, EUProvince, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
+from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
 from .utils import MapUtils
-
-
-
-class MapMode(Enum):
-    POLITICAL = "political"
-    AREA = "area"
-    REGION = "region"
-    DEVELOPMENT = "development"
-    RELIGION = "religion"
 
 
 
@@ -71,18 +61,6 @@ class MapEventHandler:
         self.canvas.bind("<B1-Motion>", self.on_pan_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_pan_end)
         self.canvas.bind("<MouseWheel>", self.on_zoom)
-
-    def redraw(self):
-        self.scaled_image = self.world_image.resize(
-            (int(self.world_image.width * self.scale_x), int(self.world_image.height * self.scale_y)),
-            Image.Resampling.NEAREST)
-
-        self.tk_image = ImageTk.PhotoImage(self.scaled_image)
-
-        self.canvas.itemconfig(self.canvas_id, image=self.tk_image)
-        self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
-
-        self.canvas.config(scrollregion=(0, 0, self.scaled_image.width, self.scaled_image.height))
 
     def set_image_in_bounds(self):
         image_width = self.scaled_image.width
@@ -147,8 +125,20 @@ class MapEventHandler:
         self.offset_x = canvas_x - image_x * self.scale_x
         self.offset_y = canvas_y - image_y * self.scale_y
 
-        self.redraw()
+        self.canvas.after(50, self.update_on_zoom)
+
+    def update_on_zoom(self):
+        scaled_image = self.world_image.resize(
+            (int(self.world_image.width * self.scale_x), int(self.world_image.height * self.scale_y)),
+            Image.Resampling.NEAREST
+        )
+
+        self.tk_image = ImageTk.PhotoImage(scaled_image)
+        self.canvas.itemconfig(self.canvas_id, image=self.tk_image)
+        self.canvas.coords(self.canvas_id, self.offset_x, self.offset_y)
+
         self.set_image_in_bounds()
+        self.canvas.config(scrollregion=(0, 0, scaled_image.width, scaled_image.height))
 
     def get_hovered_province(self, x: int, y: int):
         for province in self.provinces.values():
@@ -164,7 +154,8 @@ class MapEventHandler:
         adjusted_x = (canvas_x - self.offset_x) / self.scale_x
         adjusted_y = (canvas_y - self.offset_y) / self.scale_y
 
-        self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f})")
+        province = self.get_hovered_province(int(adjusted_x), int(adjusted_y))
+        self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f}), {province.name}")
 
 
 class WorldPainter:
