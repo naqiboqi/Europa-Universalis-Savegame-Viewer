@@ -64,6 +64,9 @@ class EUWorldData:
             while True:
                 line = next(line_iter).strip()
 
+                if "PROV" in line:
+                    continue
+
                 prov_id = self.try_extract_prov_id(line)
                 if prov_id is not None:
                     if current_province:
@@ -72,7 +75,10 @@ class EUWorldData:
                         if prov_id in self.provinces:
                             self.provinces[prov_id].update(current_province)
                         else:
-                            provinces[current_province["province_id"]] = EUProvince.from_dict(data=current_province)
+                            try:
+                                provinces[current_province["province_id"]] = EUProvince.from_dict(data=current_province)
+                            except TypeError:
+                                pass
 
                     current_province = {"province_id": prov_id}
                     continue

@@ -74,7 +74,7 @@ class MapPainter:
                     province.pixel_locations.add((x, y))
 
     def draw_map(self):
-        map_pixels = self.draw_map_region()
+        map_pixels = self.draw_map_area()
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
@@ -142,15 +142,36 @@ class MapPainter:
         world_areas = self.world_data.areas
         map_pixels = np.array(self.world_image)
 
+        sea_pixels = set()
+        wasteland_pixels = set()
+
+        # First pass: Collect all pixels for each category
+        area_pixels_map = {}  # Dictionary to store pixels per area
+
         for area in world_areas.values():
-            area_color = self.seed_color(area.area_id)
+            area_pixels = set()
 
-            pixel_locations = set()
-            for province in area.provinces.values():
-                pixel_locations.update(province.pixel_locations)
+            for province in area:
+                if province.province_type in {ProvinceType.OWNED, ProvinceType.NATIVE}:
+                    area_pixels.update(province.pixel_locations)
+                elif province.province_type == ProvinceType.SEA:
+                    sea_pixels.update(province.pixel_locations)
+                elif province.province_type == ProvinceType.WASTELAND:
+                    wasteland_pixels.update(province.pixel_locations)
 
-            for x, y in pixel_locations:
+            area_pixels_map[area.area_id] = area_pixels
+
+        # Second pass: Apply colors
+        for area_id, area_pixels in area_pixels_map.items():
+            area_color = self.seed_color(area_id)
+            for x, y in area_pixels:
                 map_pixels[y, x] = area_color
+
+        for x, y in sea_pixels:
+            map_pixels[y, x] = ProvinceTypeColor.SEA.value
+
+        for x, y in wasteland_pixels:
+            map_pixels[y, x] = ProvinceTypeColor.WASTELAND.value
 
         return map_pixels
 
