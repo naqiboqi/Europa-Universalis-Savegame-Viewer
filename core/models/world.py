@@ -26,10 +26,10 @@ class EUWorldData:
         world.provinces = world.load_world_provinces(map_folder)
 
         print("Loading areas....")
-        world.areas = world.load_world_areas(map_folder, world.provinces)
+        world.areas = world.load_world_areas(map_folder)
 
         print("Loading regions....")
-        world.regions = world.load_world_regions(map_folder, world.areas)
+        world.regions = world.load_world_regions(map_folder)
 
         return world
 
@@ -37,7 +37,7 @@ class EUWorldData:
         match = re.match(r"^-(\d+)={", line)
         return int(match.group(1)) if match else None
 
-    def load_world_provinces(self, map_folder: str, province_data: list[str] = None):
+    def load_world_provinces(self, map_folder: str=None, province_data: list[str]=None):
         provinces: dict[int, EUProvince] = {}
         patterns = {
             "name": r'name="([^"]+)"',
@@ -67,8 +67,12 @@ class EUWorldData:
                 prov_id = self.try_extract_prov_id(line)
                 if prov_id is not None:
                     if current_province:
-                        current_province["province_type"] = self.determine_province_type(current_province)
-                        provinces[current_province["province_id"]] = EUProvince.from_dict(current_province)
+                        current_province["province_type"] = self.set_province_type(current_province)
+
+                        if prov_id in self.provinces:
+                            self.provinces[prov_id].update(current_province)
+                        else:
+                            provinces[current_province["province_id"]] = EUProvince.from_dict(data=current_province)
 
                     current_province = {"province_id": prov_id}
                     continue
@@ -86,7 +90,7 @@ class EUWorldData:
 
         return provinces
 
-    def determine_province_type(self, prov_data: dict) -> ProvinceType:
+    def set_province_type(self, prov_data: dict):
         if not any(dev in prov_data for dev in ["base_tax", "base_production", "base_manpower"]):
             if "patrol" in prov_data:
                 return ProvinceType.SEA
@@ -97,11 +101,11 @@ class EUWorldData:
             return ProvinceType.NATIVE
         return None
 
-    def load_world_areas(self, map_folder: str, world_provinces: dict[int, EUProvince]):
+    def load_world_areas(self, map_folder: str):
         area_path = os.path.join(map_folder, "area.txt")
         areas: dict[str, EUArea] = {}
 
-        pattern = re.compile(r'(\w+)_area\s*=\s*\{')
+        pattern = re.compile(r'(\w+_area)\s*=\s*\{')
         area_id = None
         area_provinces: list[int] = []
 
@@ -109,14 +113,17 @@ class EUWorldData:
             for line in file:
                 line = line.strip()
 
+                if "color" in line:
+                    continue
+
                 match = pattern.match(line)
                 if match:
                     if area_id and area_provinces:
                         areas[area_id] = EUArea(
                             area_id=area_id,
-                            name=area_id.replace("_", " ").capitalize(),
-                            provinces={pid: world_provinces[pid] for pid in area_provinces
-                                if pid in world_provinces})
+                            name=EUArea.name_from_id(area_id),
+                            provinces={pid: self.provinces[pid] for pid in area_provinces
+                                if pid in self.provinces})
 
                     area_id = match.group(1)
                     area_provinces = []
@@ -126,9 +133,9 @@ class EUWorldData:
                     if area_id and area_provinces:
                         areas[area_id] = EUArea(
                             area_id=area_id,
-                            name=area_id.replace("_", " ").capitalize(),
-                            provinces={pid: world_provinces[pid] for pid in area_provinces 
-                                if pid in world_provinces})
+                            name=EUArea.name_from_id(area_id),
+                            provinces={pid: self.provinces[pid] for pid in area_provinces 
+                                if pid in self.provinces})
 
                     area_id = None
                     continue
@@ -137,7 +144,7 @@ class EUWorldData:
 
         return areas
 
-    def load_world_regions(self, map_folder: str, areas: dict[str, EUArea]):
+    def load_world_regions(self, map_folder: str):
         region_path = os.path.join(map_folder, "region.txt")
         regions = {}
 
@@ -147,12 +154,16 @@ class EUWorldData:
 
             matches = re.findall(region_pattern, region_data, flags=re.DOTALL)
             for region_id, areas_str in matches:
-                area_names = [area.strip() for area in areas_str.splitlines() if area.strip()]
-                regions[region_id] = area_names
+                region_areas = [area.strip() for area in areas_str.splitlines() if area.strip()]
+
+                areas = {area_id: self.areas[area_id] for area_id in region_areas
+                    if area_id in self.areas}
+
+                regions[region_id] = EURegion(region_id=region_id, name=EURegion.name_from_id(region_id), areas=areas)
 
         return regions
 
-    def load_savefile_provinces(self, map_folder: str, savefile: str):
+    def load_savefile_provinces(self, savefile: str):
         province_data: list[str] = []
         with open(savefile, "r", encoding="latin-1") as file:
             inside = False
@@ -175,4 +186,4 @@ class EUWorldData:
                     if depth == 0:
                         break
 
-        return self.load_world_provinces(map_folder="", province_data=province_data)
+        self.load_world_provinces(province_data=province_data)

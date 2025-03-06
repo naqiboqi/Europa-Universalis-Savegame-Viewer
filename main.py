@@ -82,7 +82,7 @@ def main():
 
                 save_path = os.path.join(SAVES_FOLDER, savefile)
                 print(f"Loading savefile {savefile}....")
-                world.provinces = world.load_savefile_provinces(MAP_FOLDER, save_path)
+                world.load_savefile_provinces(save_path)
                 world_painter = MapPainter(colors=colors, world_data=world)
                 world_painter.set_province_pixel_locations()
                 world_painter.draw_map()

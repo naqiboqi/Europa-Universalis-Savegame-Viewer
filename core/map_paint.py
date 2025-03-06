@@ -1,3 +1,4 @@
+import hashlib
 import math
 import numpy as np
 import tkinter as tk
@@ -73,10 +74,7 @@ class MapPainter:
                     province.pixel_locations.add((x, y))
 
     def draw_map(self):
-        if not self.selector.map_mode:
-            self.selector.map_mode = MapMode.DEVELOPMENT
-
-        map_pixels = self.draw_map_development()
+        map_pixels = self.draw_map_region()
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
@@ -102,7 +100,7 @@ class MapPainter:
                 world_image=self.world_image,
                 hover_label=self.hover_label, 
                 provinces=self.world_data.provinces)
-            self.canvas.bind("<Motion>", self.handler.on_province_hover)
+            self.canvas.bind("<Motion>", self.handler.on_map_hover)
 
         self.root.mainloop()
 
@@ -120,6 +118,7 @@ class MapPainter:
                 else:
                     province_color = self.colors.default_province_colors[province.province_id]
                     print(f"DID NOT FIND TAG: {owner_tag} in TAG COLORS!!!")
+
             elif province_type == ProvinceType.NATIVE:
                 province_color = ProvinceTypeColor.NATIVE.value
             elif province_type == ProvinceType.SEA:
@@ -132,28 +131,61 @@ class MapPainter:
 
         return map_pixels
 
+    def seed_color(self, name: str):
+        hash_value = int(hashlib.md5(name.encode("utf-8")).hexdigest(), 16)
+        r = (hash_value >> 16) & 0xFF
+        g = (hash_value >> 8) & 0xFF
+        b = hash_value & 0xFF
+        return (r, g, b)
+
     def draw_map_area(self):
         world_areas = self.world_data.areas
         map_pixels = np.array(self.world_image)
 
-        province_to_color = {
-            province_id: color for color, province_id
-            in self.colors.default_province_colors.items()}
-
         for area in world_areas.values():
-            provinces = list(area.provinces.values())
-            first_province = provinces[0]
-            province_color = province_to_color[first_province.province_id]
+            area_color = self.seed_color(area.area_id)
 
-            if province_color:
-                for province in area.provinces.values():
-                    for x, y in province.pixel_locations:
-                        map_pixels[y, x] = province_color
+            pixel_locations = set()
+            for province in area.provinces.values():
+                pixel_locations.update(province.pixel_locations)
+
+            for x, y in pixel_locations:
+                map_pixels[y, x] = area_color
 
         return map_pixels
 
     def draw_map_region(self):
-        pass
+        world_regions = self.world_data.regions
+        map_pixels = np.array(self.world_image)
+
+        sea_pixels = set()
+        wasteland_pixels = set()
+        for region in world_regions.values():
+            region_color = self.seed_color(region.region_id)
+
+            region_pixels = set()
+
+            for area in region:
+                for province in area:
+                    if (province.province_type == ProvinceType.OWNED
+                    or province.province_type == ProvinceType.NATIVE):
+                        region_pixels.update(province.pixel_locations)
+
+                    elif province.province_type == ProvinceType.SEA:
+                        sea_pixels.update(province.pixel_locations)
+                    elif province.province_type == ProvinceType.WASTELAND:
+                        wasteland_pixels.update(province.pixel_locations)
+
+            for x, y in region_pixels:
+                map_pixels[y, x] = region_color
+
+            for x, y in sea_pixels:
+                map_pixels[y, x] = ProvinceTypeColor.SEA.value
+
+            for x, y in wasteland_pixels:
+                map_pixels[y, x] = ProvinceTypeColor.WASTELAND.value
+
+        return map_pixels
 
     def development_to_color(self, development: float, max_development: float=200.000):
         normalized = math.log(max(1, development)) / math.log(max(1, max_development))

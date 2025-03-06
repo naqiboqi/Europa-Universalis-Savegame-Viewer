@@ -47,3 +47,19 @@ class EUProvince:
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
+
+    def update(self, data: dict[str, str]):
+        for key, value in data.items():
+            if hasattr(self, key):
+                attr_type = type(getattr(self, key))
+                try:
+                    if attr_type in [str, Optional[str]]:
+                        setattr(self, key, value)
+                    elif attr_type in [int, Optional[int]]:
+                        setattr(self, key, int(value))
+                    elif attr_type in [float, Optional[float]]:
+                        setattr(self, key, float(value))
+                    elif attr_type is ProvinceType:
+                        setattr(self, key, ProvinceType(value))
+                except:
+                    print(f"Error getting data for attribute {key} val {value} for province {self.name}'s attribute type {attr_type}")
