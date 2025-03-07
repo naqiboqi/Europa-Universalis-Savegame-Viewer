@@ -56,40 +56,23 @@ class MapPainter:
         self.tk_image: ImageTk.PhotoImage = None
         self.world_image: Image.Image = None
 
-    def set_province_pixel_locations(self):
-        if not self.world_image:
-            self.world_image = self.world_data.world_image
-
-        province_colors = self.colors.default_province_colors
-        provinces = self.world_data.provinces
-
-        map_pixels = np.array(self.world_image)
-        height, width = map_pixels.shape[:2]
-
-        for x in range(width):
-            for y in range(height):
-                pixel_color = tuple(map_pixels[y, x][:3])
-                if pixel_color in province_colors:
-                    province_id = province_colors[pixel_color]
-                    province = provinces[province_id]
-                    province.pixel_locations.add((x, y))
-
     def draw_map(self):
-        draw_map_mode = self.map_modes.get(self.selector.map_mode, self.draw_map_political)
-        print(type(draw_map_mode))
-        map_pixels = draw_map_mode()
+        print("Drawing map....")
+        #draw_map_mode = self.map_modes.get(self.selector.map_mode, self.draw_map_political)
+        self.world_image = self.world_data.world_image
+        map_pixels = self.draw_map_political()
 
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
         if not self.root:
-            self.root = tk.Tk()
+            self.root = tk.Tk()     
             self.root.title("Map Viewer")
 
             self.canvas = tk.Canvas(self.root, width=1200, height=900)
             self.canvas.pack(fill=tk.BOTH, expand=True)
 
-            self.tk_image = ImageTk.PhotoImage(world_image)
+            self.tk_image = ImageTk.PhotoImage(self.world_image)
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
             self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
@@ -114,6 +97,12 @@ class MapPainter:
         world_provinces = self.world_data.provinces
         map_pixels = np.array(self.world_image)
 
+        province_type_colors = {
+            ProvinceType.NATIVE: ProvinceTypeColor.NATIVE.value,
+            ProvinceType.SEA: ProvinceTypeColor.SEA.value,
+            ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
+        }
+
         for province in world_provinces.values():
             province_type = province.province_type
 
@@ -123,17 +112,11 @@ class MapPainter:
                     province_color = tag_colors[owner_tag]
                 else:
                     province_color = self.seed_color(province.name)
-                    print(f"WARNING: Province {province.name} (ID={province.province_id} has missing owner tag{owner_tag})")
+            else:
+                province_color = province_type_colors.get(province_type, None)
 
-            elif province_type == ProvinceType.NATIVE:
-                province_color = ProvinceTypeColor.NATIVE.value
-            elif province_type == ProvinceType.SEA:
-                province_color = ProvinceTypeColor.SEA.value
-            elif province_type == ProvinceType.WASTELAND:
-                province_color = ProvinceTypeColor.WASTELAND.value
-
-            for x, y in province.pixel_locations:
-                map_pixels[y, x] = province_color
+            x_coords, y_coords = zip(*province.pixel_locations)
+            map_pixels[y_coords, x_coords] = province_color
 
         return map_pixels
 
@@ -166,7 +149,6 @@ class MapPainter:
 
             area_pixels_map[area.area_id] = area_pixels
 
-        # Second pass: Apply colors
         for area_id, area_pixels in area_pixels_map.items():
             area_color = self.seed_color(area_id)
             for x, y in area_pixels:
@@ -184,34 +166,7 @@ class MapPainter:
         world_regions = self.world_data.regions
         map_pixels = np.array(self.world_image)
 
-        sea_pixels = set()
-        wasteland_pixels = set()
-        for region in world_regions.values():
-            region_color = self.seed_color(region.region_id)
-
-            region_pixels = set()
-
-            for area in region:
-                for province in area:
-                    if (province.province_type == ProvinceType.OWNED
-                    or province.province_type == ProvinceType.NATIVE):
-                        region_pixels.update(province.pixel_locations)
-
-                    elif province.province_type == ProvinceType.SEA:
-                        sea_pixels.update(province.pixel_locations)
-                    elif province.province_type == ProvinceType.WASTELAND:
-                        wasteland_pixels.update(province.pixel_locations)
-
-            for x, y in region_pixels:
-                map_pixels[y, x] = region_color
-
-            for x, y in sea_pixels:
-                map_pixels[y, x] = ProvinceTypeColor.SEA.value
-
-            for x, y in wasteland_pixels:
-                map_pixels[y, x] = ProvinceTypeColor.WASTELAND.value
-
-        return map_pixels
+        return None
 
     def development_to_color(self, development: float, max_development: float=200.000):
         normalized = math.log(max(1, development)) / math.log(max(1, max_development))
@@ -222,19 +177,21 @@ class MapPainter:
         world_provinces = self.world_data.provinces
         map_pixels = np.array(self.world_image)
 
-        max_development = max(province.development for province in world_provinces.values())
-        for province in world_provinces.values():
-            province_type = province.province_type
-            if province_type == ProvinceType.SEA:
-                province_color = ProvinceTypeColor.SEA.value
-            elif province_type == ProvinceType.WASTELAND:
-                province_color = ProvinceTypeColor.WASTELAND.value
-            else:
-                development = province.development
-                province_color = self.development_to_color(development, max_development)
+        max_development = max(p.development for p in world_provinces.values())
 
-            for x, y in province.pixel_locations:
-                map_pixels[y, x] = province_color
+        province_type_colors = {
+            ProvinceType.SEA: ProvinceTypeColor.SEA.value,
+            ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
+        }
+
+        for province in world_provinces.values():
+            province_color = province_type_colors.get(province.province_type)
+
+            if province_color is None:
+                province_color = self.development_to_color(province.development, max_development)
+
+            x_coords, y_coords = zip(*province.pixel_locations)
+            map_pixels[y_coords, x_coords] = province_color
 
         return map_pixels
 

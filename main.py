@@ -39,9 +39,8 @@ def get_file_input(name: str, filetypes: tuple[str], folder: str):
 
 def select_main_menu_option():
     options = [
-        "\n1. Load processed map image.",
-        "2. Load save file.", 
-        "3. Close program.\n"]
+        "\n1. Load save file.", 
+        "2. Close program.\n"]
 
     print("\n".join(options))
     option = int(input("Select an option: "))
@@ -51,12 +50,8 @@ def select_main_menu_option():
 
 
 def main():
-    world = EUWorldData.load_world_data(MAP_FOLDER)
-    map_path = os.path.join(MAP_FOLDER, "provinces.bmp")
-    map_bmp = Image.open(map_path).convert("RGB")
-    world.world_image = map_bmp
-
     colors = EUColors.load_colors(MAP_FOLDER, TAGS_FOLDER)
+    world = EUWorldData.load_world_data(MAP_FOLDER, colors)
 
     while True:
         try:
@@ -67,14 +62,6 @@ def main():
 
         match(option):
             case 1:
-                mapfile = get_file_input("mapfile", (".png", ".bmp"), OUTPUT_FOLDER)
-                if not mapfile:
-                    print("No .png or .bmp mapfiles to load, please process a save first.\n")
-                    continue
-
-                map_path = os.path.join(OUTPUT_FOLDER, mapfile)
-                map_bmp = Image.open(map_path).convert("RGB")
-            case 2:
                 savefile = get_file_input("savefile", (".eu4"), SAVES_FOLDER)
                 if not savefile:
                     print("No .eu4 savefiles to load, please get one from your saves folder.\n")
@@ -82,11 +69,10 @@ def main():
 
                 save_path = os.path.join(SAVES_FOLDER, savefile)
                 print(f"Loading savefile {savefile}....")
-                world.load_savefile_provinces(save_path)
+                world.build_world(SAVES_FOLDER, save_path)
                 world_painter = MapPainter(colors=colors, world_data=world)
-                world_painter.set_province_pixel_locations()
                 world_painter.draw_map()
-            case 3:
+            case 2:
                 print("\nExiting...")
                 exit()
 

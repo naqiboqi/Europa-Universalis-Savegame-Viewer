@@ -140,4 +140,4 @@ class MapEventHandler:
         adjusted_y = (canvas_y - self.offset_y) / self.scale_y
 
         province = self.get_hovered_province(int(adjusted_x), int(adjusted_y))
-        self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f}), {province.name}")
+        self.hover_label.config(text=f"Hovering over: ({adjusted_x:.2f}, {adjusted_y:.2f}) Province name {province.name} with ID {province.province_id}. Owned by {province.owner}")

@@ -110,7 +110,7 @@ class EUWorldData:
         }
 
         line_iter = iter(province_data)
-        current_province = None
+        current_province: dict[str, str] = None
 
         try:
             while True:
@@ -141,30 +141,33 @@ class EUWorldData:
 
         return provinces
 
-    def set_province_type(self, prov_data: dict):
-        if not any(dev in prov_data for dev in ["base_tax", "base_production", "base_manpower"]):
-            if "patrol" in prov_data:
-                return ProvinceType.SEA
-            return ProvinceType.WASTELAND
-        if "owner" in prov_data:
-            return ProvinceType.OWNED
-        if "native_size" in prov_data:
+    def set_province_type(self, province_data: dict):
+        is_developed = any(province_data.get(dev) for dev in ["base_tax", "base_production", "base_manpower"])
+
+        if is_developed:
+            if province_data.get("owner"):
+                return ProvinceType.OWNED
+
             return ProvinceType.NATIVE
-        return None
+
+        if province_data.get("patrol"):
+            return ProvinceType.SEA
+
+        return ProvinceType.WASTELAND
 
     def get_province_pixel_locations(self, default_province_colors: dict[tuple[int], int]):
-        map_pixels = np.array(self.world_image)
-        height, width = map_pixels.shape[:2]
+            map_pixels = np.array(self.world_image)
+            height, width = map_pixels.shape[:2]
 
-        province_locations = defaultdict(set)
-        for x in range(width):
-            for y in range(height):
-                pixel_color = tuple(map_pixels[y, x][:3])
-                if pixel_color in default_province_colors:
-                    province_id = default_province_colors[pixel_color]
-                    province_locations[province_id].add((x, y))
+            province_locations = defaultdict(set)
+            for x in range(width):
+                for y in range(height):
+                    pixel_color = tuple(map_pixels[y, x][:3])
+                    if pixel_color in default_province_colors:
+                        province_id = default_province_colors[pixel_color]
+                        province_locations[province_id].add((x, y))
 
-        return dict(province_locations)
+            return dict(province_locations)
 
     def load_world_areas(self, map_folder: str):
         area_path = os.path.join(map_folder, "area.txt")
