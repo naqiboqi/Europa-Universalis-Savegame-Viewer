@@ -6,13 +6,14 @@ from collections import defaultdict
 from PIL import Image
 
 from .colors import EUColors
-from .models import EUArea, EUProvince, ProvinceType, EURegion
-
+from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion
+from .utils import MapUtils
 
 
 class EUWorldData:
     def __init__(self):
         self.areas: dict[str, EUArea] = {}
+        self.countries: dict[str, EUCountry] = {}
         self.provinces: dict[int, EUProvince] = {}
         self.regions: dict[str, EURegion] = {}
         self.world_image: Image.Image = None 
@@ -27,11 +28,15 @@ class EUWorldData:
     def load_world_data(cls, map_folder: str, colors: EUColors):
         print("Loading EU4 world data....")
         world = cls()
+
+        print("Loading countries....")
+        world.countries = world.load_countries(colors)
+
         print("Loading provinces....")
         world.default_province_data = world.load_world_provinces(world.read_province_file(map_folder))
         world.world_image = world.load_world_image(map_folder)
         world.province_locations = world.get_province_pixel_locations(colors.default_province_colors)
-
+        
         print("Loading areas....")
         world.default_area_data = world.load_world_areas(map_folder)
 
@@ -74,6 +79,21 @@ class EUWorldData:
 
             region_data["areas"] = region_areas
             self.regions[region_id] = EURegion.from_dict(region_data)
+
+    def load_countries(self, colors: EUColors):
+        countries: dict[str, EUCountry] = {}
+        for country_tag, country_name in colors.tag_names.items():
+
+            tag_color = colors.tag_colors.get(country_tag)
+            if not tag_color:
+                tag_color = MapUtils.seed_color(country_tag)
+
+            countries[country_tag] = EUCountry(
+                tag=country_tag, 
+                tag_color=tag_color, 
+                name=EUCountry.fix_name(country_name))
+
+        return countries
 
     def load_world_image(self, map_folder: str):
         province_bmp_path = os.path.join(map_folder, "provinces.bmp")
@@ -156,18 +176,18 @@ class EUWorldData:
         return ProvinceType.WASTELAND
 
     def get_province_pixel_locations(self, default_province_colors: dict[tuple[int], int]):
-            map_pixels = np.array(self.world_image)
-            height, width = map_pixels.shape[:2]
+        map_pixels = np.array(self.world_image)
+        height, width = map_pixels.shape[:2]
 
-            province_locations = defaultdict(set)
-            for x in range(width):
-                for y in range(height):
-                    pixel_color = tuple(map_pixels[y, x][:3])
-                    if pixel_color in default_province_colors:
-                        province_id = default_province_colors[pixel_color]
-                        province_locations[province_id].add((x, y))
+        province_locations = defaultdict(set)
+        for x in range(width):
+            for y in range(height):
+                pixel_color = tuple(map_pixels[y, x][:3])
+                if pixel_color in default_province_colors:
+                    province_id = default_province_colors[pixel_color]
+                    province_locations[province_id].add((x, y))
 
-            return dict(province_locations)
+        return dict(province_locations)
 
     def load_world_areas(self, map_folder: str):
         area_path = os.path.join(map_folder, "area.txt")
