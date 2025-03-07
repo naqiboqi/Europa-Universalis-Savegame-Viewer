@@ -5,18 +5,20 @@ import re
 
 
 class EUColors:
-    def __init__(self, default_province_colors: dict[tuple[int], int], tag_colors: dict[str, tuple[int]]):
-        self.default_province_colors = default_province_colors
-        self.tag_colors = tag_colors
+    def __init__(self):
+        self.default_province_colors: dict[tuple[int], int] = {}
+        self.tag_colors: dict[str, tuple[int]] = {}
+        self.tag_names: dict[str, str] = {} 
 
     @classmethod
     def load_colors(cls, map_data_folder: str, tag_data_folder: str):
-        color = cls({}, {})
+        color = cls()
         print("Loading province definitions....")
         color.default_province_colors = color.load_default_province_colors(map_data_folder)
 
         print("Loading tag colors....")
-        color.tag_colors = color.load_tag_colors(tag_data_folder)
+        color.tag_names = color.load_tag_names(tag_data_folder)
+        color.tag_colors = color.load_tag_colors()
 
         return color
 
@@ -34,8 +36,8 @@ class EUColors:
 
         return colors
 
-    def load_tag_colors(self, tag_data_folder: str):
-        tags: dict[str, str] = {}
+    def load_tag_names(self, tag_data_folder: str):
+        tag_names: dict[str, str] = {}
         tag_pattern = r"(\w{3})\s*=\s*\"([^\"]+)\""
 
         tag_files = os.listdir(tag_data_folder)
@@ -49,16 +51,19 @@ class EUColors:
                     if match:
                         tag = match.group(1)
                         filename = match.group(2)
-                        tags[tag] = filename
+                        tag_names[tag] = filename.removesuffix(".txt")
                     else:
                         print(f"Unable to find file or tag for {line}?")
 
+        return tag_names
+
+    def load_tag_colors(self):
         colors: dict[str, tuple[int]] = {}
         color_pattern = r"color\s*=\s*\{\s*(\d+)\s*(\d+)\s*(\d+)\s*\}"
-        for tag, country_file in tags.items():
+        for tag, country_name in self.tag_names.items():
             try:
-                country_path = os.path.join("data", country_file)
-                with open(country_path, "r", encoding="latin-1") as file:
+                country_path = os.path.join("data", country_name)
+                with open(f"{country_path}.txt", "r", encoding="latin-1") as file:
                     for line in file:
                         if not line:
                             continue
