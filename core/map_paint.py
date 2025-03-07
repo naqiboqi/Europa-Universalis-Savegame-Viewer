@@ -6,8 +6,9 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from .colors import EUColors
 from .map_eventhandler import MapEventHandler
-from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
+from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion
 from .utils import MapUtils
+from .world import EUWorldData
 
 
 
@@ -74,7 +75,10 @@ class MapPainter:
                     province.pixel_locations.add((x, y))
 
     def draw_map(self):
-        map_pixels = self.draw_map_area()
+        draw_map_mode = self.map_modes.get(self.selector.map_mode, self.draw_map_political)
+        print(type(draw_map_mode))
+        map_pixels = draw_map_mode()
+
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
 
@@ -97,6 +101,7 @@ class MapPainter:
 
             self.handler = MapEventHandler(
                 canvas=self.canvas,
+                map_mode=self.selector.map_mode,
                 world_image=self.world_image,
                 hover_label=self.hover_label, 
                 provinces=self.world_data.provinces)
@@ -111,19 +116,20 @@ class MapPainter:
 
         for province in world_provinces.values():
             province_type = province.province_type
+
             if province_type == ProvinceType.OWNED:
                 owner_tag = province.owner
-                if owner_tag in tag_colors:
+                if owner_tag and owner_tag in tag_colors:
                     province_color = tag_colors[owner_tag]
                 else:
-                    province_color = self.colors.default_province_colors[province.province_id]
-                    print(f"DID NOT FIND TAG: {owner_tag} in TAG COLORS!!!")
+                    province_color = self.seed_color(province.name)
+                    print(f"WARNING: Province {province.name} (ID={province.province_id} has missing owner tag{owner_tag})")
 
             elif province_type == ProvinceType.NATIVE:
                 province_color = ProvinceTypeColor.NATIVE.value
             elif province_type == ProvinceType.SEA:
                 province_color = ProvinceTypeColor.SEA.value
-            else:
+            elif province_type == ProvinceType.WASTELAND:
                 province_color = ProvinceTypeColor.WASTELAND.value
 
             for x, y in province.pixel_locations:
@@ -145,8 +151,7 @@ class MapPainter:
         sea_pixels = set()
         wasteland_pixels = set()
 
-        # First pass: Collect all pixels for each category
-        area_pixels_map = {}  # Dictionary to store pixels per area
+        area_pixels_map = {}
 
         for area in world_areas.values():
             area_pixels = set()

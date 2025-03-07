@@ -1,7 +1,7 @@
 import tkinter as tk
 
 from PIL import Image, ImageTk
-from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion, EUWorldData
+from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion
 from .utils import MapUtils
 
 
@@ -10,10 +10,12 @@ class MapEventHandler:
     def __init__(
         self,
         canvas: tk.Canvas,
+        map_mode: MapMode,
         world_image: Image.Image,
         hover_label: tk.Label, 
         provinces: dict[int, EUProvince]):
         self.canvas = canvas
+        self.map_mode = map_mode
         self.world_image = world_image
         self.hover_label = hover_label
         self.provinces = provinces
