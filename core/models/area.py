@@ -11,6 +11,10 @@ class EUArea:
     provinces: dict[int, EUProvince]|list[int]
 
     @classmethod
+    def from_dict(cls, data: dict[str, str]):
+        return cls(**data)
+
+    @classmethod
     def name_from_id(cls, area_id: str):
         name_split = area_id.removesuffix("area").replace("_", " ").split()
         return " ".join(name.capitalize() for name in name_split)
