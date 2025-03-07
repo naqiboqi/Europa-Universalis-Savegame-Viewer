@@ -11,8 +11,12 @@ class EURegion:
     areas: dict[str, EUArea]
 
     @classmethod
-    def name_from_id(cls, area_id: str):
-        name_split = area_id.removesuffix("region").replace("_", " ").split()
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+    @classmethod
+    def name_from_id(cls, region_id: str):
+        name_split = region_id.removesuffix("region").replace("_", " ").split()
         return " ".join(name.capitalize() for name in name_split)
 
     def __iter__(self):
