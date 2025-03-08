@@ -190,12 +190,16 @@ class EUWorldData:
         height, width = map_pixels.shape[:2]
 
         province_locations = defaultdict(set)
-        for x in range(width):
-            for y in range(height):
-                pixel_color = tuple(map_pixels[y, x][:3])
-                if pixel_color in default_province_colors:
-                    province_id = default_province_colors[pixel_color]
-                    province_locations[province_id].add((x, y))
+        pixel_data = map_pixels[:, :, :3]
+        flat = pixel_data.reshape((-1, 3))
+
+        for i, pixel in enumerate(flat):
+            pixel_tuple = tuple(pixel)
+            if pixel_tuple in default_province_colors:
+                province_id = default_province_colors[pixel_tuple]
+                x = i % width
+                y = i // width
+                province_locations[province_id].add((x, y))
 
         return dict(province_locations)
 
