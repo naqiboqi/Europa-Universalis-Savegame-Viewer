@@ -1,4 +1,3 @@
-import hashlib
 import math
 import numpy as np
 import tkinter as tk
@@ -93,7 +92,6 @@ class MapPainter:
         self.root.mainloop()
 
     def draw_map_political(self):
-        tag_colors = self.colors.tag_colors
         world_provinces = self.world_data.provinces
         map_pixels = np.array(self.world_image)
 
@@ -107,11 +105,8 @@ class MapPainter:
             province_type = province.province_type
 
             if province_type == ProvinceType.OWNED:
-                owner_tag = province.owner
-                if owner_tag and owner_tag in tag_colors:
-                    province_color = tag_colors[owner_tag]
-                else:
-                    province_color = self.seed_color(province.name)
+                owner_country = province.owner
+                province_color = owner_country.tag_color
             else:
                 province_color = province_type_colors.get(province_type, None)
 
@@ -119,13 +114,6 @@ class MapPainter:
             map_pixels[y_coords, x_coords] = province_color
 
         return map_pixels
-
-    def seed_color(self, name: str):
-        hash_value = int(hashlib.md5(name.encode("utf-8")).hexdigest(), 16)
-        r = (hash_value >> 16) & 0xFF
-        g = (hash_value >> 8) & 0xFF
-        b = hash_value & 0xFF
-        return (r, g, b)
 
     def draw_map_area(self):
         world_areas = self.world_data.areas
@@ -150,7 +138,7 @@ class MapPainter:
             area_pixels_map[area.area_id] = area_pixels
 
         for area_id, area_pixels in area_pixels_map.items():
-            area_color = self.seed_color(area_id)
+            area_color = MapUtils.seed_color(area_id)
             for x, y in area_pixels:
                 map_pixels[y, x] = area_color
 

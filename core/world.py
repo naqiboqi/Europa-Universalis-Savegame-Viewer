@@ -36,7 +36,7 @@ class EUWorldData:
         world.default_province_data = world.load_world_provinces(world.read_province_file(map_folder))
         world.world_image = world.load_world_image(map_folder)
         world.province_locations = world.get_province_pixel_locations(colors.default_province_colors)
-        
+
         print("Loading areas....")
         world.default_area_data = world.load_world_areas(map_folder)
 
@@ -130,7 +130,7 @@ class EUWorldData:
         }
 
         line_iter = iter(province_data)
-        current_province: dict[str, str] = None
+        current_province: dict[str, str|EUCountry] = None
 
         try:
             while True:
@@ -154,7 +154,17 @@ class EUWorldData:
                 for key, pattern in patterns.items():
                     match = re.search(pattern, line)
                     if match and not key in current_province:
-                        current_province[key] = match.group(1)
+                        if key == "owner":
+                            country_tag = match.group(1)
+                            if not country_tag in self.countries:
+                                country = EUCountry(tag=country_tag, tag_color=MapUtils.seed_color(country_tag))
+                                self.countries[country_tag] = country
+                            else:
+                                country = self.countries[country_tag]
+
+                            current_province[key] = self.countries[country_tag]
+                        else:
+                            current_province[key] = match.group(1)
 
         except StopIteration:
             pass

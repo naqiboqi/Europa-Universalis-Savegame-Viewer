@@ -1,7 +1,7 @@
 import os
 
-from PIL import Image
-from core import *
+from core import EUColors, EUWorldData, MapPainter
+
 
 
 MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "map"))

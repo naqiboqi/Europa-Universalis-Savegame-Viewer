@@ -23,7 +23,7 @@ class EUProvince:
     province_id: int
     name: str
     province_type: ProvinceType
-    owner: Optional[str] = None
+    owner: Optional["EUCountry"] = None
     capital: Optional[str] = None
     culture: Optional[str] = None
     religion: Optional[str] = None
