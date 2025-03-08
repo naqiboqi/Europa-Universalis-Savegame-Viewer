@@ -59,7 +59,7 @@ class MapPainter:
         print("Drawing map....")
         #draw_map_mode = self.map_modes.get(self.selector.map_mode, self.draw_map_political)
         self.world_image = self.world_data.world_image
-        map_pixels = self.draw_map_political()
+        map_pixels = self.draw_map_area()
 
         world_image = Image.fromarray(map_pixels)
         self.world_image = world_image
@@ -119,34 +119,18 @@ class MapPainter:
         world_areas = self.world_data.areas
         map_pixels = np.array(self.world_image)
 
-        sea_pixels = set()
-        wasteland_pixels = set()
-
-        area_pixels_map = {}
-
         for area in world_areas.values():
-            area_pixels = set()
+            area_pixels = area.pixel_locations
+            if area_pixels:
+                if area.is_land_area:
+                    area_color = MapUtils.seed_color(area.area_id)
+                elif area.is_sea_area:
+                    area_color = ProvinceTypeColor.SEA.value
+                elif area.is_wasteland_area:
+                    area_color = ProvinceTypeColor.WASTELAND.value
 
-            for province in area:
-                if province.province_type in {ProvinceType.OWNED, ProvinceType.NATIVE}:
-                    area_pixels.update(province.pixel_locations)
-                elif province.province_type == ProvinceType.SEA:
-                    sea_pixels.update(province.pixel_locations)
-                elif province.province_type == ProvinceType.WASTELAND:
-                    wasteland_pixels.update(province.pixel_locations)
-
-            area_pixels_map[area.area_id] = area_pixels
-
-        for area_id, area_pixels in area_pixels_map.items():
-            area_color = MapUtils.seed_color(area_id)
-            for x, y in area_pixels:
-                map_pixels[y, x] = area_color
-
-        for x, y in sea_pixels:
-            map_pixels[y, x] = ProvinceTypeColor.SEA.value
-
-        for x, y in wasteland_pixels:
-            map_pixels[y, x] = ProvinceTypeColor.WASTELAND.value
+                x_coords, y_coords = zip(*area_pixels)
+                map_pixels[y_coords, x_coords] = area_color
 
         return map_pixels
 
