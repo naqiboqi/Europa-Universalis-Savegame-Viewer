@@ -35,7 +35,7 @@ class MapUtils:
         random = Random(hash_value)
 
         hue = random.uniform(0, 1)
-        saturation = random.uniform(0.6, 0.9)
+        saturation = random.uniform(0.4, 0.7)
         brightness = random.uniform(0.75, 0.85)
 
         r, g, b = colorsys.hsv_to_rgb(hue, saturation, brightness)
