@@ -19,6 +19,10 @@ class EURegion:
         name_split = region_id.removesuffix("region").replace("_", " ").split()
         return " ".join(name.capitalize() for name in name_split)
 
+    @property
+    def pixel_locations(self):
+        return set(loc for area in self for loc in area.pixel_locations)
+
     def __iter__(self):
         for area in self.areas.values():
             yield area
