@@ -216,7 +216,7 @@ class EUWorldData:
             for line in file:
                 line = line.strip()
 
-                if "color" in line:
+                if re.match(r"^\s*color\s*=", line):
                     continue
 
                 match = pattern.match(line)
@@ -225,7 +225,7 @@ class EUWorldData:
                         areas[area_id] = {
                             "area_id": area_id,
                             "name": EUArea.name_from_id(area_id),
-                            "provinces": {p for p in area_provinces if p in self.default_province_data},  # Dict key check
+                            "provinces": {p for p in area_provinces if p in self.default_province_data}
                         }
 
                     area_id = match.group(1)
@@ -252,7 +252,7 @@ class EUWorldData:
         regions: dict[str, dict[str, str|set[int]]] = {}
 
         with open(region_path, "r", encoding="latin-1") as file:
-            region_pattern = r"(\w+_region)\s*=\s*\{.*?areas\s*=\s*\{([^}]+)\}\s*\}"
+            region_pattern = r"(\w+_region)\s*=\s*\{[^}]*?areas\s*=\s*\{([^}]+)\}"
             region_data = file.read()
 
             matches = re.findall(region_pattern, region_data, flags=re.DOTALL)
