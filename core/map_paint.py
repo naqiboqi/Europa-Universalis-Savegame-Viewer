@@ -3,12 +3,17 @@ import numpy as np
 import tkinter as tk
 
 from PIL import Image, ImageTk
+from typing import Optional
 from .colors import EUColors
 from .map_eventhandler import MapEventHandler
 from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion
 from .utils import MapUtils
 from .world import EUWorldData
 
+
+
+CANVAS_WIDTH = 1200
+CANVAS_HEIGHT = 700
 
 
 class MapPainter:
@@ -33,9 +38,33 @@ class MapPainter:
         self.tk_image: ImageTk.PhotoImage = None
         self.world_image: Image.Image = None
 
+    def create_handler(self, offset_x: Optional[int]=None, offset_y: Optional[int]=None):
+        if not self.handler:
+            self.handler = MapEventHandler(
+                canvas=self.canvas,
+                canvas_id=self.canvas_id,
+                map_mode=self.map_mode,
+                world_image=self.world_image,
+                hover_label=self.hover_label, 
+                provinces=self.world_data.provinces,
+                offset_x=offset_x,
+                offset_y=offset_y)
+        else:
+            data = {
+                "canvas": self.canvas,
+                "canvas_id": self.canvas_id,
+                "map_mode": self.map_mode,
+                "world_image": self.world_image,
+                "hover_label": self.hover_label,
+                "provinces": self.world_data.provinces
+            }
+            self.handler.update(data)
+        self.canvas.bind("<Motion>", self.handler.on_map_hover)
+
     def set_map_mode(self, map_mode: MapMode):
-        self.map_mode = map_mode
-        self.draw_map()
+        if not self.map_mode == map_mode:
+            self.map_mode = map_mode
+            self.draw_map()
 
     def draw_map(self):
         print("Drawing map....")
@@ -59,8 +88,8 @@ class MapPainter:
                     text=map_mode.name, 
                     command=lambda m=map_mode: self.set_map_mode(m))
                 button.pack(fill=tk.X, padx=5, pady=5)
-            
-            self.canvas = tk.Canvas(self.root, width=1200, height=600)
+
+            self.canvas = tk.Canvas(self.root, width=CANVAS_WIDTH, height=CANVAS_HEIGHT)
             self.canvas.pack(fill=tk.BOTH, expand=True)
 
             self.quit_button = tk.Button(self.root, text="Quit", command=self.root.destroy)
@@ -69,32 +98,24 @@ class MapPainter:
             self.hover_label = tk.Label(self.root, text="Choose a Province", bg="white")
             self.hover_label.pack()
 
-            self.handler = MapEventHandler(
-                canvas=self.canvas,
-                map_mode=self.map_mode,
-                world_image=self.world_image,
-                hover_label=self.hover_label, 
-                provinces=self.world_data.provinces)
-            self.canvas.bind("<Motion>", self.handler.on_map_hover)
+            offset_x = (CANVAS_WIDTH - self.world_image.width) // 2
+            offset_y = (CANVAS_HEIGHT - self.world_image.height) // 2
+            self.canvas_id = self.canvas.create_image(offset_x, offset_y, anchor=tk.NW, image=self.tk_image)
+            self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
+            self.create_handler(offset_x=offset_x, offset_y=offset_y)
             self.root.mainloop()
         else:
             self.tk_image = ImageTk.PhotoImage(self.world_image)
             if self.canvas_id:
                 self.canvas.itemconfig(self.canvas_id, image=self.tk_image)
             else:
-                x_center = (self.canvas.winfo_width() - self.world_image.width) // 2
-                y_center = (self.canvas.winfo_height() - self.world_image.height) // 2
-                self.canvas_id = self.canvas.create_image(x_center, y_center, anchor=tk.CENTER, image=self.tk_image)
+                offset_x = (CANVAS_WIDTH - self.world_image.width) // 2
+                offset_y = (CANVAS_HEIGHT - self.world_image.height) // 2
+                self.canvas_id = self.canvas.create_image(offset_x, offset_y, anchor=tk.NW, image=self.tk_image)
 
             self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
-            self.handler = MapEventHandler(
-                canvas=self.canvas,
-                map_mode=self.map_mode,
-                world_image=self.world_image,
-                hover_label=self.hover_label, 
-                provinces=self.world_data.provinces)
-            self.canvas.bind("<Motion>", self.handler.on_map_hover)
+            self.create_handler()
 
     def draw_map_political(self):
         world_provinces = self.world_data.provinces
@@ -143,7 +164,14 @@ class MapPainter:
         world_regions = self.world_data.regions
         map_pixels = np.array(self.world_image)
 
-        return None
+        for region in world_regions.values():
+            region_pixels = region.pixel_locations
+            if region_pixels:
+                region_color = MapUtils.seed_color(region.region_id)
+                x_coords, y_coords = zip(*region_pixels)
+                map_pixels[y_coords, x_coords] = region_color
+
+        return map_pixels
 
     def development_to_color(self, development: float, max_development: float=200.000):
         normalized = math.log(max(1, development)) / math.log(max(1, max_development))
