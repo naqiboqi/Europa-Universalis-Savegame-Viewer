@@ -205,11 +205,12 @@ class EUWorldData:
 
     def load_world_areas(self, map_folder: str):
         area_path = os.path.join(map_folder, "area.txt")
-        areas: dict[str, dict[str, str|set[int]]] = {}
+        areas: dict[str, dict[str, str | set[int]]] = {}
 
-        pattern = re.compile(r'(\w+_area)\s*=\s*\{')
+        pattern = re.compile(r'(\w+)\s*=\s*\{')
+
         area_id = None
-        area_provinces: list[int] = []
+        area_provinces = set()
 
         with open(area_path, "r", encoding="latin-1") as file:
             for line in file:
@@ -222,27 +223,27 @@ class EUWorldData:
                 if match:
                     if area_id and area_provinces:
                         areas[area_id] = {
-                            "area_id" : area_id,
-                            "name" : EUArea.name_from_id(area_id),
-                            "provinces": set(province_id for province_id in area_provinces
-                                if province_id in self.default_province_data)}
+                            "area_id": area_id,
+                            "name": EUArea.name_from_id(area_id),
+                            "provinces": {p for p in area_provinces if p in self.default_province_data},  # Dict key check
+                        }
 
                     area_id = match.group(1)
-                    area_provinces = []
+                    area_provinces = set()
                     continue
 
                 if line == "}":
                     if area_id and area_provinces:
                         areas[area_id] = {
-                            "area_id" : area_id,
-                            "name" : EUArea.name_from_id(area_id),
-                            "provinces": set(province_id for province_id in area_provinces
-                                if province_id in self.default_province_data)}
+                            "area_id": area_id,
+                            "name": EUArea.name_from_id(area_id),
+                            "provinces": {p for p in area_provinces if p in self.default_province_data},  # Dict key check
+                        }
 
                     area_id = None
                     continue
 
-                area_provinces.extend(map(int, re.findall(r"\b\d+\b", line)))
+                area_provinces.update(map(int, re.findall(r"\b\d+\b", line)))
 
         return areas
 
