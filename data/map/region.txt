@@ -1150,6 +1150,7 @@ southeast_america_region =  { # 9 areas
 		upper_american_georgia_area
 		florida_area
 		north_florida_area
+		big_bend_fl_area
 	}
 	monsoon = {
 		00.06.01
@@ -1189,7 +1190,7 @@ great_lakes_region = { # 7 areas
 rio_grande_region = { # 10 areas
 	areas = {
 		lower_plains_area
-		llano_estacado_area # Brian; fixed duplicate
+		llano_estacado_area
 		texas_area
 		coastal_prarie_area
 		rio_grande_area
@@ -1342,7 +1343,7 @@ central_america_region = { # 10 areas
 		honduras_area
 		nicaragua_area
 		costa_rica_area
-		panama_area # Brian; moved from colombia_region
+		panama_area
 	}
 	monsoon = {
 		00.06.01
