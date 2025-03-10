@@ -20,6 +20,14 @@ class EURegion:
         return " ".join(name.capitalize() for name in name_split)
 
     @property
+    def is_land_region(self):
+        return any(area.is_land_area for area in self)
+
+    @property
+    def is_sea_region(self):
+        return any(area.is_sea_area for area in self)
+
+    @property
     def pixel_locations(self):
         return set(loc for area in self for loc in area.pixel_locations)
 
