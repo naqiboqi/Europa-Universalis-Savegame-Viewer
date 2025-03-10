@@ -43,20 +43,20 @@ class MapPainter:
             self.handler = MapEventHandler(
                 canvas=self.canvas,
                 canvas_id=self.canvas_id,
-                map_mode=self.map_mode,
-                world_image=self.world_image,
                 hover_label=self.hover_label, 
-                provinces=self.world_data.provinces,
+                map_mode=self.map_mode,
+                world_data=self.world_data,
+                world_image=self.world_image,
                 offset_x=offset_x,
                 offset_y=offset_y)
         else:
             data = {
                 "canvas": self.canvas,
                 "canvas_id": self.canvas_id,
-                "map_mode": self.map_mode,
-                "world_image": self.world_image,
                 "hover_label": self.hover_label,
-                "provinces": self.world_data.provinces
+                "map_mode": self.map_mode,
+                "world_data": self.world_data,
+                "world_image": self.world_image,
             }
             self.handler.update(data)
         self.canvas.bind("<Motion>", self.handler.on_map_hover)
