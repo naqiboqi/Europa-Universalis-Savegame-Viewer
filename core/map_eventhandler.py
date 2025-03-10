@@ -108,36 +108,55 @@ class MapEventHandler:
         if not province:
             self.hover_label.config(text=f"Coords: ({adjusted_x:.2f}, {adjusted_y:.2f}) No province found.")
             return
-
-        if self.map_mode in {MapMode.POLITICAL, MapMode.DEVELOPMENT, MapMode.RELIGION}:
+    
+        area = self.world_data.province_to_area.get(province.province_id)
+        if self.map_mode in {MapMode.POLITICAL, MapMode.RELIGION}:
             province_type = province.province_type
 
             if province_type == ProvinceType.OWNED:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The province of {province.name} with ID {province.province_id}. Owned by {province.owner})"
+                region = self.world_data.province_to_region.get(province.province_id)
+                label = f"""
+                Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The province of {province.name} with ID {province.province_id}
+                (In area: {area.name} -> Region: {region.name}).
+                Owned by {province.owner}"""
             elif province_type == ProvinceType.NATIVE:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The native lands of {province.name} with ID {province.province_id})"
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The native lands of {province.name} with ID {province.province_id}"
             elif province_type == ProvinceType.SEA:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The waters of {province.name} with ID {province.province_id})"
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The waters of {province.name} with ID {province.province_id}"
             elif province_type == ProvinceType.WASTELAND:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The wasteland of {province.name} with ID {province.province_id})"
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The wasteland of {province.name} with ID {province.province_id}"
+
+        elif self.map_mode == MapMode.DEVELOPMENT:
+            if province.province_type in {ProvinceType.OWNED, ProvinceType.NATIVE}:
+                label = f"""
+                Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The province of {province.name} with ID {province.province_id}
+                Tax: {province.base_tax}, Production: {province.base_production}, Manpower: {province.base_manpower}"""
+            elif province.province_type == ProvinceType.SEA:
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The waters of {province.name} with ID {province.province_id}"
+            elif province_type == ProvinceType.WASTELAND:
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The wasteland of {province.name} with ID {province.province_id}"
 
         elif self.map_mode == MapMode.AREA:
-            area = self.world_data.province_to_area.get(province.province_id)
             if area:
                 if area.area_id == "wasteland_area":
-                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The wasteland of {province.name} with ID {province.province_id})"
-                elif area.area_id == "lakes_area":
-                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The waters of {province.name} with ID {province.province_id})"
+                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The wasteland of {province.name} with ID {province.province_id}"
+                elif area.area_id == "lake_area":
+                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The waters of {province.name} with ID {province.province_id}"
                 else:
-                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The area of {area.name} with ID {area.area_id})"
+                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The area of {area.name} with ID {area.area_id}"
             else:
                 label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f} Unknown area...."
 
         elif self.map_mode == MapMode.REGION:
             region = self.world_data.province_to_region.get(province.province_id)
-            if region:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f} The region of {region.name} with ID {region.region_id}"
+            if area.area_id == "wasteland_area":
+                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}, The wasteland of {province.name} with ID {province.province_id})"
+            elif area.area_id == "lake_area":
+                label = label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f}), The waters of {province.name} with ID {province.province_id}"
             else:
-                label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f} Unknown region...."
+                if region:
+                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f} The region of {region.name} with ID {region.region_id}"
+                else:
+                    label = f"Coords ({adjusted_x:.2f} {adjusted_y:.2f} Unknown region...."
 
         self.hover_label.config(text=label)
