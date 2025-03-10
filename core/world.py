@@ -16,6 +16,8 @@ class EUWorldData:
         self.countries: dict[str, EUCountry] = {}
         self.provinces: dict[int, EUProvince] = {}
         self.regions: dict[str, EURegion] = {}
+        self.province_to_area: dict[int, EUArea] = {}
+        self.province_to_region: dict[int, EURegion] = {}
         self.world_image: Image.Image = None 
 
         self.default_province_data: dict[int, dict[str, str]] = {}
@@ -69,6 +71,10 @@ class EUWorldData:
             area_data["provinces"] = area_provinces
             self.areas[area_id] = EUArea.from_dict(area_data)
 
+        for area_id, area in self.areas.items():
+            for province_id in area.provinces:
+                self.province_to_area[province_id] = area
+
         print("Building regions....")
         for region_id, region_data in self.default_region_data.items():
             region_area_ids = region_data["areas"]
@@ -79,6 +85,11 @@ class EUWorldData:
 
             region_data["areas"] = region_areas
             self.regions[region_id] = EURegion.from_dict(region_data)
+
+        for region_id, region in self.regions.items():
+            for area in region:
+                for province_id in area.provinces:
+                    self.province_to_region[province_id] = region
 
     def load_countries(self, colors: EUColors):
         countries: dict[str, EUCountry] = {}
