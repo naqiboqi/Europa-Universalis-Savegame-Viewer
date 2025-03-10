@@ -12,8 +12,8 @@ from .world import EUWorldData
 
 
 
-CANVAS_WIDTH = 1200
-CANVAS_HEIGHT = 700
+CANVAS_WIDTH = 700
+CANVAS_HEIGHT = 400
 
 
 class MapPainter:
@@ -66,6 +66,34 @@ class MapPainter:
             self.map_mode = map_mode
             self.draw_map()
 
+    def create_canvas(self):
+        self.root = tk.Tk()     
+        self.root.title("Map Viewer")
+
+        self.tk_image = ImageTk.PhotoImage(self.world_image)
+
+        button_frame = tk.Frame(self.root)
+        button_frame.pack(side=tk.TOP, fill=tk.X)
+        for map_mode in self.map_modes.keys():
+            button = tk.Button(
+                button_frame, 
+                text=map_mode.name, 
+                command=lambda m=map_mode: self.set_map_mode(m))
+            button.pack(fill=tk.X, padx=5, pady=5)
+
+        self.canvas = tk.Canvas(self.root, width=CANVAS_WIDTH, height=CANVAS_HEIGHT)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.quit_button = tk.Button(self.root, text="Quit", command=self.root.destroy)
+        self.quit_button.pack()
+
+        self.hover_label = tk.Label(self.root, text="Choose a Province", bg="white")
+        self.hover_label.pack()
+
+        offset_x = (CANVAS_WIDTH - self.world_image.width) // 2
+        offset_y = (CANVAS_HEIGHT - self.world_image.height) // 2
+        return offset_x, offset_y
+
     def draw_map(self):
         print("Drawing map....")
 
@@ -75,35 +103,11 @@ class MapPainter:
 
         self.world_image = Image.fromarray(map_pixels)
         if not self.root:
-            self.root = tk.Tk()     
-            self.root.title("Map Viewer")
-
-            self.tk_image = ImageTk.PhotoImage(self.world_image)
-
-            button_frame = tk.Frame(self.root)
-            button_frame.pack(side=tk.TOP, fill=tk.X)
-            for map_mode in self.map_modes.keys():
-                button = tk.Button(
-                    button_frame, 
-                    text=map_mode.name, 
-                    command=lambda m=map_mode: self.set_map_mode(m))
-                button.pack(fill=tk.X, padx=5, pady=5)
-
-            self.canvas = tk.Canvas(self.root, width=CANVAS_WIDTH, height=CANVAS_HEIGHT)
-            self.canvas.pack(fill=tk.BOTH, expand=True)
-
-            self.quit_button = tk.Button(self.root, text="Quit", command=self.root.destroy)
-            self.quit_button.pack()
-
-            self.hover_label = tk.Label(self.root, text="Choose a Province", bg="white")
-            self.hover_label.pack()
-
-            offset_x = (CANVAS_WIDTH - self.world_image.width) // 2
-            offset_y = (CANVAS_HEIGHT - self.world_image.height) // 2
+            offset_x, offset_y = self.create_canvas()
             self.canvas_id = self.canvas.create_image(offset_x, offset_y, anchor=tk.NW, image=self.tk_image)
             self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
-
             self.create_handler(offset_x=offset_x, offset_y=offset_y)
+
             self.root.mainloop()
         else:
             self.tk_image = ImageTk.PhotoImage(self.world_image)
@@ -167,9 +171,27 @@ class MapPainter:
         for region in world_regions.values():
             region_pixels = region.pixel_locations
             if region_pixels:
-                region_color = MapUtils.seed_color(region.region_id)
+                if region.is_land_region:
+                    region_color = MapUtils.seed_color(region.region_id)
+                elif region.is_sea_region:
+                    region_color = ProvinceTypeColor.SEA.value
+
                 x_coords, y_coords = zip(*region_pixels)
                 map_pixels[y_coords, x_coords] = region_color
+        
+        wasteland_pixels = set()
+        for province in self.world_data.areas.get("wasteland_area"):
+            wasteland_pixels.update(province.pixel_locations)
+
+        x_wasteland_coords, y_wasteland_coords = zip(*wasteland_pixels)
+        map_pixels[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
+        
+        lake_pixels = set()
+        for province in self.world_data.areas.get("lake_area"):
+            lake_pixels.update(province.pixel_locations)
+
+        x_lake_coords, y_lake_coords = zip(*lake_pixels)
+        map_pixels[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
 
         return map_pixels
 
@@ -182,7 +204,7 @@ class MapPainter:
         world_provinces = self.world_data.provinces
         map_pixels = np.array(self.world_image)
 
-        max_development = max(p.development for p in world_provinces.values())
+        max_development = max(province.development for province in world_provinces.values())
 
         province_type_colors = {
             ProvinceType.SEA: ProvinceTypeColor.SEA.value,
