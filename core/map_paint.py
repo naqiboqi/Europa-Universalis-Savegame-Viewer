@@ -1,17 +1,14 @@
+import io
 import math
 import numpy as np
+import FreeSimpleGUI as fsg
 
-from PIL import Image, ImageTk
-from typing import Optional
+from PIL import Image
 from .colors import EUColors
 from .models import EUArea, EUProvince, MapMode, ProvinceType, ProvinceTypeColor, EURegion
 from .utils import MapUtils
 from .world import EUWorldData
 
-
-
-CANVAS_WIDTH = 700
-CANVAS_HEIGHT = 400
 
 
 class MapPainter:
@@ -26,6 +23,15 @@ class MapPainter:
             MapMode.DEVELOPMENT: self.draw_map_development,
             MapMode.RELIGION: self.draw_map_religion
         }
+
+        self.world_image = self.world_data.world_image
+
+    def draw_map(self):
+        draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
+        map_pixels = draw_method()
+
+        self.world_image = Image.fromarray(map_pixels)
+        return self.world_image
 
     def draw_map_political(self):
         world_provinces = self.world_data.provinces
@@ -91,7 +97,7 @@ class MapPainter:
 
         x_wasteland_coords, y_wasteland_coords = zip(*wasteland_pixels)
         map_pixels[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
-        
+
         lake_pixels = set()
         for province in self.world_data.areas.get("lake_area"):
             lake_pixels.update(province.pixel_locations)

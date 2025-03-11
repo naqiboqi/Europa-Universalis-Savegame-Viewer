@@ -1,6 +1,6 @@
 import os
 
-from core import EUColors, EUWorldData, MapPainter
+from core import EUColors, EUWorldData, MapDisplayer, MapPainter
 
 
 
@@ -70,8 +70,10 @@ def main():
                 save_path = os.path.join(SAVES_FOLDER, savefile)
                 print(f"Loading savefile {savefile}....")
                 world.build_world(SAVES_FOLDER, save_path)
-                world_painter = MapPainter(colors=colors, world_data=world)
-                world_painter.draw_map()
+
+                map_painter = MapPainter(colors=colors, world_data=world)
+                map_display = MapDisplayer(painter=map_painter)
+                map_display.display_map()
             case 2:
                 print("\nExiting...")
                 exit()
