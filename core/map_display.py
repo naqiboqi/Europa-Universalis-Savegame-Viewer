@@ -1,5 +1,6 @@
-import FreeSimpleGUI as fsg
+import FreeSimpleGUI as sg
 import io
+import tkinter as tk
 
 from PIL import Image, ImageTk
 from . import MapPainter
@@ -11,19 +12,111 @@ class MapDisplayer:
     def __init__(self, painter: MapPainter):
         self.painter = painter
 
-        self.pan_x = 0
-        self.pan_y = 0
-        self.dragging = False
-        self.start_x = 0
-        self.start_y = 0
+        self.canvas_size = ()
+        self.image_id = None
+        self.map_image = None
+        self.tk_image = None
+
+        self.max_scale = 5.0
+        self.map_scale = 1.0
+        self.min_scale = 1.0
+        self.offset_x = 0
+        self.offset_y = 0
+        self.scale_factor = 1.1
 
     def image_to_bytes(self, image: Image.Image):
         with io.BytesIO() as output:
             image.save(output, format="PNG")
             return output.getvalue()
 
-    def display_map(self):
-        fsg.theme("DarkBlue")
+    def image_to_tkimage(self, image: Image.Image):
+        return ImageTk.PhotoImage(image)
 
-        map_image = self.painter.draw_map()
-        max_width, max_height = 1200, 800
+    def scale_image_to_fit(self, map_image: Image.Image):
+        width, height = map_image.size
+        canvas_width, canvas_height = self.canvas_size
+        self.map_scale = min(canvas_width / width, canvas_height / height)
+        self.min_scale = self.map_scale
+
+        return map_image.resize((self.canvas_size), Image.Resampling.LANCZOS)
+
+    def zoom_map(self, cursor_loc: tuple[int, int], zoom_in: bool=True):
+        cursor_x, cursor_y = cursor_loc
+        canvas_width, canvas_height = self.canvas_size
+
+        if zoom_in and self.map_scale >= self.max_scale:
+            return self.map_image
+
+        if not zoom_in and self.map_scale <= self.min_scale:
+            return self.map_image
+
+        new_scale = self.map_scale * self.scale_factor if zoom_in else self.map_scale / self.scale_factor
+        new_scale = min(self.max_scale, max(self.min_scale, new_scale))
+
+        scaled_width = int(self.original_map.width * new_scale)
+        scaled_height = int(self.original_map.height * new_scale)
+
+        map_cursor_x = (cursor_x - self.offset_x) / self.map_scale
+        map_cursor_y = (cursor_y - self.offset_y) / self.map_scale
+
+        new_offset_x = cursor_x - map_cursor_x * new_scale
+        new_offset_y = cursor_y - map_cursor_y * new_scale
+
+        new_offset_x = min(0, max(canvas_width - scaled_width, new_offset_x))
+        new_offset_y = min(0, max(canvas_height - scaled_height, new_offset_y))
+
+        self.offset_x = new_offset_x
+        self.offset_y = new_offset_y
+        self.map_scale = new_scale
+
+        return self.original_map.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
+
+    def display_map(self):
+        sg.theme("DarkBlue")
+
+        self.original_map = self.painter.draw_map()
+        map_width, map_height = self.original_map.size
+
+        canvas_width = 800
+        canvas_height = int(canvas_width * (map_height / map_width))
+        self.canvas_size = (canvas_width, canvas_height)
+
+        self.map_image = self.scale_image_to_fit(self.original_map)
+
+        layout = [[sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-"), sg.Button("Exit")]]
+
+        window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
+        window.move_to_center()
+
+        canvas = window["-CANVAS-"]
+        tk_canvas: tk.Canvas = canvas.TKCanvas
+
+        self.tk_image = self.image_to_tkimage(self.map_image)
+        self.image_id = tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+
+        while True:
+            event, values = window.read()
+            if not event:
+                continue
+
+            if event == "WindowClick":
+                print("Clicked the window!!!")
+
+            if event.startswith("MouseWheel"):
+                cursor_x, cursor_y = window.mouse_location()
+                cursor_x -= window.current_location()[0]
+                cursor_y -= window.current_location()[1]
+
+                if event == "MouseWheel:Up":
+                    self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=True)
+                elif event == "MouseWheel:Down":
+                    self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=False)
+
+                self.tk_image = self.image_to_tkimage(self.map_image)
+                tk_canvas.itemconfig(self.image_id, image=self.tk_image)
+                tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+
+            if event in (sg.WIN_CLOSED, "Exit"):
+                break
+
+        window.close()
