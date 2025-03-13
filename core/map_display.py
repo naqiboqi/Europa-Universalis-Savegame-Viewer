@@ -17,11 +17,14 @@ class MapDisplayer:
         self.map_image = None
         self.tk_image = None
 
+        self.dragging = False
         self.max_scale = 5.0
         self.map_scale = 1.0
         self.min_scale = 1.0
         self.offset_x = 0
         self.offset_y = 0
+        self.prev_x = 0
+        self.prev_y = 0
         self.scale_factor = 1.1
 
     def image_to_bytes(self, image: Image.Image):
@@ -40,8 +43,41 @@ class MapDisplayer:
 
         return map_image.resize((self.canvas_size), Image.Resampling.LANCZOS)
 
+    def clamp_offsets(self):
+        map_width, map_height = self.map_image.size
+        
+        max_x = 0
+        min_x = -(map_width - self.canvas_size[0])
+        
+        max_y = 0
+        min_y = -(map_height - self.canvas_size[1])
+        
+        self.offset_x = max(min_x, min(self.offset_x, max_x))
+        self.offset_y = max(min_y, min(self.offset_y, max_y))
+
+    def on_press(self, event: tk.Event):
+        self.dragging = True
+        self.prev_x = event.x
+        self.prev_y = event.y
+
+    def on_drag(self, event: tk.Event):
+        if self.dragging:
+            dx = event.x - self.prev_x
+            dy = event.y - self.prev_y
+
+            self.offset_x += dx
+            self.offset_y += dy
+            self.clamp_offsets()
+
+            event.widget.coords(self.image_id, self.offset_x, self.offset_y)
+            self.prev_x = event.x
+            self.prev_y = event.y
+
+    def on_release(self, event: tk.Event):
+        self.dragging = False
+
     def zoom_map(self, cursor_loc: tuple[int, int], zoom_in: bool=True):
-        cursor_x, cursor_y = cursor_loc
+        cursor_x, cursor_y = cursor_loc 
         canvas_width, canvas_height = self.canvas_size
 
         if zoom_in and self.map_scale >= self.max_scale:
@@ -71,6 +107,20 @@ class MapDisplayer:
 
         return self.original_map.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
 
+    def on_zoom(self, event: tk.Event):
+        cursor_x, cursor_y = event.x, event.y
+
+        if event.delta > 0 or event.num == 4:
+            self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=True)
+        elif event.delta < 0 or event.num == 5:
+            self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=False)
+
+        self.tk_image = self.image_to_tkimage(self.map_image)
+        event.widget.itemconfig(self.image_id, image=self.tk_image)
+        self.clamp_offsets()
+
+        event.widget.coords(self.image_id, self.offset_x, self.offset_y)
+
     def display_map(self):
         sg.theme("DarkBlue")
 
@@ -94,27 +144,18 @@ class MapDisplayer:
         self.tk_image = self.image_to_tkimage(self.map_image)
         self.image_id = tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
 
+        tk_canvas.bind("<ButtonPress-1>", self.on_press)
+        tk_canvas.bind("<B1-Motion>", self.on_drag)
+        tk_canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        tk_canvas.bind("<MouseWheel>", self.on_zoom)
+        tk_canvas.bind("<Button-4>", self.on_zoom)
+        tk_canvas.bind("<Button-5>", self.on_zoom)
+
+        window.finalize()
+
         while True:
             event, values = window.read()
-            if not event:
-                continue
-
-            if event == "WindowClick":
-                print("Clicked the window!!!")
-
-            if event.startswith("MouseWheel"):
-                cursor_x, cursor_y = window.mouse_location()
-                cursor_x -= window.current_location()[0]
-                cursor_y -= window.current_location()[1]
-
-                if event == "MouseWheel:Up":
-                    self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=True)
-                elif event == "MouseWheel:Down":
-                    self.map_image = self.zoom_map((cursor_x, cursor_y), zoom_in=False)
-
-                self.tk_image = self.image_to_tkimage(self.map_image)
-                tk_canvas.itemconfig(self.image_id, image=self.tk_image)
-                tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
 
             if event in (sg.WIN_CLOSED, "Exit"):
                 break
