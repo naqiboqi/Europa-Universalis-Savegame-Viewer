@@ -24,15 +24,6 @@ class MapHandler:
         self.scale_factor = 1.1
         self.zooming = False
 
-    def bind_events(self):
-        self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
-        self.tk_canvas.bind("<B1-Motion>", self.on_drag)
-        self.tk_canvas.bind("<ButtonRelease-1>", self.on_release)
-
-        self.tk_canvas.bind("<MouseWheel>", self.on_zoom)
-        self.tk_canvas.bind("<Button-4>", self.on_zoom)
-        self.tk_canvas.bind("<Button-5>", self.on_zoom)
-
     def clamp_offsets(self):
         displayer = self.displayer
         map_width, map_height = displayer.map_image.size
@@ -46,6 +37,25 @@ class MapHandler:
 
         displayer.offset_x = max(min_x, min(displayer.offset_x, max_x))
         displayer.offset_y = max(min_y, min(displayer.offset_y, max_y))
+
+    def bind_events(self):
+        self.tk_canvas.bind("<Motion>", self.on_hover)
+        self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
+        self.tk_canvas.bind("<B1-Motion>", self.on_drag)
+        self.tk_canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        self.tk_canvas.bind("<MouseWheel>", self.on_zoom)
+        self.tk_canvas.bind("<Button-4>", self.on_zoom)
+        self.tk_canvas.bind("<Button-5>", self.on_zoom)
+
+    def on_hover(self, event: tk.Event):
+        displayer = self.displayer
+        canvas_x = event.x
+        canvas_y = event.y
+
+        image_x = int((canvas_x - displayer.offset_x) / displayer.map_scale)
+        image_y = int((canvas_y - displayer.offset_y) / displayer.map_scale)
+        print(image_x, image_y)
 
     def on_press(self, event: tk.Event):
         self.dragging = True
@@ -61,7 +71,7 @@ class MapHandler:
             self.displayer.offset_y += dy
             self.clamp_offsets()
 
-            self.tk_canvas.after(10, lambda: self.displayer.update_display(self.tk_canvas))
+            self.tk_canvas.coords(self.displayer.image_id, self.displayer.offset_x, self.displayer.offset_y)
 
             self.prev_x = event.x
             self.prev_y = event.y
