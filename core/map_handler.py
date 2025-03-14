@@ -22,6 +22,7 @@ class MapHandler:
         self.prev_y = 0
 
         self.scale_factor = 1.1
+        self.zooming = False
 
     def bind_events(self):
         self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
@@ -60,7 +61,8 @@ class MapHandler:
             self.displayer.offset_y += dy
             self.clamp_offsets()
 
-            self.displayer.update_display(self.tk_canvas)
+            self.tk_canvas.after(10, lambda: self.displayer.update_display(self.tk_canvas))
+
             self.prev_x = event.x
             self.prev_y = event.y
 
@@ -68,15 +70,21 @@ class MapHandler:
         self.dragging = False
 
     def zoom_map(self, cursor_x: float, cursor_y: float, zoom_in: bool=True):
+        if self.zooming:
+            return
+
         displayer = self.displayer
         canvas_width, canvas_height = displayer.canvas_size
 
         if zoom_in and displayer.map_scale >= displayer.max_scale:
+            self.zooming = False
             return
 
         if not zoom_in and displayer.map_scale <= displayer.min_scale:
+            self.zooming = False
             return
 
+        self.zooming = True
         new_scale = displayer.map_scale * self.scale_factor if zoom_in else displayer.map_scale / self.scale_factor
         new_scale = min(displayer.max_scale, max(displayer.min_scale, new_scale))
 
@@ -100,8 +108,8 @@ class MapHandler:
         self.displayer.map_image = self.displayer.original_map.resize(
             (scaled_width, scaled_height), Image.Resampling.LANCZOS)
         self.displayer.update_display(self.tk_canvas)
-        
-        print(new_scale)
+
+        self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
 
     def on_zoom(self, event: tk.Event):
         cursor_x, cursor_y = event.x, event.y
