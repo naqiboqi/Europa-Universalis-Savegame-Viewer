@@ -33,17 +33,29 @@ class MapDisplayer:
     def image_to_tkimage(self, image: Image.Image):
         return ImageTk.PhotoImage(image)
 
-    def scale_image_to_fit(self, map_image: Image.Image):
-        width, height = map_image.size
+    def scale_image_to_fit(self, image: Image.Image):
+        width, height = image.size
         canvas_width, canvas_height = self.canvas_size
 
         self.map_scale = min(canvas_width / width, canvas_height / height)
         self.max_scale = 10 * self.map_scale
         self.min_scale = self.map_scale
 
-        return map_image.resize((self.canvas_size), Image.Resampling.LANCZOS)
+        return image.resize((self.canvas_size), Image.Resampling.LANCZOS)
 
     def update_display(self, tk_canvas: tk.Canvas):
+        self.tk_image = self.image_to_tkimage(self.map_image)
+        tk_canvas.itemconfig(self.image_id, image=self.tk_image)
+        tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+
+    def update_map_mode(self, map_mode: MapMode, tk_canvas: tk.Canvas):
+        if map_mode == self.painter.map_mode:
+            return
+
+        self.painter.map_mode = map_mode
+        self.original_map = self.painter.draw_map()
+
+        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
         self.tk_image = self.image_to_tkimage(self.map_image)
         tk_canvas.itemconfig(self.image_id, image=self.tk_image)
         tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
@@ -58,7 +70,11 @@ class MapDisplayer:
         self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
         self.map_image = self.scale_image_to_fit(self.original_map)
 
-        layout = [[sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-"), sg.Button("Exit")]]
+        layout = [
+            [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-")],
+            [sg.HorizontalSeparator(key="-HSEP-")],
+            [sg.Button(mode.name, key=mode.value) for mode in self.painter.map_modes],
+            ]
         window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
         window.move_to_center()
 
@@ -71,9 +87,16 @@ class MapDisplayer:
         self.handler = MapHandler(self, tk_canvas)
         self.handler.bind_events()
 
+        mode_names = {mode.value: mode for mode in self.painter.map_modes}
         while True:
             event, values = window.read()
             if event in (sg.WIN_CLOSED, "Exit"):
                 break
+
+            if event in mode_names:
+                self.update_map_mode(mode_names[event], tk_canvas)
+
+            if event.startswith("-CANVAS-"):
+                text = self.handler.on_hover(window.mouse_location())
 
         window.close()
