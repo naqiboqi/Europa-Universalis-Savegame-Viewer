@@ -9,7 +9,7 @@ from . import MapPainter
 from .models import MapMode
 
 
-CANVAS_WIDTH_MAX = 800
+CANVAS_WIDTH_MAX = 1400
 
 
 
@@ -36,8 +36,9 @@ class MapDisplayer:
     def scale_image_to_fit(self, map_image: Image.Image):
         width, height = map_image.size
         canvas_width, canvas_height = self.canvas_size
+
         self.map_scale = min(canvas_width / width, canvas_height / height)
-        self.max_scale = 5 * self.map_scale
+        self.max_scale = 10 * self.map_scale
         self.min_scale = self.map_scale
 
         return map_image.resize((self.canvas_size), Image.Resampling.LANCZOS)
