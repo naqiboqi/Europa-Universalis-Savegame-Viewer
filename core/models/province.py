@@ -32,7 +32,22 @@ class EUProvince:
     base_manpower: Optional[float] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
-    pixel_locations: set[tuple] = field(default_factory=set)
+    pixel_locations: set[tuple[int, int]] = field(default_factory=set)
+
+    @property
+    def bounding_box(self):
+        if not self.pixel_locations:
+            return None
+
+        x_values = [x for x, y in self.pixel_locations]
+        y_values = [y for x, y in self.pixel_locations]
+
+        min_x = min(x_values)
+        max_x = max(x_values)
+        min_y = min(y_values)
+        max_y = max(y_values)
+
+        return (min_x, max_x, min_y, max_y)
 
     @property
     def development(self):
