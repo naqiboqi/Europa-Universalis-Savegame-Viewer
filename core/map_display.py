@@ -22,6 +22,7 @@ class MapDisplayer:
         self.image_id = None
         self.map_image = None
         self.tk_image = None
+        self.window = None
 
         self.max_scale = 5.0
         self.map_scale = 1.0
@@ -72,11 +73,20 @@ class MapDisplayer:
 
         layout = [
             [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-")],
+            [sg.Multiline(
+                default_text="Hover over an area to get more information!", 
+                disabled=True, 
+                justification="center",
+                size=(120, 3),
+                write_only=True, 
+                key="-MULTILINE-")
+            ],
             [sg.HorizontalSeparator(key="-HSEP-")],
             [sg.Button(mode.name, key=mode.value) for mode in self.painter.map_modes],
             ]
         window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
         window.move_to_center()
+        self.window = window
 
         canvas = window["-CANVAS-"]
         tk_canvas: tk.Canvas = canvas.TKCanvas
@@ -95,8 +105,5 @@ class MapDisplayer:
 
             if event in mode_names:
                 self.update_map_mode(mode_names[event], tk_canvas)
-
-            if event.startswith("-CANVAS-"):
-                text = self.handler.on_hover(window.mouse_location())
 
         window.close()
