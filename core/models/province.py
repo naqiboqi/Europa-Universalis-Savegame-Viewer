@@ -34,6 +34,10 @@ class EUProvince:
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, str]):
+        return cls(**data)
+
     @property
     def bounding_box(self):
         if not self.pixel_locations:
@@ -55,10 +59,6 @@ class EUProvince:
             return float(self.base_manpower) + float(self.base_production) + float(self.base_tax)
 
         return 0.000
-
-    @classmethod
-    def from_dict(cls, data: dict[str, str]):
-        return cls(**data)
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
