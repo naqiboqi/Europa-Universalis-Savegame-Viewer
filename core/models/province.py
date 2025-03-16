@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+from typing import TYPE_CHECKING
 
+
+
+if TYPE_CHECKING:
+    from . import EUCountry
 
 
 class ProvinceType(Enum):
@@ -23,7 +30,7 @@ class EUProvince:
     province_id: int
     name: str
     province_type: ProvinceType
-    owner: Optional["EUCountry"] = None
+    owner: Optional[EUCountry] = None
     capital: Optional[str] = None
     culture: Optional[str] = None
     religion: Optional[str] = None
