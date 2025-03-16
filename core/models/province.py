@@ -40,11 +40,12 @@ class EUProvince:
 
     @property
     def bounding_box(self):
-        if not self.pixel_locations:
+        locations = self.pixel_locations
+        if not locations:
             return None
 
-        x_values = [x for x, y in self.pixel_locations]
-        y_values = [y for x, y in self.pixel_locations]
+        x_values = [x for x, y in locations]
+        y_values = [y for x, y in locations]
 
         min_x = min(x_values)
         max_x = max(x_values)
