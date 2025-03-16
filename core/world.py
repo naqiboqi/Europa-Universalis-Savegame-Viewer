@@ -227,7 +227,7 @@ class EUWorldData:
             for line in file:
                 line = line.strip()
 
-                if re.match(r"^\s*color\s*=", line):
+                if re.match(r"^\s*#?color\s*=", line):
                     continue
 
                 match = pattern.match(line)
