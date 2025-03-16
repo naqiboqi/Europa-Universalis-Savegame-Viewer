@@ -1095,7 +1095,7 @@ iraq_arabi_area = { #Lower Euphrates
 	409 2311 2312 6141 6142 6143 6144
 }
 basra_area = { #Lower Mesopotamia
-	408 2340 4288 6145
+	408 2340 4288 6145 6146
 }
 north_kurdistan_area = { #Vaspurakan
 	2306 2307 4296 5332 6112 6113
