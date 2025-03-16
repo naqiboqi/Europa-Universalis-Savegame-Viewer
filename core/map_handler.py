@@ -4,7 +4,8 @@ import tkinter as tk
 
 from PIL import Image
 from typing import TYPE_CHECKING
-
+from .models import MapMode
+from .models import ProvinceType
 
 
 if TYPE_CHECKING:
@@ -86,7 +87,39 @@ class MapHandler:
         if not province:
             return
 
-        displayer.window["-MULTILINE-"].update(province.name)
+        area = displayer.painter.world_data.province_to_area[province.province_id]
+        if not area:
+            return
+
+        map_mode = displayer.painter.map_mode
+        if province.province_type == ProvinceType.WASTELAND:
+            info = f"The wasteland of {province.name}"
+        elif area.area_id == "lake_area":
+            info = f"The waters of {province.name}"
+        else:
+            if map_mode == MapMode.POLITICAL or map_mode == MapMode.DEVELOPMENT:
+                if province.province_type == ProvinceType.SEA:
+                    info = f"The waters of {province.name}"
+                else:
+                    info = f"The province of {province.name}"
+
+            elif map_mode == MapMode.AREA:
+                if area.is_sea_area:
+                    info = f"The waters of {area.name}"
+                else:
+                    info = f"The area of {area.name}"
+
+            elif map_mode == MapMode.REGION:
+                region = displayer.painter.world_data.province_to_region[province.province_id]
+                if region.is_sea_region:
+                    info = f"The waters of {region.name}"
+                else:
+                    info = f"The region of {region.name}"
+
+        if not info:
+            return
+
+        displayer.window["-MULTILINE-"].update(info)
 
     def on_click(self, event: tk.Event):
         if self.pan_animation_id:
@@ -101,7 +134,21 @@ class MapHandler:
         if not province:
             return
 
-        bbox = province.bounding_box
+        map_mode = displayer.painter.map_mode
+        if province.province_type == ProvinceType.WASTELAND:
+            bbox = province.bounding_box
+        else:
+            if map_mode == MapMode.POLITICAL or map_mode == MapMode.DEVELOPMENT:
+                bbox = province.bounding_box
+
+            elif map_mode == MapMode.AREA:
+                area = displayer.painter.world_data.province_to_area[province.province_id]
+                bbox = area.bounding_box
+
+            elif map_mode == MapMode.REGION:
+                region = displayer.painter.world_data.province_to_region[province.province_id]
+                bbox = region.bounding_box
+
         if not bbox:
             return
 
