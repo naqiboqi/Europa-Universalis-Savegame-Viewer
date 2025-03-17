@@ -9,7 +9,7 @@ from . import MapPainter
 from .models import MapMode
 
 
-CANVAS_WIDTH_MAX = 1400
+CANVAS_WIDTH_MAX = 800
 
 
 
@@ -44,6 +44,12 @@ class MapDisplayer:
 
         return image.resize((self.canvas_size), Image.Resampling.LANCZOS)
 
+    def reset_display(self, tk_canvas: tk.Canvas):
+        self.offset_x = 0
+        self.offset_y = 0
+        self.map_image = self.scale_image_to_fit(self.original_map)
+        self.update_display(tk_canvas)
+
     def update_display(self, tk_canvas: tk.Canvas):
         self.tk_image = self.image_to_tkimage(self.map_image)
         tk_canvas.itemconfig(self.image_id, image=self.tk_image)
@@ -72,18 +78,45 @@ class MapDisplayer:
         self.map_image = self.scale_image_to_fit(self.original_map)
 
         layout = [
-            [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-")],
-            [sg.Multiline(
-                default_text="Hover over an area to get more information!", 
-                disabled=True, 
+            [sg.Column(
+                [[sg.Text("Province/Country Information", font=("Arial", 14), justification="center", size=(30, 1), pad=(0, 10))],
+                    [sg.Multiline(
+                    default_text="Hover over an area to get more information!", 
+                    disabled=True, 
+                    justification="center",
+                    size=(CANVAS_WIDTH_MAX // 20, 2),
+                    write_only=True, 
+                    key="-MULTILINE-",
+                    no_scrollbar=True,
+                    background_color="#f0f0f0",
+                    text_color="black",
+                    font=("Arial", 12)
+                )]], 
                 justification="center",
-                size=(120, 3),
-                write_only=True, 
-                key="-MULTILINE-")
-            ],
-            [sg.HorizontalSeparator(key="-HSEP-")],
-            [sg.Button(mode.name, key=mode.value) for mode in self.painter.map_modes],
-            ]
+                element_justification="center",
+                expand_x=True,
+                pad=(10, 10)
+            )],
+
+            [sg.Text("Search:", font=("Arial", 12)), sg.Input(size=(20, 1), key="-SEARCH-", font=("Arial", 12), enable_events=True)],
+            [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, visible=False)],  
+
+            [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-", pad=(10, 10))],
+
+            [sg.HorizontalSeparator(key="-HSEP-", pad=(5, 10))],
+
+            [sg.Frame(
+                "Map Modes", 
+                [[sg.Button(mode.name, key=mode.value, pad=(5, 5)) for mode in self.painter.map_modes]],
+                element_justification="center",
+                relief=sg.RELIEF_SUNKEN,
+                pad=(10, 10)
+            )],
+
+            [sg.Button("Reset View", key="-RESET-", pad=(10, 5), font=("Arial", 12))],
+            [sg.Text('', size=(1, 1), pad=(5, 5))]
+        ]
+
         window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
         window.move_to_center()
         self.window = window
@@ -105,5 +138,23 @@ class MapDisplayer:
 
             if event in mode_names:
                 self.update_map_mode(mode_names[event], tk_canvas)
+
+            if event == "-RESET-":
+                self.reset_display(tk_canvas)
+
+            if event == "-SEARCH-":
+                search_param = values["-SEARCH-"].strip().lower()
+                if not search_param:
+                    window["-RESULTS-"].update(values=[], visible=False)
+                    continue
+
+                province_matches = self.painter.world_data.search(search_param=search_param)
+                name_matches = [p.name for p in province_matches]
+
+                if name_matches:
+                    window["-RESULTS-"].update(values=name_matches, visible=True)
+                else:
+                    window["-RESULTS-"].update(values=[], visible=False)
+
 
         window.close()

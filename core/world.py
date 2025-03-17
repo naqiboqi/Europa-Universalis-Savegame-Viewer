@@ -136,6 +136,20 @@ class EUWorldData:
         match = re.match(r"^-(\d+)={", line)
         return int(match.group(1)) if match else None
 
+    def set_province_type(self, province_data: dict):
+        is_developed = any(province_data.get(dev) for dev in ["base_tax", "base_production", "base_manpower"])
+
+        if is_developed:
+            if province_data.get("owner"):
+                return ProvinceType.OWNED
+
+            return ProvinceType.NATIVE
+
+        if province_data.get("patrol"):
+            return ProvinceType.SEA
+
+        return ProvinceType.WASTELAND
+
     def load_world_provinces(self, province_data: list[str]):
         provinces: dict[int, dict[str, str]] = {}
         patterns = {
@@ -192,20 +206,6 @@ class EUWorldData:
             pass
 
         return provinces
-
-    def set_province_type(self, province_data: dict):
-        is_developed = any(province_data.get(dev) for dev in ["base_tax", "base_production", "base_manpower"])
-
-        if is_developed:
-            if province_data.get("owner"):
-                return ProvinceType.OWNED
-
-            return ProvinceType.NATIVE
-
-        if province_data.get("patrol"):
-            return ProvinceType.SEA
-
-        return ProvinceType.WASTELAND
 
     def get_province_pixel_locations(self, default_province_colors: dict[tuple[int], int]):
         map_pixels = np.array(self.world_image)
@@ -290,3 +290,14 @@ class EUWorldData:
                 }
 
         return regions
+
+    def search(self, search_param: str):
+        search_param = search_param.strip()
+        if not search_param:
+            return []
+
+        matches = sorted(
+            (p for p in self.provinces.values() if search_param in p.name.lower()), 
+            key=lambda p: p.name)
+
+        return matches
