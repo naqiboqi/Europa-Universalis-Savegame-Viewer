@@ -106,6 +106,17 @@ class EUWorldData:
 
         return countries
 
+    def get_tag_pixel_locations(self, tag: str):
+        if not tag in self.countries:
+            return
+
+        locations: set[tuple[int, int]] = set()
+        for province in self.provinces.values():
+            if province.owner and province.owner.tag == tag:
+                locations.update(province.pixel_locations)
+
+        return locations
+
     def load_world_image(self, map_folder: str):
         province_bmp_path = os.path.join(map_folder, "provinces.bmp")
         province_color_map = Image.open(province_bmp_path).convert("RGB")
