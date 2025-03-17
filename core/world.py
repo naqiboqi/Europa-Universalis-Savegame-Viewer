@@ -291,13 +291,15 @@ class EUWorldData:
 
         return regions
 
-    def search(self, search_param: str):
+    def search(self, exact_matches_only: bool, search_param: str):
         search_param = search_param.strip()
         if not search_param:
             return []
 
-        matches = sorted(
-            (p for p in self.provinces.values() if search_param in p.name.lower()), 
-            key=lambda p: p.name)
+        if exact_matches_only:
+            matches = (p for p in self.provinces.values() if search_param == p.name.lower())
+        else:
+            matches = (p for p in self.provinces.values() if search_param in p.name.lower())
 
+        matches = sorted(matches, key=lambda p: (p.name, p.province_id))
         return matches
