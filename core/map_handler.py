@@ -139,7 +139,23 @@ class MapHandler:
             bbox = province.bounding_box
         else:
             if map_mode == MapMode.POLITICAL or map_mode == MapMode.DEVELOPMENT:
-                bbox = province.bounding_box
+                at_province_zoom_level = (displayer.map_scale / displayer.max_scale) > 0.50
+
+                owner_country = province.owner
+                if not owner_country or at_province_zoom_level:
+                    bbox = province.bounding_box
+                else:
+                    locations = self.world_data.get_tag_pixel_locations(owner_country.tag)
+
+                    x_values = [x for x, y in locations]
+                    y_values = [y for x, y in locations]
+
+                    min_x = min(x_values)
+                    max_x = max(x_values)
+                    min_y = min(y_values)
+                    max_y = max(y_values)
+
+                    bbox = (min_x, max_x, min_y, max_y)
 
             elif map_mode == MapMode.AREA:
                 area = displayer.painter.world_data.province_to_area[province.province_id]
