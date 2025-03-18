@@ -79,6 +79,8 @@ class MapDisplayer:
 
         self.offset_x = 0
         self.offset_y = 0
+        
+        self.search_results = []
 
     def image_to_tkimage(self, image: Image.Image):
         """Converts a PIL image to a TkInter image."""
@@ -193,7 +195,14 @@ class MapDisplayer:
 
                     [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11))],
 
-                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False)]
+                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False)],
+                    [sg.Button(
+                        "Go to",
+                        key="-GOTO-",
+                        pad=(5, 5),
+                        font=("Georgia", 12, "bold"),
+                        button_color=(BUTTON_BG, BUTTON_FG),
+                        visible=False)]
                 ],
                 pad=(10, 10),
                 relief=sg.RELIEF_FLAT,
@@ -263,7 +272,7 @@ class MapDisplayer:
         self.handler.bind_events()
 
         mode_names = {mode.value: mode for mode in self.painter.map_modes}
-
+        
         while True:
             event, values = window.read()
             if event in (sg.WIN_CLOSED, "Exit"):
@@ -271,9 +280,6 @@ class MapDisplayer:
 
             if event in mode_names:
                 self.update_map_mode(mode_names[event], tk_canvas)
-
-            if event == "-RESET-":
-                self.reset_display(tk_canvas)
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 exact_matches_only = values["-EXACT_MATCH-"]
@@ -284,11 +290,29 @@ class MapDisplayer:
 
                 province_matches = self.painter.world_data.search(
                     exact_matches_only=exact_matches_only, search_param=search_param)
+                self.search_results = province_matches
 
                 name_matches = [p.name for p in province_matches]
                 if name_matches:
                     window["-RESULTS-"].update(values=name_matches, visible=True)
+                    window["-GOTO-"].update(visible=True)
                 else:
                     window["-RESULTS-"].update(values=[], visible=False)
+                    window["-GOTO-"].update(visible=False)
+
+            if event == "-RESULTS-":
+                selected = values["-RESULTS-"]
+                if selected:
+                    province_name = selected[0]
+                    selected_province = next((p for p in self.search_results if p.name.lower() == province_name.lower()), None)
+                    if selected_province:
+                        print(f"Selected province {selected_province}")
+
+            if event == "-GOTO-":
+                if selected_province:
+                    self.handler.go_to(selected_province)
+
+            if event == "-RESET-":
+                self.reset_display(tk_canvas)
 
         window.close()

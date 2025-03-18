@@ -24,7 +24,7 @@ import tkinter as tk
 from PIL import Image
 from typing import TYPE_CHECKING
 from .models import MapMode
-from .models import ProvinceType
+from .models import EUProvince, ProvinceType, EUArea, EURegion
 
 
 if TYPE_CHECKING:
@@ -143,6 +143,54 @@ class MapHandler:
 
         return None
 
+    def go_to(self, destination: EUProvince|EUArea|EURegion=None):
+        ...
+        if self.pan_animation_id:
+            self.tk_canvas.after_cancel(self.pan_animation_id)
+
+        displayer = self.displayer
+        bbox = destination.bounding_box
+        if not bbox:
+            return
+
+        min_x, max_x, min_y, max_y = bbox
+        center_x = (min_x + max_x) // 2
+        center_y = (min_y + max_y) // 2
+
+        canvas_width, canvas_height = self.displayer.canvas_size
+
+        target_offset_x = (canvas_width // 2) - (center_x * displayer.map_scale)
+        target_offset_y = (canvas_height // 2) - (center_y * displayer.map_scale)
+        target_offset_x, target_offset_y = self.clamp_offsets(target_offset_x, target_offset_y)
+
+        def animate_pan(step: int=0, pan_speed: int=10):
+            """Smoothly animates the camera to pan toward the target offset.
+
+            Used to navigate towards the selected province, area, or region the user clicked on.
+
+            Args:
+                step (int): The current animation step (unused but can be for progressive movement).
+                pan_speed (int): The delay in milliseconds between animation frames.
+            """
+            dx = target_offset_x - displayer.offset_x
+            dy = target_offset_y - displayer.offset_y
+
+            if abs(dx) < 1 and abs(dy) < 1:
+                displayer.offset_x = target_offset_x
+                displayer.offset_y = target_offset_y
+                self.clamp_offsets()
+                self.tk_canvas.coords(displayer.image_id, target_offset_x, target_offset_y)
+                return
+
+            displayer.offset_x += dx * 0.1
+            displayer.offset_y += dy * 0.1
+
+            self.tk_canvas.coords(displayer.image_id, displayer.offset_x, displayer.offset_y)
+
+            self.pan_animation_id = self.tk_canvas.after(pan_speed, animate_pan)
+
+        animate_pan()
+
     def on_hover(self, event: tk.Event):
         """Handles mouse hover events and updates the UI with province/area/region information."""
         displayer = self.displayer
@@ -196,93 +244,8 @@ class MapHandler:
         """Handles click events on the map canvas.
         
         - Determines the clicked location on the canvas and converts it to map coordinates.
-        - Identifies the province at the clicked location.
-        - Adjusts the view to center on the selected province, area, or region based on the active map mode.
-        - If applicable, smoothly pans the view toward the selected location.
-        """
-        if self.pan_animation_id:
-            self.tk_canvas.after_cancel(self.pan_animation_id)
-
-        displayer = self.displayer
-        canvas_x = event.x
-        canvas_y = event.y
-        image_x, image_y = self.canvas_to_image_coords(canvas_x, canvas_y)
-
-        province = self.get_province_at(image_x, image_y)
-        if not province:
-            return
-
-        map_mode = displayer.painter.map_mode
-        if province.province_type == ProvinceType.WASTELAND:
-            bbox = province.bounding_box
-        else:
-            if map_mode == MapMode.POLITICAL or map_mode == MapMode.DEVELOPMENT:
-                at_province_zoom_level = (displayer.map_scale / displayer.max_scale) > 0.50
-
-                owner_country = province.owner
-                if not owner_country or at_province_zoom_level:
-                    bbox = province.bounding_box
-                else:
-                    locations = self.world_data.get_tag_pixel_locations(owner_country.tag)
-
-                    x_values = [x for x, y in locations]
-                    y_values = [y for x, y in locations]
-
-                    min_x = min(x_values)
-                    max_x = max(x_values)
-                    min_y = min(y_values)
-                    max_y = max(y_values)
-
-                    bbox = (min_x, max_x, min_y, max_y)
-
-            elif map_mode == MapMode.AREA:
-                area = displayer.painter.world_data.province_to_area[province.province_id]
-                bbox = area.bounding_box
-
-            elif map_mode == MapMode.REGION:
-                region = displayer.painter.world_data.province_to_region[province.province_id]
-                bbox = region.bounding_box
-
-        if not bbox:
-            return
-
-        min_x, max_x, min_y, max_y = bbox
-        center_x = (min_x + max_x) // 2
-        center_y = (min_y + max_y) // 2
-
-        canvas_width, canvas_height = self.displayer.canvas_size
-
-        target_offset_x = (canvas_width // 2) - (center_x * displayer.map_scale)
-        target_offset_y = (canvas_height // 2) - (center_y * displayer.map_scale)
-        target_offset_x, target_offset_y = self.clamp_offsets(target_offset_x, target_offset_y)
-
-        def animate_pan(step: int=0, pan_speed: int=10):
-            """Smoothly animates the camera to pan toward the target offset.
-
-            Used to navigate towards the selected province, area, or region the user clicked on.
-
-            Args:
-                step (int): The current animation step (unused but can be for progressive movement).
-                pan_speed (int): The delay in milliseconds between animation frames.
-            """
-            dx = target_offset_x - displayer.offset_x
-            dy = target_offset_y - displayer.offset_y
-
-            if abs(dx) < 1 and abs(dy) < 1:
-                displayer.offset_x = target_offset_x
-                displayer.offset_y = target_offset_y
-                self.clamp_offsets()
-                self.tk_canvas.coords(displayer.image_id, target_offset_x, target_offset_y)
-                return
-
-            displayer.offset_x += dx * 0.1
-            displayer.offset_y += dy * 0.1
-
-            self.tk_canvas.coords(displayer.image_id, displayer.offset_x, displayer.offset_y)
-
-            self.pan_animation_id = self.tk_canvas.after(pan_speed, animate_pan)
-
-        animate_pan()
+        - Identifies the province at the clicked location."""
+        ...
 
     def on_press(self, event: tk.Event):
         """Updates the handler attribtues and is triggered the left-mouse button is pressed."""
