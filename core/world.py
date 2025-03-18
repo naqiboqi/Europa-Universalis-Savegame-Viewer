@@ -8,7 +8,6 @@ is then stored in the EUWorldData class and accessed for drawing the map.
 
 
 
-
 import numpy as np
 import os
 import re
@@ -72,7 +71,7 @@ class EUWorldData:
         
         Args:
             map_folder (str): The folder that contains the world definition files.
-            colors (EUColors): The EUColors object that stores the default province and country (tag) colors.
+            colors (EUColors): Stores default province and country (tag) colors.
             
         Returns:
             world: (EUWorldData): The world data containting the default data.
