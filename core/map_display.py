@@ -9,7 +9,21 @@ from . import MapPainter
 from .models import MapMode
 
 
-CANVAS_WIDTH_MAX = 800
+CANVAS_WIDTH_MAX = 1400
+
+LIGHT_TEXT = "#d2d2d2"
+WHITE_TEXT = "#ffffff"
+GOLD_ACCENT = "#ffcc00"
+TEAL_ACCENT = "#0e6f74"
+FRAME_BG = "#2c2f36"
+FRAME_TITLE_COLOR = GOLD_ACCENT
+RED_BANNER = "#9e2a2f"
+DARK_BG = "#1d1f21"
+FRAME_BG = "#2b2b2b"
+BUTTON_BG = "#5d8fae"
+BUTTON_FG = "#ffffff" 
+LISTBOX_BG = "#2b2b2b"
+LISTBOX_FG = LIGHT_TEXT
 
 
 
@@ -79,44 +93,84 @@ class MapDisplayer:
 
         layout = [
             [sg.Column(
-                [[sg.Text("Province/Country Information", font=("Arial", 14), justification="center", size=(30, 1), pad=(0, 10))],
+                [
+                    [sg.Text(
+                        "Map Information", 
+                        font=("Times New Roman", 14, "bold"), 
+                        justification="center", 
+                        size=(30, 1), 
+                        pad=(0, 10),
+                        text_color=WHITE_TEXT,  # White text
+                        background_color=RED_BANNER,  # Red banner background
+                        relief=sg.RELIEF_RAISED,  # Raised border effect for a banner look
+                        border_width=2)],  # Adding border width for emphasis
+
                     [sg.Multiline(
-                    default_text="Hover over an area to get more information!", 
-                    disabled=True, 
-                    justification="center",
-                    size=(CANVAS_WIDTH_MAX // 20, 2),
-                    write_only=True, 
-                    key="-MULTILINE-",
-                    no_scrollbar=True,
-                    background_color="#f0f0f0",
-                    text_color="black",
-                    font=("Arial", 12)
-                )]], 
+                        default_text="Hover over an area to get more information!", 
+                        disabled=True, 
+                        justification="center",
+                        size=(CANVAS_WIDTH_MAX // 20, 2),
+                        write_only=True, 
+                        key="-MULTILINE-",
+                        no_scrollbar=True,
+                        background_color=DARK_BG,
+                        text_color=LIGHT_TEXT,
+                        font=("Segoe UI", 12)
+                    )]
+                ], 
                 justification="center",
                 element_justification="center",
                 expand_x=True,
                 pad=(10, 10)
             )],
 
-            [sg.Text("Search:", font=("Arial", 12)), sg.Input(size=(20, 1), key="-SEARCH-", font=("Arial", 12), enable_events=True)],
-            [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, visible=False)],  
+            [sg.HorizontalSeparator(pad=(5, 10))],
+
+            [sg.Frame(
+                "",
+                [
+                    [sg.Text("Search:", font=("Georgia", 12)), 
+                    sg.Input(size=(20, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True)],
+
+                    [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11))],
+
+                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False)]
+                ],
+                pad=(10, 10),
+                relief=sg.RELIEF_FLAT,
+                background_color=DARK_BG
+            )],
 
             [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-", pad=(10, 10))],
 
-            [sg.HorizontalSeparator(key="-HSEP-", pad=(5, 10))],
-
             [sg.Frame(
                 "Map Modes", 
-                [[sg.Button(mode.name, key=mode.value, pad=(5, 5)) for mode in self.painter.map_modes]],
+                [[sg.Button(
+                    mode.name, 
+                    key=mode.value, 
+                    pad=(5, 5), 
+                    button_color=(BUTTON_FG, BUTTON_BG),
+                    font=("Garamond", 12)) for mode in self.painter.map_modes]],
                 element_justification="center",
                 relief=sg.RELIEF_SUNKEN,
-                pad=(10, 10)
-            )],
+                pad=(10, 10),
+                background_color=FRAME_BG,
+                border_width=1,
+                title_color=FRAME_TITLE_COLOR)],
 
-            [sg.Button("Reset View", key="-RESET-", pad=(10, 5), font=("Arial", 12))],
+            [sg.HorizontalSeparator(pad=(5, 10))],
+
+            [sg.Button(
+                "Reset View", 
+                key="-RESET-", 
+                pad=(10, 5), 
+                font=("Georgia", 12, "bold"), 
+                button_color=(BUTTON_BG, BUTTON_FG))],
+
             [sg.Text('', size=(1, 1), pad=(5, 5))]
         ]
 
+        sg.set_options(font=("Segoe UI", 12))
         window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
         window.move_to_center()
         self.window = window
@@ -131,6 +185,7 @@ class MapDisplayer:
         self.handler.bind_events()
 
         mode_names = {mode.value: mode for mode in self.painter.map_modes}
+
         while True:
             event, values = window.read()
             if event in (sg.WIN_CLOSED, "Exit"):
@@ -142,19 +197,20 @@ class MapDisplayer:
             if event == "-RESET-":
                 self.reset_display(tk_canvas)
 
-            if event == "-SEARCH-":
+            if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
+                exact_matches_only = values["-EXACT_MATCH-"]
                 search_param = values["-SEARCH-"].strip().lower()
                 if not search_param:
                     window["-RESULTS-"].update(values=[], visible=False)
                     continue
 
-                province_matches = self.painter.world_data.search(search_param=search_param)
-                name_matches = [p.name for p in province_matches]
+                province_matches = self.painter.world_data.search(
+                    exact_matches_only=exact_matches_only, search_param=search_param)
 
+                name_matches = [p.name for p in province_matches]
                 if name_matches:
                     window["-RESULTS-"].update(values=name_matches, visible=True)
                 else:
                     window["-RESULTS-"].update(values=[], visible=False)
-
 
         window.close()
