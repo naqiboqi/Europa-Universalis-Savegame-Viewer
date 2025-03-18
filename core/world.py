@@ -72,9 +72,6 @@ class EUWorldData:
         Args:
             map_folder (str): The folder that contains the world definition files.
             colors (EUColors): Stores default province and country (tag) colors.
-            
-        Returns:
-            world: (EUWorldData): The world data containting the default data.
         """
         print("Loading EU4 world data....")
         world = cls()
