@@ -1,3 +1,21 @@
+"""
+Initialization module for the Europa Universalis world components.
+
+This module imports the necessary components for the game world, including 
+provinces, countries, areas, map modes, and regions. These components are 
+used to define and manage the structure of the Europa Universalis world 
+and its various entities.
+
+Imports:
+    - **EUProvince**: Represents a province on the map.
+    - **ProvinceType**: Enumeration of the different province types.
+    - **ProvinceTypeColor**: Colors associated with different province types.
+    - **EUCountry**: Represents a country in the game.
+    - **EUArea**: Represents a geographical area.
+    - **MapMode** Defines the different map modes.
+    - **EURegion**: Represents a region, which contains multiple areas.
+"""
+
 from .province import EUProvince, ProvinceType, ProvinceTypeColor
 from .country import EUCountry
 from .area import EUArea
