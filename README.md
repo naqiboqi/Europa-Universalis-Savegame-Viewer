@@ -36,8 +36,12 @@ Note that unoccupied provinces will be assigned a random color (as of now...)
 
 #### To-Do
 -----------
-- [ ] Add other mapmodes native to EU4 (trade, subjects)
+- [X] Add GUI for viewing and interacting with t he map
+
+- [ ] Move loading save files to the GUI instead
+
+- [ ] Add some graphs to show country area, development, some other stats?
 
 - [ ] Add map-painter functionality to control ownership of provinces and create modded saves
 
-- [ ] Add some graphs to show country area (with and without water), and other stats such as development
+- [ ] Add timeline to show game history
