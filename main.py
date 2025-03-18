@@ -12,6 +12,18 @@ TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "c
 
 
 def get_file_input(name: str, filetypes: tuple[str], folder: str):
+    """Prompts the user to select a file to load from the list.
+    
+    Args:
+        name (str): The type of file to load (ex. 'savefile')
+        filetypes (tuple[str]): File extensions to check for (ex. '.txt', '.dat', '.eu4')
+
+    Returns:
+        option: The chosen option
+    Raises:
+        IndexError: If invalid option is entered.
+        ValueError: If a non-numeric is entered.
+    """
     print("\nAvailable files:")
     options = [
         f"{i}. {filename}" for i, filename in enumerate(os.listdir(folder), start=1)
@@ -38,6 +50,11 @@ def get_file_input(name: str, filetypes: tuple[str], folder: str):
     return option.split()[1]
 
 def select_main_menu_option():
+    """Prompts the user to select an option from the list.
+    
+    Raises:
+        IndexError: If invalid option is entered.
+    """
     options = [
         "\n1. Load save file.", 
         "2. Close program.\n"]
@@ -50,6 +67,7 @@ def select_main_menu_option():
 
 
 def main():
+    """Driver function that handles loading the necessary game files."""
     colors = EUColors.load_colors(MAP_FOLDER, TAGS_FOLDER)
     world = EUWorldData.load_world_data(MAP_FOLDER, colors)
 
