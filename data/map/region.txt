@@ -260,7 +260,7 @@ crimea_region = { # 11 areas
 		crimea_area
 		astrakhan_area
 		lower_don_area
-		lower_yik_area # Brian; moved from central_asia_region
+		lower_yik_area
 		middle_don_area
 		lower_dnieper_area
 		pryazovia_area
