@@ -1,15 +1,18 @@
 """
-World Map drawing and editing for Europa Universalis IV (EU4) savegame viewing.
+World Map Drawing and Visualization for Europa Universalis IV (EU4) Savegame Viewing.
 
-This module contains the implementation for drawing the map based on a loaded savegame stored in
-**EUWorldData**. It includes various map modes that display different information and can be easily
-switched between.
+This module contains the implementation for rendering and coloring the world map based on 
+a loaded savegame stored in **EUWorldData**. The map can be displayed in various modes, 
+each highlighting different aspects of the game world, such as political boundaries, 
+area classifications, and province development.
 
 Map Modes:
-    - **Political**: Shows provinces colored in their owning country (tag)'s color.
-    - **Area**: Groups provinces by area with a single color.
-    - **Region**: Groups provinces and areas by region with a single color.
-    - **Development**: Colors each province green with higher intensities denoting higher total development.
+    - **Political**: Displays provinces colored by their owning country (tag)'s color.
+    - **Area**: Groups provinces by area with a single color for each area.
+    - **Region**: Groups provinces and areas by region with a single color for each region.
+    - **Development**: Colors provinces based on development level, with higher intensities 
+      representing higher total development.
+    - **Religion**: Shows provinces colored according to the dominant religion.
 """
 
 

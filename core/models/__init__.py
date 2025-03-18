@@ -21,3 +21,13 @@ from .country import EUCountry
 from .area import EUArea
 from .mapmode import MapMode
 from .region import EURegion
+
+__all__ = [
+    'EUProvince', 
+    'ProvinceType', 
+    'ProvinceTypeColor', 
+    'EUCountry', 
+    'EUArea', 
+    'MapMode', 
+    'EURegion'
+]

@@ -1,3 +1,22 @@
+"""
+World Map interaction handler for Europa Universalis IV (EU4) savegame viewing.
+
+This module implements the handling of user interactions with the world map, including 
+zooming, panning, and displaying tooltips. It processes user input events such as mouse 
+clicks, drags, and scrolls to adjust the map view accordingly.
+
+Key Features:
+    - **Panning**: Allows users to drag the map to view different areas.
+    - **Zooming**: Enables users to zoom in and out of the map using mouse scroll or buttons.
+    - **Hover Information**: Displays contextual information about provinces, areas, and regions 
+      when hovering over the map.
+
+The **MapHandler** class works in conjunction with the `MapDisplayer` and canvas to manage 
+user interactions and ensure smooth map navigation.
+"""
+
+
+
 from __future__ import annotations
 
 import tkinter as tk
@@ -14,6 +33,24 @@ if TYPE_CHECKING:
 
 
 class MapHandler:
+    """Handles user interactions for panning and zooming on the map displayed in the 
+    `MapDisplayer` instance. Manages the internal state for drag events, zoom operations, 
+    and panning animations.
+
+    Attributes:
+        displayer (MapDisplayer): The instance of the MapDisplayer responsible for displaying the map.
+        tk_canvas (tk.Canvas): The Tkinter canvas on which the map is rendered.
+        world_data (WorldData): The world data associated with the map.
+        pan_animation_id (int or None): The identifier for the pan animation, if active.
+        cursor_movement (float): The total distance moved by the cursor while dragging.
+        dragging (bool): Flag indicating whether the user is currently dragging the map.
+        prev_x (int): The previous x-coordinate of the cursor during dragging.
+        prev_y (int): The previous y-coordinate of the cursor during dragging.
+        start_x (int): The starting x-coordinate of the cursor during dragging.
+        start_y (int): The starting y-coordinate of the cursor during dragging.
+        scale_factor (float): The factor by which the map scales during zooming operations.
+        zooming (bool): Flag indicating whether a zoom operation is currently in progress.
+    """
     def __init__(self, displayer: MapDisplayer, tk_canvas: tk.Canvas):
         self.displayer = displayer
         self.tk_canvas = tk_canvas
@@ -30,7 +67,32 @@ class MapHandler:
         self.scale_factor = 1.1
         self.zooming = False
 
+    def bind_events(self):
+        """Binds events to `self.tk_canvas` for event handling."""
+        self.tk_canvas.bind("<Motion>", self.on_hover)
+        self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
+        self.tk_canvas.bind("<B1-Motion>", self.on_drag)
+        self.tk_canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        self.tk_canvas.bind("<MouseWheel>", self.on_zoom)
+        self.tk_canvas.bind("<Button-4>", self.on_zoom)
+        self.tk_canvas.bind("<Button-5>", self.on_zoom)
+
     def clamp_offsets(self, target_offset_x: int=None, target_offset_y: int=None):
+        """Restricts the map's position within valid bounds to prevent it from moving out of view.
+
+        This function ensures that the map remains within the visible canvas area 
+        by clamping the offsets within the allowed range. If target offsets are provided, 
+        it returns the clamped values without modifying the current offsets.
+
+        Args:
+            target_offset_x (int, optional): The target x-offset for the map. If None, modifies `displayer.offset_x`.
+            target_offset_y (int, optional): The target y-offset for the map. If None, modifies `displayer.offset_y`.
+
+        Returns:
+            offsets|None (tuple[int, int]): If target offsets are provided, returns the clamped (x, y) offsets. 
+                Otherwise, updates `displayer.offset_x` and `displayer.offset_y` directly.
+        """
         displayer = self.displayer
         map_width, map_height = displayer.map_image.size
         canvas_width, canvas_height = displayer.canvas_size
@@ -49,17 +111,16 @@ class MapHandler:
             displayer.offset_x = max(min_x, min(displayer.offset_x, max_x))
             displayer.offset_y = max(min_y, min(displayer.offset_y, max_y))
 
-    def bind_events(self):
-        self.tk_canvas.bind("<Motion>", self.on_hover)
-        self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
-        self.tk_canvas.bind("<B1-Motion>", self.on_drag)
-        self.tk_canvas.bind("<ButtonRelease-1>", self.on_release)
-
-        self.tk_canvas.bind("<MouseWheel>", self.on_zoom)
-        self.tk_canvas.bind("<Button-4>", self.on_zoom)
-        self.tk_canvas.bind("<Button-5>", self.on_zoom)
-
     def canvas_to_image_coords(self, canvas_x: int|float, canvas_y: int|float):
+        """Converts canvas coordinates to image coordinates using the current map scale.
+        
+        Args:
+            canvas_x (int|float): x location on the canvas.
+            canvas_y (int|float): y location on the canvas.
+        
+        Returns:
+            coords (tuple[int, int]): The (x, y) image coordinates.
+        """
         displayer = self.displayer
         image_x = int((canvas_x - displayer.offset_x) / displayer.map_scale)
         image_y = int((canvas_y - displayer.offset_y) / displayer.map_scale)
@@ -67,6 +128,15 @@ class MapHandler:
         return (image_x, image_y)
 
     def get_province_at(self, image_x: int, image_y: int):
+        """Gets the province at the given `x, y` location on the map.
+        
+        Args:
+            image_x (int): x location on the map image.
+            image_y (int): y location on the map image.
+        
+        Returns:
+            province (EUProvince|None): The located province.
+        """
         for province in self.world_data.provinces.values():
             if (image_x, image_y) in province.pixel_locations:
                 return province
@@ -74,6 +144,7 @@ class MapHandler:
         return None
 
     def on_hover(self, event: tk.Event):
+        """Handles mouse hover events and updates the UI with province/area/region information."""
         displayer = self.displayer
         canvas_x = event.x
         canvas_y = event.y
@@ -122,6 +193,13 @@ class MapHandler:
         displayer.window["-MULTILINE-"].update(info)
 
     def on_click(self, event: tk.Event):
+        """Handles click events on the map canvas.
+        
+        - Determines the clicked location on the canvas and converts it to map coordinates.
+        - Identifies the province at the clicked location.
+        - Adjusts the view to center on the selected province, area, or region based on the active map mode.
+        - If applicable, smoothly pans the view toward the selected location.
+        """
         if self.pan_animation_id:
             self.tk_canvas.after_cancel(self.pan_animation_id)
 
@@ -179,6 +257,14 @@ class MapHandler:
         target_offset_x, target_offset_y = self.clamp_offsets(target_offset_x, target_offset_y)
 
         def animate_pan(step: int=0, pan_speed: int=10):
+            """Smoothly animates the camera to pan toward the target offset.
+
+            Used to navigate towards the selected province, area, or region the user clicked on.
+
+            Args:
+                step (int): The current animation step (unused but can be for progressive movement).
+                pan_speed (int): The delay in milliseconds between animation frames.
+            """
             dx = target_offset_x - displayer.offset_x
             dy = target_offset_y - displayer.offset_y
 
@@ -199,6 +285,7 @@ class MapHandler:
         animate_pan()
 
     def on_press(self, event: tk.Event):
+        """Updates the handler attribtues and is triggered the left-mouse button is pressed."""
         self.dragging = True
         self.prev_x = event.x
         self.prev_y = event.y
@@ -207,6 +294,12 @@ class MapHandler:
         self.cursor_movement = 0
 
     def on_drag(self, event: tk.Event):
+        """Pans the image while the left mouse button is held down.
+        
+        Triggered whenever the cursor moves while the left mouse button is pressed.
+        Continuously updates the canvas offsets to move the image accordingly, ensuring 
+        that panning remains within the allowed bounds.
+        """
         displayer = self.displayer
 
         if self.dragging:
@@ -224,6 +317,12 @@ class MapHandler:
             self.prev_y = event.y
 
     def on_release(self, event: tk.Event):
+        """Handles mouse release events.
+
+        Updates handler attributes when the left mouse button is released.
+        If the cursor did not move significantly, the release is registered as a click event, 
+        triggering the `on_click` method.
+        """
         self.dragging = False
 
         cursor_move_threshold = 1
@@ -231,6 +330,18 @@ class MapHandler:
             self.on_click(event)
 
     def zoom_map(self, cursor_x: float, cursor_y: float, zoom_in: bool=True):
+        """Zooms in or out on the map while keeping the cursor position as the focal point.
+
+        This function scales the map image based on the zoom factor, updates offsets 
+        to maintain the cursor position in place, and ensures the new scale remains 
+        within allowed limits.
+
+        Args:
+            cursor_x (float): The x-coordinate of the cursor on the canvas.
+            cursor_y (float): The y-coordinate of the cursor on the canvas.
+            zoom_in (bool, optional): Determines whether to zoom in (True) or out (False). 
+                Defaults to True.
+        """
         if self.zooming:
             return
 
@@ -273,6 +384,11 @@ class MapHandler:
         self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
 
     def on_zoom(self, event: tk.Event):
+        """Handles zoom events triggered by the mouse scroll or trackpad gestures.
+
+        Determines the zoom direction based on the event data and calls `zoom_map` 
+        with the appropriate zoom direction.
+        """
         cursor_x, cursor_y = event.x, event.y
 
         if event.delta > 0 or event.num == 4:

@@ -39,8 +39,7 @@ LISTBOX_FG = LIGHT_TEXT
 
 
 class MapDisplayer:
-    """
-    Handles displaying the map and managing user interactions.
+    """Handles displaying the map and managing user interactions.
 
     This class is responsible for rendering the map, handling zooming and panning, 
     managing UI elements, and responding to user events such as searching and 
@@ -242,7 +241,7 @@ class MapDisplayer:
         - **Map Modes:** Buttons to switch between different map visualizations.
         - **Reset Button:** Resets the map view to its original state.
 
-        The event loop continuously listens for user actions, updating the UI accordingly.
+        The event loop continuously listens for user actions to update the UI.
         """
         sg.theme("DarkBlue")
 
