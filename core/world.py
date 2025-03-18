@@ -1,3 +1,14 @@
+"""
+World Data storage for Europa Universalis IV (EU4) savegame viewing.
+
+This module contains the implementation for loading and parsing EU4's world definition files.
+These files break the world up into regions, areas, and provinces. The world data 
+is then stored in the EUWorldData class and accessed for drawing the map.
+"""
+
+
+
+
 import numpy as np
 import os
 import re
@@ -11,6 +22,35 @@ from .utils import MapUtils
 
 
 class EUWorldData:
+    """Represents the world data, and stores information for how the EU4 world and user
+    savegames.
+    
+    This class handles the loading and parsing of world definition files and user savefiles.
+    Breaks the world into chunks for easier access for the MapPainter and MapDisplayer when it comes
+    time to draw the map.
+    
+    The breakdown occurs when loading only the definition files, since their definitions do not change
+    throughout a savegame's progress, only provinces. It is structured as follows:
+    
+    Structure:
+        - **Regions** consist of multiple **areas**.
+        - **Areas consist of multiple **provinces**.
+        - **Countries can own **provinces** but are not restricted by **regions** or **areas**
+    
+    Attributes:
+        areas (dict[str, EUArea]): A mapping of area names to their corresponding `EUArea` objects.
+        countries (dict[str, EUCountry]): A mapping of country **tags** (in game identifiers) to `EUCountry` objects.
+        provinces (dict[int, EUProvince]): A mapping of province IDs to `EUProvince` objects.
+        regions (dict[str, EURegion]): A mapping of region names to `EURegion` objects.
+        province_to_area (dict[int, EUArea]): A mapping of province IDs to their respective `EUArea`.
+        province_to_region (dict[int, EURegion]): A mapping of province IDs to their respective `EURegion`.
+        world_image (Image.Image | None): The world map image, loaded from a definition file.
+        default_province_data (dict[int, dict[str, str]]): Default properties for each province before modifications.
+        current_province_data (dict[int, dict[str, str]]): Stores current province data, which updates as the game progresses.
+        province_locations (dict[int, set[tuple[int]]]): A mapping of province IDs to a set of pixel coordinates in the world image.
+        default_area_data (dict[str, dict[str, str | set[int]]]): Default attributes for areas, including associated province IDs.
+        default_region_data (dict[str, dict[str, str | set[str]]]): Default attributes for regions, including associated area names.
+    """
     def __init__(self):
         self.areas: dict[str, EUArea] = {}
         self.countries: dict[str, EUCountry] = {}
@@ -28,6 +68,15 @@ class EUWorldData:
 
     @classmethod
     def load_world_data(cls, map_folder: str, colors: EUColors):
+        """Driver class method that handles loading the default world data.
+        
+        Args:
+            map_folder (str): The folder that contains the world definition files.
+            colors (EUColors): The EUColors object that stores the default province and country (tag) colors.
+            
+        Returns:
+            world: (EUWorldData): The world data containting the default data.
+        """
         print("Loading EU4 world data....")
         world = cls()
 
@@ -48,6 +97,16 @@ class EUWorldData:
         return world
 
     def build_world(self, save_folder: str, savefile: str):
+        """Builds the **EUProvince**, **EUArea**, **EURegion**, and Country objects by
+        applying the savegame data to the default world data.
+        
+        Populates the **provinces**, **areas**, and **regions** dictionaries to provide
+        easier access.
+        
+        Args:
+            save_folder (str): The folder containing the user save file.
+            save_file (str): The savefile to read.
+        """
         print("Building provinces....")
         province_file_lines = self.read_save_file(save_folder, savefile)
         self.current_province_data = self.load_world_provinces(province_file_lines)
@@ -92,6 +151,20 @@ class EUWorldData:
                     self.province_to_region[province_id] = region
 
     def load_countries(self, colors: EUColors):
+        """Builds the **countries** dictionary with game countries.
+        
+        Each country has a unique three letter **tag** that will be used to identify which
+        provinces it owns and an RGB color that will show which provinces it owns on the map.
+        
+        If a country definition is not found (common for user custom nations or native federations)
+        then a color will be seeded at random.
+        
+        Args:
+            colors (EUColors): The EUColors object that stores the default province and country (tag) colors.
+        
+        Returns:
+            countries (dict[str, EUCountry]): A mapping of tags to a country.
+        """
         countries: dict[str, EUCountry] = {}
         for country_tag, country_name in colors.tag_names.items():
 
@@ -107,6 +180,16 @@ class EUWorldData:
         return countries
 
     def get_tag_pixel_locations(self, tag: str):
+        """Builds the pixel locations that are occupied by a particular country.
+        
+        Checks the owner of each province (if it has one) and adds its pixel locations to the set.
+        
+        Args:
+            tag (str): The three-letter identifier for the country.
+            
+        Returns:
+            locations (set[tuple[int, int]]): A set of x, y coordinates that are occupied by the country.
+        """
         if not tag in self.countries:
             return
 
@@ -118,39 +201,154 @@ class EUWorldData:
         return locations
 
     def load_world_image(self, map_folder: str):
+        """Loads the provinces.bmp file that contains the definitions for each province.
+        
+        Args:
+            map_folder (str): The folder that contains the world definition files.
+            
+        Returns:
+            province_color_map (PIL.Image): The map image.
+        """
         province_bmp_path = os.path.join(map_folder, "provinces.bmp")
         province_color_map = Image.open(province_bmp_path).convert("RGB")
         return province_color_map
 
     def read_province_file(self, map_folder: str):
+        """Loads and reads the provinces.txt file that contains the default province information
+        present at game start.
+        
+        Args:
+            map_folder (str): The folder that contains the world definition files.
+        
+        Returns:
+            list[str]: The lines from the file.
+        """
         province_data_path = os.path.join(map_folder, "province.txt")
         with open(province_data_path, "r", encoding="latin-1") as file:
             return file.readlines()
 
     def read_save_file(self, save_folder: str, savefile: str):
+        """Loads and reads the user savefile that contains the current province and country information.
+        Args:
+            save_folder (str): The folder that contains the world definition files.
+            save_file (str): The savefile to read.
+        Returns:
+            list[str]: The lines from the file.
+        """
         save_data_path = os.path.join(save_folder, savefile)
         with open(save_data_path, "r", encoding="latin-1") as file:
             return file.readlines()
 
     def try_extract_prov_id(self, line: str):
+        """Checks if the line contains a province definition.
+        
+        Lines that start a province definition block start with a '-' followed by an integer:
+        
+            '-1={
+            ......
+            }'
+        
+        Args:
+            line (str): The line to check.
+        
+        Returns:
+            int: The province id.
+        """
         match = re.match(r"^-(\d+)={", line)
         return int(match.group(1)) if match else None
 
     def set_province_type(self, province_data: dict):
+        """Sets the type of province based on its key-values.
+        
+        Possible province types:
+            - **owned**: Land province with a country owner.
+            - **native**: Land province with no owner.
+            - **sea**: Catch-all for coastal waters, oceans, and inland seas.
+            - **wasteland**: Inhospital and intraversable.
+        
+        Args:
+            province_data [dict]: The data for the province to check.
+            
+        Returns:
+            ProvinceType: An enum that represents the province's type.
+        """
         is_developed = any(province_data.get(dev) for dev in ["base_tax", "base_production", "base_manpower"])
 
+        ## Only land provinces can have developent.
         if is_developed:
             if province_data.get("owner"):
                 return ProvinceType.OWNED
 
             return ProvinceType.NATIVE
 
+        ## EU4 assigns a patrol varaible for all sea provinces, that is used for ship patrols.
+        ## Of course, you can't patrol a ship on land.
         if province_data.get("patrol"):
             return ProvinceType.SEA
 
+        ## Otherwise it has to be wasteland.
         return ProvinceType.WASTELAND
 
     def load_world_provinces(self, province_data: list[str]):
+        """Builds the default **provinces** dictionary from read game data.
+        
+        Reads over the **province_data** and matches the province definition blocks to extract
+        each variable's value, and assigns it to each province.
+        
+        Example of part of the definition for a **land** province. Note that a lot
+        of these fields will be unused (as of now):
+        
+            '-15={
+                variables={
+                precalc_monthly_dev_points=0.022
+                provincial_dev_points_modifier=1.100
+                shown_development_cost=26.000
+                shown_precalc_monthly_dev_points=0.020
+                }
+                name="Ribe"
+                owner="DAN"
+                controller="DAN"
+                previous_controller="DAN"
+                cores={
+                DAN
+                }
+                trade="lubeck"
+                original_culture=danish
+                native_culture=danish
+                culture=danish
+                religion=catholic
+                original_religion=catholic
+                capital="Ribe"
+                is_city=yes
+                base_tax=5.000
+                original_tax=13.000
+                base_production=5.000
+                base_manpower=3.000
+            ....
+            ....
+            }'
+
+        A **sea** province:
+        
+            '-1483={
+                name="Labrador Sea"
+                institutions={
+                0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+                }
+                likely_rebels="parliamentarians_rebels"
+                trade_goods=unknown
+                ub=no
+                patrol=90
+                discovered_by={}
+                trade_power=0.000
+            }'
+
+        Args:
+            province_data (list[str]): The read province data. Is from either default or a savegame.
+        
+        Returns:
+            provinces (dict[int, dict[str, str]]): A mapping of province IDs to that province's data.
+        """
         provinces: dict[int, dict[str, str]] = {}
         patterns = {
             "name": r'name="([^"]+)"',
@@ -166,15 +364,17 @@ class EUWorldData:
         }
 
         line_iter = iter(province_data)
-        current_province: dict[str, str|EUCountry] = None
+        current_province: dict[str, str] = None
 
         try:
             while True:
                 line = next(line_iter).strip()
 
+                ## "PROV" represents unused provinces.
                 if "PROV" in line:
                     continue
 
+                ## Check if this line starts a province definition block.
                 prov_id = self.try_extract_prov_id(line)
                 if prov_id is not None:
                     if current_province and "name" in current_province:
@@ -192,6 +392,8 @@ class EUWorldData:
                     if match and not key in current_province:
                         if key == "owner":
                             country_tag = match.group(1)
+                            ## Check if that tag exists, if not we build a new country.
+                            ## Commonly happens for user created countries or native federations.
                             if not country_tag in self.countries:
                                 country = EUCountry(tag=country_tag, tag_color=MapUtils.seed_color(country_tag))
                                 self.countries[country_tag] = country
@@ -207,7 +409,18 @@ class EUWorldData:
 
         return provinces
 
-    def get_province_pixel_locations(self, default_province_colors: dict[tuple[int], int]):
+    def get_province_pixel_locations(self, default_province_colors: dict[tuple[int, int, int], int]):
+        """Builds the pixel locations that are occupied by each province in the world.
+        
+        Each province has a unique color in the image, and by reading over the pixels, can get exactly
+        which pixels each province occupies.
+
+        Args:
+            default_province_colors (dict[tuple[int, int, int], int]): A mapping of colors to the owning province ID.
+            
+        Returns:
+            dict[int, set[tuple[int, int]]]: A mapping of province IDs to a set of x, coords occupied by the province.
+        """
         map_pixels = np.array(self.world_image)
         height, width = map_pixels.shape[:2]
 
@@ -226,8 +439,25 @@ class EUWorldData:
         return dict(province_locations)
 
     def load_world_areas(self, map_folder: str):
+        """Builds the default **areas** dictionary from read game data.
+        
+        The area data consists of the area's internal ID, display name, and a set of province IDs
+        that belong to it.
+        
+        Example of an area definition:
+        
+            'ile_de_france_area = { #Champagne and Ile de France
+                182 183 185 3070 7960 7961 7962 7963 
+            }`
+        
+        Args:
+            map_folder (str): The folder that contains the world definition files.
+        
+        Returns:
+            areas: dict[str, dict[str, str|set[int]]]: A mapping of area ID's to that area's data.
+        """
         area_path = os.path.join(map_folder, "area.txt")
-        areas: dict[str, dict[str, str | set[int]]] = {}
+        areas: dict[str, dict[str, str|set[int]]] = {}
 
         pattern = re.compile(r'(\w+)\s*=\s*\{')
 
@@ -238,6 +468,7 @@ class EUWorldData:
             for line in file:
                 line = line.strip()
 
+                ## Check if this line starts an area definition block.
                 if re.match(r"^\s*#?color\s*=", line):
                     continue
 
@@ -254,6 +485,7 @@ class EUWorldData:
                     area_provinces = set()
                     continue
 
+                ## End of definition.
                 if line == "}":
                     if area_id and area_provinces:
                         areas[area_id] = {
@@ -270,8 +502,35 @@ class EUWorldData:
         return areas
 
     def load_world_regions(self, map_folder: str):
+        """Builds the default **regions** dictionary from read game data.
+        
+        The region data consists of the regions's internal ID, display name, and a set of string area IDs
+        that belong to it.
+        
+        Example definition for a region:
+        
+            'poland_region = { # 9 areas
+                areas = {
+                    wielkopolska_area
+                    malopolska_area
+                    mazovia_area
+                    central_poland_area
+                    sandomierz_area
+                    kuyavia_area
+                    silesia_area
+                    lower_silesia_area
+                    middle_silesia_area
+                }
+            }'
+        
+        Args:
+            map_folder (str): The folder that contains the world definition files.
+        
+        Returns:
+            regions: dict[str, dict[str, set[str]]]: A mapping of region ID's to that region's data.
+        """
         region_path = os.path.join(map_folder, "region.txt")
-        regions: dict[str, dict[str, str|set[int]]] = {}
+        regions: dict[str, dict[str, set[str]]] = {}
 
         with open(region_path, "r", encoding="latin-1") as file:
             region_pattern = r"(\w+_region)\s*=\s*\{[^}]*?areas\s*=\s*\{([^}]+)\}"
@@ -282,7 +541,6 @@ class EUWorldData:
                 area_ids = [area.strip() for area in areas_str.splitlines() if area.strip()]
 
                 region_areas = set(area_id for area_id in area_ids if area_id in self.default_area_data)
-
                 regions[region_id] = {
                     "region_id" : region_id,
                     "name" : EURegion.name_from_id(region_id),
@@ -292,6 +550,14 @@ class EUWorldData:
         return regions
 
     def search(self, exact_matches_only: bool, search_param: str):
+        """Searches for a province given a name. Can optionally return only exact matches.
+        
+        Args:
+            exact_matches_only (bool): Whether to only return exact matches.
+            search_param (str): The name to search for.
+        
+        Returns:
+            matches (list[EUProvince]): The provinces that match the search param."""
         search_param = search_param.strip()
         if not search_param:
             return []
