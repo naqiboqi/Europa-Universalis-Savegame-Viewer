@@ -272,7 +272,7 @@ class MapDisplayer:
         self.handler.bind_events()
 
         mode_names = {mode.value: mode for mode in self.painter.map_modes}
-        
+
         while True:
             event, values = window.read()
             if event in (sg.WIN_CLOSED, "Exit"):
@@ -288,11 +288,11 @@ class MapDisplayer:
                     window["-RESULTS-"].update(values=[], visible=False)
                     continue
 
-                province_matches = self.painter.world_data.search(
+                matches = self.painter.world_data.search(
                     exact_matches_only=exact_matches_only, search_param=search_param)
-                self.search_results = province_matches
+                self.search_results = matches
 
-                name_matches = [p.name for p in province_matches]
+                name_matches = [item.name for item in self.search_results]
                 if name_matches:
                     window["-RESULTS-"].update(values=name_matches, visible=True)
                     window["-GOTO-"].update(visible=True)
@@ -303,14 +303,15 @@ class MapDisplayer:
             if event == "-RESULTS-":
                 selected = values["-RESULTS-"]
                 if selected:
-                    province_name = selected[0]
-                    selected_province = next((p for p in self.search_results if p.name.lower() == province_name.lower()), None)
-                    if selected_province:
-                        print(f"Selected province {selected_province}")
+                    item_name = selected[0]
+                    selected_item = next(
+                        (item for item in self.search_results
+                        if item.name.lower() == item_name.lower()),
+                        None)
 
             if event == "-GOTO-":
-                if selected_province:
-                    self.handler.go_to(selected_province)
+                if selected_item:
+                    self.handler.go_to(selected_item)
 
             if event == "-RESET-":
                 self.reset_display(tk_canvas)

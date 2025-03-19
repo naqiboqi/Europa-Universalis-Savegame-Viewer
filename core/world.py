@@ -14,6 +14,7 @@ import re
 
 from collections import defaultdict
 from PIL import Image
+from typing import Optional, Union
 
 from .colors import EUColors
 from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion
@@ -545,8 +546,8 @@ class EUWorldData:
 
         return regions
 
-    def search(self, exact_matches_only: bool, search_param: str):
-        """Searches for a province given a name. Can optionally return only exact matches.
+    def search(self, exact_matches_only: bool, search_param: str) -> list[Union[EUProvince, EUArea, EURegion]]:
+        """Searches for a location given a name. Can optionally return only exact matches.
         
         Args:
             exact_matches_only (bool): Whether to only return exact matches.
@@ -554,14 +555,19 @@ class EUWorldData:
         
         Returns:
             matches (list[EUProvince]): The provinces that match the search param."""
-        search_param = search_param.strip()
+        search_param = search_param.strip().lower()
         if not search_param:
             return []
 
-        if exact_matches_only:
-            matches = (p for p in self.provinces.values() if search_param == p.name.lower())
-        else:
-            matches = (p for p in self.provinces.values() if search_param in p.name.lower())
+        all_items = []
+        all_items.extend(self.provinces.values())
+        all_items.extend(self.areas.values())
+        all_items.extend(self.regions.values())
 
-        matches = sorted(matches, key=lambda p: (p.name, p.province_id))
+        if exact_matches_only:
+            matches = (item for item in all_items if item.name.lower() == search_param)
+        else:
+            matches = (item for item in all_items if search_param in item.name.lower())
+
+        matches = sorted(matches, key=lambda x: x.name)
         return matches
