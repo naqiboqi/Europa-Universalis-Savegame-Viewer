@@ -54,7 +54,7 @@ class MapHandler:
     def __init__(self, displayer: MapDisplayer, tk_canvas: tk.Canvas):
         self.displayer = displayer
         self.tk_canvas = tk_canvas
-        self.world_data = self.displayer.painter.world_data
+        self.world_data = self.displayer.world_data
 
         self.pan_animation_id = None
         self.cursor_movement = 0
@@ -143,8 +143,7 @@ class MapHandler:
 
         return None
 
-    def go_to(self, destination: EUProvince|EUArea|EURegion=None):
-        ...
+    def go_to_entity_location(self, destination: EUProvince|EUArea|EURegion=None):
         if self.pan_animation_id:
             self.tk_canvas.after_cancel(self.pan_animation_id)
 
@@ -342,7 +341,7 @@ class MapHandler:
 
         self.displayer.map_image = self.displayer.original_map.resize(
             (scaled_width, scaled_height), Image.Resampling.LANCZOS)
-        self.displayer.update_display(self.tk_canvas)
+        self.displayer.update_display()
 
         self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
 
