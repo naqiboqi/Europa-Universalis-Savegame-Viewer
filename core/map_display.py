@@ -26,11 +26,10 @@ CANVAS_WIDTH_MAX = 1400
 LIGHT_TEXT = "#d2d2d2"
 WHITE_TEXT = "#ffffff"
 GOLD_ACCENT = "#ffcc00"
-FRAME_BORDER_COLOR = "#D4AF37"
+GOLD_FRAME = "#D4AF37"
 TEAL_ACCENT = "#0e6f74"
 FRAME_BG = "#2c2f36"
 FRAME_TITLE_COLOR = GOLD_ACCENT
-RED_BANNER = "#9e2a2f"
 DARK_BG = "#1d1f21"
 FRAME_BG = "#2b2b2b"
 BUTTON_BG = "#5d8fae"
@@ -38,9 +37,12 @@ BUTTON_FG = "#ffffff"
 LISTBOX_BG = "#2b2b2b"
 LISTBOX_FG = LIGHT_TEXT
 
+GOLD_FRAME_UPPER = "#b68950"
+GOLD_FRAME_LOWER = "#9f7240"
+RED_BANNER = "#9e2a2f"
 TOP_BANNER_BG = "#353c25"
 SECTION_BANNER_BG = "#172f48"
-LIGHT_FRAME_BG = "#2a343b"
+LIGHT_FRAME_BG = "#344048"
 DARK_FRAME_BG = "#2a343b"
 BUTTON_COLOR = "#314b68"
 GREEN_TEXT = "#2b8334"
@@ -159,116 +161,112 @@ class MapDisplayer:
         self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
 
         return [
-            [sg.Column(
-                [
-                    [sg.Text(
-                        "Map Information", 
-                        font=("Georgia", 18, "bold"), 
-                        justification="center", 
-                        size=(30, 1), 
-                        pad=(0, 10),
-                        text_color=WHITE_TEXT,
-                        background_color=TOP_BANNER_BG,
-                        relief=sg.RELIEF_RAISED,
-                        border_width=2)],
+            [sg.Frame("", [  # Outer Frame
+                [sg.Frame("", [  # Inner Frame
+                    [sg.Column([
+                        [sg.Text(
+                            "Map Information", 
+                            font=("Georgia", 18, "bold"), 
+                            justification="center", 
+                            size=(30, 1), 
+                            pad=(0, 10),
+                            text_color=LIGHT_TEXT,
+                            background_color=TOP_BANNER_BG,
+                            relief=sg.RELIEF_RAISED,  # Raised for a slight glow effect
+                            border_width=2)],
 
-                    [sg.Multiline(
-                        default_text="Hover over an area to get more information!", 
-                        disabled=True, 
-                        justification="center",
-                        size=(CANVAS_WIDTH_MAX // 20, 2),
-                        write_only=True, 
-                        key="-MULTILINE-",
-                        no_scrollbar=True,
-                        background_color=DARK_BG,
-                        text_color=LIGHT_TEXT,
-                        font=("Segoe UI", 12)
-                    )]
-                ], 
-                justification="center",
-                element_justification="center",
-                expand_x=True,
-                pad=(10, 10)
-            )],
+                        [sg.Multiline(
+                            default_text="Hover over an area to get more information!", 
+                            disabled=True, 
+                            justification="center",
+                            size=(CANVAS_WIDTH_MAX // 20, 2),
+                            write_only=True, 
+                            key="-MULTILINE-",
+                            no_scrollbar=True,
+                            background_color=LIGHT_FRAME_BG,
+                            text_color=LIGHT_TEXT,
+                            font=("Segoe UI", 12),
+                            border_width=2,
+                            pad=(5, 5))],
 
-            [sg.HorizontalSeparator(pad=(5, 10))],
+                        [sg.Text("", size=(30, 1), pad=(0, 10), background_color=LIGHT_FRAME_BG)]
+                    ], justification="center", element_justification="center", expand_x=True, pad=(5, 5), background_color=LIGHT_FRAME_BG)]
+                ], expand_x=True, relief=sg.RELIEF_SUNKEN, border_width=2, background_color=GOLD_FRAME_LOWER, pad=(5, 5))]  # Darker Inner Frame
+            ], expand_x=True, relief=sg.RELIEF_RAISED, border_width=2, background_color=GOLD_FRAME_UPPER, pad=(15, 15))],  # Lighter Outer Frame
 
-            [
-                sg.Frame("", [
-                    [sg.Text("Search:", font=("Georgia", 12, "bold"), text_color=LIGHT_TEXT, background_color=DARK_BG)], 
-                    [sg.Input(size=(20, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True, text_color=LIGHT_TEXT, background_color=DARK_BG)],
+            [sg.Frame("", [
+                [sg.Text("Search:", font=("Georgia", 12, "bold"), text_color=LIGHT_TEXT, background_color=LIGHT_FRAME_BG)], 
+                [sg.Input(size=(20, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True, text_color=LIGHT_TEXT, background_color=LIGHT_FRAME_BG)],
 
-                    [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11), text_color=LIGHT_TEXT, background_color=DARK_BG)],
+                [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11), text_color=LIGHT_TEXT, background_color=LIGHT_FRAME_BG)],
 
-                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False, text_color=LIGHT_TEXT, background_color=DARK_BG)],
-                    [sg.Button(
-                        "Go to",
-                        key="-GOTO-",
-                        pad=(5, 5),
-                        font=("Georgia", 12, "bold"),
-                        button_color=(LIGHT_TEXT, BUTTON_COLOR),
-                        visible=False)]],
-                pad=(10, 10),
-                relief=sg.RELIEF_GROOVE,
-                background_color=DARK_BG,
-                border_width=5),
-                sg.Push(),
-
+                [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False, text_color=LIGHT_TEXT, background_color=LIGHT_FRAME_BG)],
+                [sg.Button(
+                    "Go to",
+                    key="-GOTO-",
+                    pad=(5, 5),
+                    font=("Georgia", 12, "bold"),
+                    button_color=(LIGHT_TEXT, BUTTON_COLOR),
+                    visible=False)]
+                ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=LIGHT_FRAME_BG, border_width=5),
+                
+                sg.Push(background_color=LIGHT_FRAME_BG),
                 sg.Frame("", [
                     [sg.Frame("", [
-                        [
-                            sg.Column([
-                                [sg.Text("Province:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
-                                sg.Text("", key="-INFO_NAME-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                        [sg.Column([
+                            [sg.Text("Province:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                            sg.Text("", key="-INFO_NAME-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
 
-                                [sg.Text("Capital:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
-                                sg.Text("", key="-INFO_CAPITAL-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
-                            ], background_color=TOP_BANNER_BG, element_justification="left", expand_x=True),
+                            [sg.Text("Capital:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                            sg.Text("", key="-INFO_CAPITAL-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                        ], background_color=TOP_BANNER_BG, element_justification="left", expand_x=True),
 
-                            # Right Column (Area & Region)
-                            sg.Column([
-                                [sg.Text("Area:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
-                                sg.Text("", key="-INFO_PROVINCE_AREA-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                        sg.Column([
+                            [sg.Text("Area:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                            sg.Text("", key="-INFO_PROVINCE_AREA-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
 
-                                [sg.Text("Region:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
-                                sg.Text("", key="-INFO_PROVINCE_REGION-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
-                            ], background_color=TOP_BANNER_BG, element_justification="right", expand_x=True),
-                        ]
+                            [sg.Text("Region:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                            sg.Text("", key="-INFO_PROVINCE_REGION-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                        ], background_color=TOP_BANNER_BG, element_justification="right", expand_x=True)]
                     ], background_color=TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=LIGHT_TEXT, pad=(5, 5), expand_x=True)],
 
-                    [sg.Push(),
-                        sg.Frame("Development", [
-                        [sg.Text("Tax:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_BASE_TAX-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1)),  
+                    [sg.Push(background_color=LIGHT_FRAME_BG),
+                        sg.Frame("", [
+                        [sg.Text("Development", font=("Georgia", 12, "bold"), text_color=LIGHT_TEXT, background_color=SECTION_BANNER_BG, relief=sg.RELIEF_RAISED)],
+
+                        [sg.Text("Tax:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                        sg.Text("", key="-INFO_BASE_TAX-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(10, 1)),  
                         
-                        sg.Text("Production:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_BASE_PRODUCTION-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1)),  
+                        sg.Text("Production:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                        sg.Text("", key="-INFO_BASE_PRODUCTION-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(10, 1)),  
                         
-                        sg.Text("Manpower:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_BASE_MANPOWER-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1))]
-                    ], background_color=DARK_BG, relief=sg.RELIEF_RAISED, border_width=2, title_color=LIGHT_TEXT),
-                    sg.Push()],  
+                        sg.Text("Manpower:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                        sg.Text("", key="-INFO_BASE_MANPOWER-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(10, 1))]
+                    ], background_color=DARK_FRAME_BG, pad=(5, 10), relief=sg.RELIEF_SUNKEN, border_width=3, title_color=LIGHT_TEXT),
+                    sg.Push(background_color=LIGHT_FRAME_BG)],  
 
-                    [sg.HorizontalSeparator(color=FRAME_BORDER_COLOR)],
+                    [sg.Push(background_color=LIGHT_FRAME_BG),
+                        sg.Frame("", [
+                            [sg.Text("Demographics", font=("Georgia", 12, "bold"), text_color=LIGHT_TEXT, background_color=SECTION_BANNER_BG, relief=sg.RELIEF_RAISED)],
 
-                    [sg.Push(),
-                        sg.Frame("Demographics", [
-                        [sg.Text("Cored By:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_OWNER-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))],
+                            [sg.Text("Cored By:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                            sg.Text("", key="-INFO_OWNER-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(20, 1))],
 
-                        [sg.Text("Culture:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_CULTURE-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))],
+                            [sg.Text("Culture:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                            sg.Text("", key="-INFO_CULTURE-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(20, 1))],
 
-                        [sg.Text("Religion:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
-                        sg.Text("", key="-INFO_RELIGION-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))]
-                    ], background_color=DARK_BG, relief=sg.RELIEF_RAISED, border_width=2, title_color=LIGHT_TEXT),
-                    sg.Push(background_color=DARK_BG)]],
-                key="-PROVINCE_INFO-", pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=DARK_BG, border_width=5, title_color=LIGHT_TEXT,
-            )],
+                            [sg.Text("Religion:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_FRAME_BG),  
+                            sg.Text("", key="-INFO_RELIGION-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_FRAME_BG, size=(20, 1))]
+                        ], background_color=DARK_FRAME_BG, pad=(5, 10), relief=sg.RELIEF_SUNKEN, border_width=4, expand_x=True),
+                    sg.Push(background_color=LIGHT_FRAME_BG)]
+                ], key="-PROVINCE_INFO-", pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=LIGHT_FRAME_BG, border_width=5, title_color=LIGHT_TEXT)
+            ],
             
-            [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-", pad=(10, 10))],
+            [sg.Frame("", [
+                [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-", pad=(10, 10))]
+            ], background_color=LIGHT_FRAME_BG, relief=sg.RELIEF_GROOVE, pad=(10, 10), border_width=5)],
 
-            [sg.Frame( "Map Modes", [
+            [sg.Frame("Map Modes", [
                 [sg.Button(
                     mode.name, 
                     key=mode.value, 
@@ -278,8 +276,8 @@ class MapDisplayer:
                 element_justification="center",
                 relief=sg.RELIEF_GROOVE,
                 pad=(10, 10),
-                background_color=FRAME_BG,
-                border_width=5,
+                background_color=LIGHT_FRAME_BG,
+                border_width=3,
                 title_color=LIGHT_TEXT),
 
                 sg.Button(
@@ -289,7 +287,7 @@ class MapDisplayer:
                     font=("Georgia", 12, "bold"), 
                     button_color=(LIGHT_TEXT, BUTTON_COLOR))],
 
-            [sg.Text('', size=(1, 1), pad=(5, 5))]
+            [sg.Text("", size=(1, 1), pad=(5, 5), background_color=LIGHT_FRAME_BG)]
         ]
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
@@ -337,7 +335,7 @@ class MapDisplayer:
         layout = self.create_layout()
         self.map_image = self.scale_image_to_fit(self.original_map)
 
-        window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True)
+        window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True, background_color=LIGHT_FRAME_BG)
         window.move_to_center()
         self.window = window
 
@@ -391,9 +389,9 @@ class MapDisplayer:
                     self.selected_item = selected_item
 
             if event == "-GOTO-":
-                if selected_item:
-                    self.handler.go_to_entity_location(selected_item)
-                    self.update_details(selected_item)
+                if self.selected_item:
+                    self.handler.go_to_entity_location(self.selected_item)
+                    self.update_details(self.selected_item)
 
             if event == "-RESET-":
                 self.reset_display()

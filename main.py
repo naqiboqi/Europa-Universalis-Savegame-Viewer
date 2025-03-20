@@ -18,7 +18,7 @@ def get_file_input(name: str, filetypes: tuple[str], folder: str):
         name (str): The type of file to load (ex. 'savefile')
         filetypes (tuple[str]): File extensions to check for (ex. '.txt', '.dat', '.eu4')
 
-    Returns:
+    Returns:    
         option: The chosen option
     Raises:
         IndexError: If invalid option is entered.
