@@ -15,6 +15,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from . import MapHandler
 from . import MapPainter
+from .models import EUProvince, EUArea, EURegion
 from .models import MapMode
 
 
@@ -25,6 +26,7 @@ CANVAS_WIDTH_MAX = 1400
 LIGHT_TEXT = "#d2d2d2"
 WHITE_TEXT = "#ffffff"
 GOLD_ACCENT = "#ffcc00"
+FRAME_BORDER_COLOR = "#D4AF37"
 TEAL_ACCENT = "#0e6f74"
 FRAME_BG = "#2c2f36"
 FRAME_TITLE_COLOR = GOLD_ACCENT
@@ -35,6 +37,13 @@ BUTTON_BG = "#5d8fae"
 BUTTON_FG = "#ffffff" 
 LISTBOX_BG = "#2b2b2b"
 LISTBOX_FG = LIGHT_TEXT
+
+TOP_BANNER_BG = "#353c25"
+SECTION_BANNER_BG = "#172f48"
+LIGHT_FRAME_BG = "#2a343b"
+DARK_FRAME_BG = "#2a343b"
+BUTTON_COLOR = "#314b68"
+GREEN_TEXT = "#2b8334"
 
 
 
@@ -53,6 +62,7 @@ class MapDisplayer:
         original_map (PIL.Image): The original unscaled map image.
         map_image (PIL.Image): The currently displayed map image.
         tk_image (tk.PhotoImage): The Tkinter-compatible image for rendering.
+        tk_canvas (tk.Canvas): The window canvas for the current image.
         window (sg.Window): The PySimpleGUI window for the UI.
 
         max_scale (float): The maximum zoom level allowed.
@@ -64,6 +74,7 @@ class MapDisplayer:
     """
     def __init__(self, painter: MapPainter):
         self.painter = painter
+        self.world_data = painter.world_data
 
         self.canvas_size = ()
         self.handler: MapHandler = None
@@ -71,6 +82,7 @@ class MapDisplayer:
         self.original_map = None
         self.map_image = None
         self.tk_image = None
+        self.tk_canvas = None
         self.window = None
 
         self.max_scale = 5.0
@@ -79,7 +91,8 @@ class MapDisplayer:
 
         self.offset_x = 0
         self.offset_y = 0
-        
+
+        self.selected_item = None
         self.search_results = []
 
     def image_to_tkimage(self, image: Image.Image):
@@ -106,35 +119,28 @@ class MapDisplayer:
 
         return image.resize((self.canvas_size), Image.Resampling.LANCZOS)
 
-    def reset_display(self, tk_canvas: tk.Canvas):
-        """Resets the canvas and image to their inital settings.
-        
-        Args:
-            tk_canvas (tk.Canvas): The window canvas for the current image.
-        """
+    def reset_display(self):
+        """Resets the canvas and image to their inital settings."""
         self.offset_x = 0
         self.offset_y = 0
         self.map_image = self.scale_image_to_fit(self.original_map)
-        self.update_display(tk_canvas)
+        self.update_display()
 
-    def update_display(self, tk_canvas: tk.Canvas):
+    def update_display(self):
         """Updates the canvas and image.
         
         Applies any pan or zoom adjustments to the canvas for user interaction.
-        
-        Args:
-            tk_canvas (tk.Canvas): The window canvas for the current image.
         """
         self.tk_image = self.image_to_tkimage(self.map_image)
-        tk_canvas.itemconfig(self.image_id, image=self.tk_image)
-        tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+        self.tk_canvas.itemconfig(self.image_id, image=self.tk_image)
+        self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
 
-    def update_map_mode(self, map_mode: MapMode, tk_canvas: tk.Canvas):
+    def update_map_mode(self, map_mode: MapMode):
         """Updates the map mode and redraws the map.
         
         Args:
             map_mode (MapMode): The new map mode.
-            tk_canvas (tk.Canvas): The window canvas for the current image. """
+        """
         if map_mode == self.painter.map_mode:
             return
 
@@ -143,8 +149,8 @@ class MapDisplayer:
 
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
         self.tk_image = self.image_to_tkimage(self.map_image)
-        tk_canvas.itemconfig(self.image_id, image=self.tk_image)
-        tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+        self.tk_canvas.itemconfig(self.image_id, image=self.tk_image)
+        self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
 
     def create_layout(self):
         """Creates the UI layout for the map viewer and returns it."""
@@ -157,12 +163,12 @@ class MapDisplayer:
                 [
                     [sg.Text(
                         "Map Information", 
-                        font=("Times New Roman", 14, "bold"), 
+                        font=("Georgia", 18, "bold"), 
                         justification="center", 
                         size=(30, 1), 
                         pad=(0, 10),
                         text_color=WHITE_TEXT,
-                        background_color=RED_BANNER,
+                        background_color=TOP_BANNER_BG,
                         relief=sg.RELIEF_RAISED,
                         border_width=2)],
 
@@ -187,56 +193,129 @@ class MapDisplayer:
 
             [sg.HorizontalSeparator(pad=(5, 10))],
 
-            [sg.Frame(
-                "",
-                [
-                    [sg.Text("Search:", font=("Georgia", 12)), 
-                    sg.Input(size=(20, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True)],
+            [
+                sg.Frame("", [
+                    [sg.Text("Search:", font=("Georgia", 12, "bold"), text_color=LIGHT_TEXT, background_color=DARK_BG)], 
+                    [sg.Input(size=(20, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True, text_color=LIGHT_TEXT, background_color=DARK_BG)],
 
-                    [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11))],
+                    [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11), text_color=LIGHT_TEXT, background_color=DARK_BG)],
 
-                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False)],
+                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False, text_color=LIGHT_TEXT, background_color=DARK_BG)],
                     [sg.Button(
                         "Go to",
                         key="-GOTO-",
                         pad=(5, 5),
                         font=("Georgia", 12, "bold"),
-                        button_color=(BUTTON_BG, BUTTON_FG),
-                        visible=False)]
-                ],
+                        button_color=(LIGHT_TEXT, BUTTON_COLOR),
+                        visible=False)]],
                 pad=(10, 10),
-                relief=sg.RELIEF_FLAT,
-                background_color=DARK_BG
-            )],
+                relief=sg.RELIEF_GROOVE,
+                background_color=DARK_BG,
+                border_width=5),
+                sg.Push(),
 
+                sg.Frame("", [
+                    [sg.Frame("", [
+                        [
+                            sg.Column([
+                                [sg.Text("Province:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                                sg.Text("", key="-INFO_NAME-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+
+                                [sg.Text("Capital:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                                sg.Text("", key="-INFO_CAPITAL-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                            ], background_color=TOP_BANNER_BG, element_justification="left", expand_x=True),
+
+                            # Right Column (Area & Region)
+                            sg.Column([
+                                [sg.Text("Area:", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                                sg.Text("", key="-INFO_PROVINCE_AREA-", font=("Georgia", 14, "bold"), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+
+                                [sg.Text("Region:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG),
+                                sg.Text("", key="-INFO_PROVINCE_REGION-", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=TOP_BANNER_BG)],
+                            ], background_color=TOP_BANNER_BG, element_justification="right", expand_x=True),
+                        ]
+                    ], background_color=TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=LIGHT_TEXT, pad=(5, 5), expand_x=True)],
+
+                    [sg.Push(),
+                        sg.Frame("Development", [
+                        [sg.Text("Tax:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_BASE_TAX-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1)),  
+                        
+                        sg.Text("Production:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_BASE_PRODUCTION-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1)),  
+                        
+                        sg.Text("Manpower:", font=("Georgia", 12), text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_BASE_MANPOWER-", font=("Georgia", 12), text_color=GREEN_TEXT, background_color=DARK_BG, size=(10, 1))]
+                    ], background_color=DARK_BG, relief=sg.RELIEF_RAISED, border_width=2, title_color=LIGHT_TEXT),
+                    sg.Push()],  
+
+                    [sg.HorizontalSeparator(color=FRAME_BORDER_COLOR)],
+
+                    [sg.Push(),
+                        sg.Frame("Demographics", [
+                        [sg.Text("Cored By:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_OWNER-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))],
+
+                        [sg.Text("Culture:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_CULTURE-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))],
+
+                        [sg.Text("Religion:", text_color=LIGHT_TEXT, background_color=DARK_BG),  
+                        sg.Text("", key="-INFO_RELIGION-", text_color=LIGHT_TEXT, background_color=DARK_BG, size=(20, 1))]
+                    ], background_color=DARK_BG, relief=sg.RELIEF_RAISED, border_width=2, title_color=LIGHT_TEXT),
+                    sg.Push(background_color=DARK_BG)]],
+                key="-PROVINCE_INFO-", pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=DARK_BG, border_width=5, title_color=LIGHT_TEXT,
+            )],
+            
             [sg.Canvas(background_color="black", size=self.canvas_size, key="-CANVAS-", pad=(10, 10))],
 
-            [sg.Frame(
-                "Map Modes", 
-                [[sg.Button(
+            [sg.Frame( "Map Modes", [
+                [sg.Button(
                     mode.name, 
                     key=mode.value, 
                     pad=(5, 5), 
-                    button_color=(BUTTON_FG, BUTTON_BG),
-                    font=("Garamond", 12)) for mode in self.painter.map_modes]],
+                    button_color=(LIGHT_TEXT, BUTTON_COLOR),
+                    font=("Garamond", 12, "bold")) for mode in self.painter.map_modes]],
                 element_justification="center",
-                relief=sg.RELIEF_SUNKEN,
+                relief=sg.RELIEF_GROOVE,
                 pad=(10, 10),
                 background_color=FRAME_BG,
-                border_width=1,
-                title_color=FRAME_TITLE_COLOR)],
+                border_width=5,
+                title_color=LIGHT_TEXT),
 
-            [sg.HorizontalSeparator(pad=(5, 10))],
-
-            [sg.Button(
-                "Reset View", 
-                key="-RESET-", 
-                pad=(10, 5), 
-                font=("Georgia", 12, "bold"), 
-                button_color=(BUTTON_BG, BUTTON_FG))],
+                sg.Button(
+                    "Reset View", 
+                    key="-RESET-", 
+                    pad=(10, 5), 
+                    font=("Georgia", 12, "bold"), 
+                    button_color=(LIGHT_TEXT, BUTTON_COLOR))],
 
             [sg.Text('', size=(1, 1), pad=(5, 5))]
         ]
+
+    def update_details(self, selected_item: EUProvince|EUArea|EURegion):
+        window = self.window
+
+        if isinstance(selected_item, EUProvince):
+            province = selected_item
+            data = {
+                "-INFO_NAME-" : province.name,
+                "-INFO_OWNER-" : province.owner.name or province.owner.tag,
+                "-INFO_CAPITAL-" : province.capital,
+                "-INFO_PROVINCE_AREA-" : self.world_data.province_to_area.get(province.province_id, None).name, 
+                "-INFO_PROVINCE_REGION-" : self.world_data.province_to_region.get(province.province_id, None).name,
+                "-INFO_BASE_TAX-" : province.base_tax,
+                "-INFO_BASE_PRODUCTION-" : province.base_production,
+                "-INFO_BASE_MANPOWER-" : province.base_manpower,
+                "-INFO_CULTURE-" : province.culture,
+                "-INFO_RELIGION-" : province.religion,
+                }
+
+            for element, attr_value in data.items():
+                if attr_value is not None:
+                    print(f"{element}: {attr_value}")
+                    window[element].update(value=attr_value, visible=True)
+                else:
+                    window[element].update(visible=False)
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV map viewer.
@@ -263,12 +342,12 @@ class MapDisplayer:
         self.window = window
 
         canvas = window["-CANVAS-"]
-        tk_canvas: tk.Canvas = canvas.TKCanvas
+        self.tk_canvas: tk.Canvas = canvas.TKCanvas
 
         self.tk_image = self.image_to_tkimage(self.map_image)
-        self.image_id = tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+        self.image_id = self.tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
 
-        self.handler = MapHandler(self, tk_canvas)
+        self.handler = MapHandler(self, self.tk_canvas)
         self.handler.bind_events()
 
         mode_names = {mode.value: mode for mode in self.painter.map_modes}
@@ -279,7 +358,7 @@ class MapDisplayer:
                 break
 
             if event in mode_names:
-                self.update_map_mode(mode_names[event], tk_canvas)
+                self.update_map_mode(mode_names[event])
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 exact_matches_only = values["-EXACT_MATCH-"]
@@ -288,7 +367,7 @@ class MapDisplayer:
                     window["-RESULTS-"].update(values=[], visible=False)
                     continue
 
-                matches = self.painter.world_data.search(
+                matches = self.world_data.search(
                     exact_matches_only=exact_matches_only, search_param=search_param)
                 self.search_results = matches
 
@@ -309,11 +388,14 @@ class MapDisplayer:
                         if item.name.lower() == item_name.lower()),
                         None)
 
+                    self.selected_item = selected_item
+
             if event == "-GOTO-":
                 if selected_item:
-                    self.handler.go_to(selected_item)
+                    self.handler.go_to_entity_location(selected_item)
+                    self.update_details(selected_item)
 
             if event == "-RESET-":
-                self.reset_display(tk_canvas)
+                self.reset_display()
 
         window.close()
