@@ -144,14 +144,18 @@ class MapDisplayer:
         self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
 
     def create_layout(self):
-        """Creates the UI layout for the map viewer and returns it."""
+        """Creates the UI layout for the map viewer.
+        
+        Returns:
+            layout (list[list]): The layout for the Window.
+        """
         screen_width, screen_height = sg.Window.get_screen_size()
         CANVAS_WIDTH_MAX = min(1200, int(screen_width * 0.9))
 
         map_width, map_height = self.original_map.size
         canvas_height = int(CANVAS_WIDTH_MAX * (map_height / map_width))
         self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
-        return Layout.get_layout(self.canvas_size, self.painter.map_modes)
+        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
         window = self.window
@@ -159,7 +163,7 @@ class MapDisplayer:
         if isinstance(selected_item, EUProvince):
             province = selected_item
             data = {
-                "-INFO_NAME-" : province.name,
+                "-INFO_PROVINCE_NAME-" : province.name,
                 "-INFO_OWNER-" : province.owner.name or province.owner.tag,
                 "-INFO_CAPITAL-" : province.capital,
                 "-INFO_PROVINCE_AREA-" : self.world_data.province_to_area.get(province.province_id, None).name, 
@@ -222,10 +226,12 @@ class MapDisplayer:
                 self.update_map_mode(mode_names[event])
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
+                window["-CLEAR-"].update(visible=True)
                 exact_matches_only = values["-EXACT_MATCH-"]
                 search_param = values["-SEARCH-"].strip().lower()
                 if not search_param:
                     window["-RESULTS-"].update(values=[], visible=False)
+                    window["-CLEAR-"].update(visible=False)
                     continue
 
                 matches = self.world_data.search(
