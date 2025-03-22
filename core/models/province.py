@@ -64,6 +64,15 @@ class EUProvince:
         base_tax (Optional[int]): The province's tax development.
         base_production (Optional[int]): The province's production development.
         base_manpower (Optional[int]): The province's manpower development.
+        trade_goods (Optional[str]): The dominant trade good produced by the province.
+        trade_power (Optional[float]): The province's trade power.
+            Higher levels indicate stronger influence on that province's trade node.
+        center_of_trade (Optional[int]): The province's center of trade level.
+            Higher levels indicate stronger trade power and development.
+        trade_node (Optional[str]): The trade node that the province belongs to.
+        garrison (Optional[int]): The province's fort garrison population.
+        fort_level (Optional[int]): The province's fort level. 
+            Higher levels indicate a stronger fort.
         native_size (Optional[int]): The number of natives in the province.
         patrol (Optional[int]): The number of game ticks it takes to patrol the province.
         pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the province.
@@ -78,6 +87,12 @@ class EUProvince:
     base_tax: Optional[int] = None
     base_production: Optional[int] = None
     base_manpower: Optional[int] = None
+    trade_goods: Optional[str] = None
+    trade_power: Optional[float] = None
+    center_of_trade: Optional[int] = None
+    trade_node: Optional[str] = None
+    garrison: Optional[int] = None
+    fort_level: Optional[int] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)
@@ -95,7 +110,7 @@ class EUProvince:
                     if attr_type in ["str", "Optional[str]"]:
                         converted_data[key] = value
                     elif attr_type in ["int", "Optional[int]"]:
-                        converted_data[key] = int(float(value))  # Handles cases like "20.0000"
+                        converted_data[key] = int(float(value))
                     elif attr_type in ["float", "Optional[float]"]:
                         converted_data[key] = float(value)
                     elif attr_type == "ProvinceType":

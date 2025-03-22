@@ -356,6 +356,12 @@ class EUWorldData:
             "base_tax": r'base_tax=([\d.]+)',
             "base_production": r'base_production=([\d.]+)',
             "base_manpower": r'base_manpower=([\d.]+)',
+            "trade_goods": r'trade_goods=([\w]+)',
+            "trade_power": r'trade_power=([\d.]+)',
+            "center_of_trade": r'center_of_trade=([\d]+)',
+            "trade_node": r'trade=([\w]+)',
+            "garrison": r'garrison=([\d.]+)',
+            #"fort_level": r'fort_15th=yes',
             "native_size": r"native_size=(\d+)",
             "patrol": r"patrol=(\d+)"
         }
