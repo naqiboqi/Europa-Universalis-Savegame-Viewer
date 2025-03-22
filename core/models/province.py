@@ -85,7 +85,27 @@ class EUProvince:
     @classmethod
     def from_dict(cls, data: dict[str, str]):
         """Builds the province from a dictionary."""
-        return cls(**data)
+        converted_data = {}
+
+        for key, value in data.items():
+            if key in cls.__annotations__:
+
+                attr_type = cls.__annotations__[key]
+                try:
+                    if attr_type in ["str", "Optional[str]"]:
+                        converted_data[key] = value
+                    elif attr_type in ["int", "Optional[int]"]:
+                        converted_data[key] = int(float(value))  # Handles cases like "20.0000"
+                    elif attr_type in ["float", "Optional[float]"]:
+                        converted_data[key] = float(value)
+                    elif attr_type == "ProvinceType":
+                        converted_data[key] = ProvinceType(value)
+                    else:
+                        converted_data[key] = value
+                except (ValueError, TypeError) as e:
+                    print(f"Error converting {key} with value {value}: {e}")
+
+        return cls(**converted_data)
 
     @property
     def bounding_box(self):
