@@ -75,9 +75,9 @@ class EUProvince:
     capital: Optional[str] = None
     culture: Optional[str] = None
     religion: Optional[str] = None
-    base_tax: Optional[float] = None
-    base_production: Optional[float] = None
-    base_manpower: Optional[float] = None
+    base_tax: Optional[int] = None
+    base_production: Optional[int] = None
+    base_manpower: Optional[int] = None
     native_size: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)
@@ -118,9 +118,9 @@ class EUProvince:
         As wasteland and sea provinces have no development, returns 0 in those cases.
         """
         if not (self.province_type == ProvinceType.SEA or self.province_type == ProvinceType.WASTELAND):
-            return float(self.base_manpower) + float(self.base_production) + float(self.base_tax)
+            return self.base_manpower + self.base_production + self.base_tax
 
-        return 0.000
+        return 0
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
@@ -142,7 +142,7 @@ class EUProvince:
                     elif attr_type in [int, Optional[int]]:
                         setattr(self, key, int(value))
                     elif attr_type in [float, Optional[float]]:
-                        setattr(self, key, float(value))
+                        setattr(self, key, int(float(value)))
                     elif attr_type is ProvinceType:
                         setattr(self, key, ProvinceType(value))
                 except:
