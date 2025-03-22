@@ -61,9 +61,9 @@ class EUProvince:
         capital (Optional[str]): The province's capital city.
         culture (Optional[str]): The province's culture.
         religion (Optional[str]): The province's religion.
-        base_tax (Optional[float]): The province's tax development.
-        base_production (Optional[float]): The province's production development.
-        base_manpower (Optional[float]): The province's manpower development.
+        base_tax (Optional[int]): The province's tax development.
+        base_production (Optional[int]): The province's production development.
+        base_manpower (Optional[int]): The province's manpower development.
         native_size (Optional[int]): The number of natives in the province.
         patrol (Optional[int]): The number of game ticks it takes to patrol the province.
         pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the province.
