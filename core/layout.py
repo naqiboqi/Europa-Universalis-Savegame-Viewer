@@ -37,8 +37,8 @@ class Layout:
             inner_border (tuple[str, int]): Specifies the hex color and width of the inner border.
             outer_border (tuple[str, int]): Specifies the hex color and width of the outer border.
             pad (tuple[int, int]): Amount of padding to put around each frame in pixels (left/right, top/bottom).
-            expand_x (bool):  If True the element will automatically expand in the X direction to fill available space.
-            expand_y (bool):  If True the element will automatically expand in the Y direction to fill available space
+            expand_x (bool): If True the element will automatically expand in the X direction to fill available space.
+            expand_y (bool): If True the element will automatically expand in the Y direction to fill available space
         
         Returns:
             outer_frame (Frame): The create frame with the border .
@@ -135,7 +135,9 @@ class Layout:
         text_colors: tuple[str, str],
         text_key: str,
         default_text_value: str="",
-        font: tuple[str, int, str]=("Georgia", 12)):
+        font: tuple[str, int, str]=("Georgia", 12),
+        justification: str="left",
+        visible_field: bool=True):
         """
         Creates text with a label inline with a value field.
         
@@ -148,6 +150,8 @@ class Layout:
             default_text_value (str): The default text to show.
             font (tuple[str, int, str]|tuple[str, int]): Specifies the font family for the text content
                 (font_name, font_size, "bold"/"italic"/"underline"/"overstrike").
+            justification (str): How the string should be alligned ("left"/"right"/"center")
+            visible_field (bool): If the field is initially visible.
         
         Returns:
             text_list (list[Text, Text]): The label and inline text field.
@@ -157,7 +161,8 @@ class Layout:
             label_name, 
             font=font, 
             text_color=label_text_color, 
-            background_color=label_background)
+            background_color=label_background,
+            justification=justification)
 
         text_color, field_background = text_colors
         value_text = sg.Text(
@@ -166,7 +171,9 @@ class Layout:
             font=font, 
             text_color=text_color, 
             background_color=field_background, 
-            size=(10, 1))
+            size=(10, 1),
+            justification=justification,
+            visible=visible_field)
 
         return label_text, value_text
 
@@ -278,13 +285,17 @@ class Layout:
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_key="-INFO_PROVINCE_AREA-",
-            font=("Georgia", 14, "bold"))
+            font=("Georgia", 14, "bold"),
+            justification="right",
+            visible_field=False)
 
         region_label, region_field = Layout.create_text_with_inline_label(
             label_name="Region:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
-            text_key="-INFO_PROVINCE_REGION-")
+            text_key="-INFO_PROVINCE_REGION-",
+            justification="right",
+            visible_field=False)
 
         return sg.Frame("", [
             [sg.Column([
@@ -299,7 +310,7 @@ class Layout:
         ], background_color=Layout.TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=Layout.LIGHT_TEXT, pad=(5, 5), expand_x=True)
 
     @staticmethod
-    def create_development_info_frame():
+    def create_development_info_frame(name: str):
         """Creates the development frame section for a province.
 
         Returns:
@@ -309,19 +320,19 @@ class Layout:
             label_name="Tax",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
             text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
-            text_key="-INFO_BASE_TAX-")
+            text_key=f"-INFO_{name}_BASE_TAX-")
 
         prod_label, prod_field = Layout.create_text_with_inline_label(
             label_name="Production",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
             text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
-            text_key="-INFO_BASE_PRODUCTION-")
+            text_key=f"-INFO_{name}_BASE_PRODUCTION-")
 
         pop_label, pop_field = Layout.create_text_with_inline_label(
             label_name="Manpower",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
             text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
-            text_key="-INFO_BASE_MANPOWER-")
+            text_key=f"-INFO_{name}_BASE_MANPOWER-")
 
         return sg.Frame("", [
             [tax_label, tax_field, prod_label, prod_field, pop_label, pop_field]
@@ -369,7 +380,7 @@ class Layout:
                     content="Development",
                     content_color=Layout.LIGHT_TEXT,
                     frame_background_color=Layout.SECTION_BANNER_BG)],
-                [Layout.create_development_info_frame(), sg.Push(background_color=Layout.LIGHT_FRAME_BG)],  
+                [Layout.create_development_info_frame(name="PROVINCE"), sg.Push(background_color=Layout.LIGHT_FRAME_BG)],  
 
                 [Layout.create_text_with_frame(
                     content="Demographics",
@@ -377,8 +388,53 @@ class Layout:
                     frame_background_color=Layout.SECTION_BANNER_BG)],
                 [Layout.create_demographic_info_frame(), sg.Push(background_color=Layout.LIGHT_FRAME_BG)]
 
-            ], key="-PROVINCE_INFO-", pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, title_color=Layout.LIGHT_TEXT)]
-        ], vertical_alignment="top", pad=(10, 10), expand_y=True, background_color=Layout.DARK_FRAME_BG)
+            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, title_color=Layout.LIGHT_TEXT)]
+        ], key="-PROVINCE_INFO-", vertical_alignment="top", pad=(10, 10), expand_y=True, background_color=Layout.DARK_FRAME_BG)
+
+    @staticmethod
+    def create_geographic_area_info_frame():
+        """Creates the geographical frame section for an area.
+
+        Returns:
+            frame (Frame): The frame containing the area info.
+        """
+        area_label, area_field = Layout.create_text_with_inline_label(
+            label_name="Area:",
+            label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_key="-INFO_AREA_NAME-",
+            font=("Georgia", 14, "bold"))
+
+        region_label, region_field = Layout.create_text_with_inline_label(
+            label_name="Region:",
+            label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_key="-INFO_AREA_REGION-")
+
+        return sg.Frame("", [
+            [sg.Column([
+                [area_label, area_field]
+            ], background_color=Layout.TOP_BANNER_BG, element_justification="left", expand_x=True),
+
+            sg.Column([
+                [region_label, region_field],
+            ], background_color=Layout.TOP_BANNER_BG, element_justification="right", expand_x=True)]
+        ], background_color=Layout.TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=Layout.LIGHT_TEXT, pad=(5, 5), expand_x=True)
+
+    @staticmethod
+    def create_area_info_column():
+        return sg.Column([
+            [sg.Frame("", [
+                [Layout.create_geographic_area_info_frame()],
+                
+                [Layout.create_text_with_frame(
+                    content="Development",
+                    content_color=Layout.LIGHT_TEXT,
+                    frame_background_color=Layout.SECTION_BANNER_BG)],
+                [Layout.create_development_info_frame(name="AREA")]
+
+            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, expand_y=True, border_width=5, title_color=Layout.LIGHT_TEXT)]
+        ], key="-AREA_INFO-", vertical_alignment="top", pad=(10, 10), expand_y=True, background_color=Layout.DARK_FRAME_BG, visible=False)
 
     @staticmethod
     def create_map_canvas_frame(canvas_size: tuple[int, int], key: str):
@@ -421,12 +477,13 @@ class Layout:
             canvas_size (tuple[int, int]): The `(x, y)` size of the canvas determined by the display size.
             map_modes (dict[MapMode]): The possible map modes to choose from when displaying the map.
         """
+        print("Building layout....")
         return [
             [Layout.create_window_header()],
 
             [sg.Frame("", [
-                [Layout.create_search_column(), Layout.create_province_info_column()]
-            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, expand_x=True)],
+                [Layout.create_search_column(), Layout.create_province_info_column(), Layout.create_area_info_column()]
+            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, size=(1, 460), expand_x=True)],
 
             [Layout.create_map_canvas_frame(canvas_size=canvas_size, key="-CANVAS-")],
 
