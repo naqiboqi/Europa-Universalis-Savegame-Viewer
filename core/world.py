@@ -359,11 +359,11 @@ class EUWorldData:
             "trade_goods": r'trade_goods=([\w]+)',
             "trade_power": r'trade_power=([\d.]+)',
             "center_of_trade": r'center_of_trade=([\d]+)',
-            "trade_node": r'trade=([\w]+)',
+            "trade_node": r'^trade="([\w]+)"',
             "garrison": r'garrison=([\d.]+)',
             #"fort_level": r'fort_15th=yes',
-            "native_size": r"native_size=(\d+)",
-            "patrol": r"patrol=(\d+)"
+            "native_size": r'native_size=(\d+)',
+            "patrol": r'patrol=(\d+)'
         }
 
         line_iter = iter(province_data)
