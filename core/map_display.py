@@ -15,7 +15,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from . import MapHandler, MapPainter
 from . import Layout
-from .models import EUProvince, EUArea, EURegion
+from .models import EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
 
 
@@ -157,30 +157,70 @@ class MapDisplayer:
         self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
         return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
-    def update_details(self, selected_item: EUProvince|EUArea|EURegion):
+    def update_province_details(self, province: EUProvince):
         window = self.window
 
-        if isinstance(selected_item, EUProvince):
-            province = selected_item
+        if province.province_type == ProvinceType.OWNED:
             data = {
-                "-INFO_PROVINCE_NAME-" : province.name,
-                "-INFO_OWNER-" : province.owner.name or province.owner.tag,
-                "-INFO_CAPITAL-" : province.capital,
-                "-INFO_PROVINCE_AREA-" : self.world_data.province_to_area.get(province.province_id, None).name, 
-                "-INFO_PROVINCE_REGION-" : self.world_data.province_to_region.get(province.province_id, None).name,
-                "-INFO_BASE_TAX-" : province.base_tax,
-                "-INFO_BASE_PRODUCTION-" : province.base_production,
-                "-INFO_BASE_MANPOWER-" : province.base_manpower,
-                "-INFO_CULTURE-" : province.culture,
-                "-INFO_RELIGION-" : province.religion,
-                }
+                "-INFO_PROVINCE_NAME-": province.name,
+                "-INFO_OWNER-": province.owner.name or province.owner.tag,
+                "-INFO_CAPITAL-": province.capital,
+                "-INFO_PROVINCE_AREA-": self.world_data.province_to_area.get(province.province_id, None).name, 
+                "-INFO_PROVINCE_REGION-": self.world_data.province_to_region.get(province.province_id, None).name,
+                "-INFO_PROVINCE_BASE_TAX-": province.base_tax,
+                "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
+                "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
+                "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
+                "-INFO_PROVINCE_GOODS_PRODUCED-": province.base_production / 10,
+                "-INFO_PROVINCE_TRADE_GOOD-": province.trade_goods,
+                "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
+                "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
+                "-INFO_PROVINCE_FORT_LEVEL-": province.fort_level,
+                # "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
+                # "-INFO_PROVINCE_DEVASTATION-": province.devastation,
+                "-INFO_CULTURE-": province.culture,
+                "-INFO_RELIGION-": province.religion,
+            }
 
+            window["-AREA_INFO-"].update(visible=False)
+            window["-PROVINCE_INFO-"].update(visible=True)
             for element, attr_value in data.items():
                 if attr_value is not None:
-                    print(f"{element}: {attr_value}")
                     window[element].update(value=attr_value, visible=True)
                 else:
                     window[element].update(visible=False)
+
+    def update_area_details(self, area: EUArea):
+        window = self.window
+        area_province = list(area.provinces.values())[0]
+
+        if area.is_land_area:
+            data = {
+                "-INFO_AREA_NAME-" : area.name,
+                "-INFO_AREA_REGION-" : self.world_data.province_to_region.get(area_province.province_id, None).name,
+                "-INFO_AREA_BASE_TAX-" : sum(province.base_tax for province in area.provinces.values()),
+                "-INFO_AREA_BASE_PRODUCTION-" : sum(province.base_production for province in area.provinces.values()),
+                "-INFO_AREA_BASE_MANPOWER-" : sum(province.base_manpower for province in area.provinces.values()),
+                "-INFO_AREA_PROVINCES-" : [province.name for province in area.provinces.values()]
+            }
+
+            window["-PROVINCE_INFO-"].update(visible=False)
+            window["-AREA_INFO-"].update(visible=True)
+            for element, attr_value in data.items():
+                if attr_value is not None:
+                    try:
+                        window[element].update(value=attr_value, visible=True)
+                    except (AttributeError, TypeError):
+                        window[element].update(values=attr_value, visible=True)
+                else:
+                    window[element].update(visible=False)
+
+    def update_details(self, selected_item: EUProvince|EUArea|EURegion):
+        if hasattr(selected_item, "province_type"):
+            self.update_province_details(selected_item)
+
+        elif isinstance(selected_item, EUArea):
+            self.update_area_details(selected_item)
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV map viewer.

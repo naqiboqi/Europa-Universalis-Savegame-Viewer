@@ -361,9 +361,19 @@ class EUWorldData:
             "center_of_trade": r'center_of_trade=([\d]+)',
             "trade_node": r'^trade="([\w]+)"',
             "garrison": r'garrison=([\d.]+)',
-            #"fort_level": r'fort_15th=yes',
+            "fort_level": r'fort_15th=yes',
+            "local_autonomy": r'local_autonomy=([\d.]+)',
+            "devastation": r'devastation=([\d.]+)',
             "native_size": r'native_size=(\d+)',
             "patrol": r'patrol=(\d+)'
+        }
+
+        fort_buildings = {
+            "fort_15th": 1,
+            "fort_16th": 2,
+            "fort_17th": 3,
+            "fort_18th": 4,
+            "fort_19th": 5
         }
 
         line_iter = iter(province_data)
@@ -384,11 +394,15 @@ class EUWorldData:
                         current_province["province_type"] = self.set_province_type(current_province)
                         provinces[current_province["province_id"]] = current_province
 
-                    current_province = {"province_id": prov_id}
+                    current_province = {"province_id": prov_id, "fort_level": 0}
                     continue
 
                 if current_province is None:
                     continue
+
+                for fort, level in fort_buildings.items():
+                    if fort in line:
+                        current_province["fort_level"] = max(current_province["fort_level"], level)
 
                 for key, pattern in patterns.items():
                     match = re.search(pattern, line)

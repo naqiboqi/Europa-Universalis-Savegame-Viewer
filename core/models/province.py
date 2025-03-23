@@ -69,6 +69,10 @@ class EUProvince:
             Higher levels indicate stronger influence on that province's trade node.
         center_of_trade (Optional[int]): The province's center of trade level.
             Higher levels indicate stronger trade power and development.
+        local_autonomy (Optional[float]): The province's autonomy and degree of separation.
+            Higher levels indicate less production and power contribution to the owning country.
+        devastation (Optional[int]): The amount of devastation in the province.
+            Higher levels indicate less production and power contribution to the owning country.
         trade_node (Optional[str]): The trade node that the province belongs to.
         garrison (Optional[int]): The province's fort garrison population.
         fort_level (Optional[int]): The province's fort level. 
@@ -90,9 +94,12 @@ class EUProvince:
     trade_goods: Optional[str] = None
     trade_power: Optional[float] = None
     center_of_trade: Optional[int] = None
+    local_autonomy: Optional[float] = None
+    devastation: Optional[int] = None
     trade_node: Optional[str] = None
     garrison: Optional[int] = None
     fort_level: Optional[int] = None
+    is_hre: Optional[bool] = False
     native_size: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)

@@ -13,8 +13,9 @@ class Layout:
     TOP_BANNER_BG = "#353c25"
     SECTION_BANNER_BG = "#172f48"
     LIGHT_FRAME_BG = "#344048"
-    DARK_FRAME_BG = "#2a343b"
-    SUNKEN_FRAME_BG = "#283239"
+    MEDIUM_FRAME_BG = "#2a343b"
+    DARK_FRAME_BG = "#283239"
+    SUNK_FRAME_BG =  "#252e34"
     WINDOW_BACKGROUND = ""
     BUTTON_BG = "#314b68"
     BUTTON_FG = "#394d66"
@@ -102,7 +103,10 @@ class Layout:
         content: str,
         content_color: str,
         frame_background_color: str,
-        font: tuple[str, int, str]=("Georgia", 12, "bold")):
+        font: tuple[str, int, str]=("Georgia", 12, "bold"),
+        justification: str=None,
+        key: str=None,
+        size: tuple[int, int]=(None, None)):
         """
         Creates text with a framed background.
         
@@ -116,12 +120,17 @@ class Layout:
         Returns:
             frame (Frame): The frame containing the wrapped text.
         """
+        text = sg.Text(
+            content, 
+            font=font, 
+            background_color=frame_background_color,
+            text_color=content_color, 
+            key=key,
+            justification=justification,
+            size=size)
+
         return sg.Frame("", [
-            [sg.Text(
-                content, 
-                font=font, 
-                text_color=content_color, 
-                background_color=frame_background_color)]
+            [text]
         ], background_color=frame_background_color, element_justification="left", pad=(5, 5))
 
     @staticmethod
@@ -133,11 +142,13 @@ class Layout:
         label_name: str,
         label_colors: tuple[str, str],
         text_colors: tuple[str, str],
+        text_field_size: tuple[int, int],
         text_key: str,
         default_text_value: str="",
         font: tuple[str, int, str]=("Georgia", 12),
-        justification: str="left",
-        visible_field: bool=True):
+        justification: str=None,
+        visible_field: bool=True,
+        expand_x: bool=False):
         """
         Creates text with a label inline with a value field.
         
@@ -145,6 +156,7 @@ class Layout:
             label_name (str): The name of the text label.
             label_colors (tuple[str, str]): The label font and label background hex colors.
             text_colors (tuple[str, str]): The text font and field background hex colors.
+            text_field_size (tuple[int, int]): Size of the text field as (width, height).
             text_key (str): The string that will be returned from `window.read()` to access the text value.
                 Should follow the format `-NAME-` for clarity.
             default_text_value (str): The default text to show.
@@ -154,7 +166,7 @@ class Layout:
             visible_field (bool): If the field is initially visible.
         
         Returns:
-            text_list (list[Text, Text]): The label and inline text field.
+            texts (tuple[Text, Text]): The label and inline text field.
         """
         label_text_color, label_background = label_colors
         label_text = sg.Text(
@@ -171,9 +183,10 @@ class Layout:
             font=font, 
             text_color=text_color, 
             background_color=field_background, 
-            size=(10, 1),
+            size=text_field_size,
             justification=justification,
-            visible=visible_field)
+            visible=visible_field,
+            expand_x=expand_x)
 
         return label_text, value_text
 
@@ -205,7 +218,7 @@ class Layout:
             write_only=True, 
             key="-MULTILINE-",
             no_scrollbar=True,
-            background_color=Layout.SUNKEN_FRAME_BG,
+            background_color=Layout.DARK_FRAME_BG,
             text_color=Layout.LIGHT_TEXT,
             font=("Georgia", 14),
             border_width=3,
@@ -215,12 +228,11 @@ class Layout:
             [sg.Column([
                 [header_text],
                 [info_text],
-                ], justification="center", 
-                element_justification="center", 
-                expand_x=True, 
-                pad=(5, 5), 
-                background_color=Layout.LIGHT_FRAME_BG)
-            ]
+            ], justification="center", 
+            element_justification="center", 
+            expand_x=True, 
+            pad=(5, 5), 
+            background_color=Layout.LIGHT_FRAME_BG)]
         ]
 
         bordered_layout = Layout.add_border(
@@ -241,24 +253,74 @@ class Layout:
         Returns:
             column (Column): The column containing the search section.
         """
+        search_label = Layout.create_text_with_frame("Search", Layout.LIGHT_TEXT, Layout.RED_BANNER_BG)
+        search_input = sg.Input(
+            size=(30, 1), 
+            key="-SEARCH-", 
+            font=("Georgia", 12), 
+            enable_events=True, 
+            text_color=Layout.LIGHT_TEXT, 
+            background_color=Layout.MEDIUM_FRAME_BG)
+
+        matches_checkbox = sg.Checkbox(
+            "Exact Matches?", 
+            key="-EXACT_MATCH-", 
+            enable_events=True, 
+            font=("Georgia", 11), 
+            text_color=Layout.LIGHT_TEXT, 
+            background_color=Layout.LIGHT_FRAME_BG)
+
+        matches_output = sg.Listbox(
+            values=[], 
+            size=(30, 5), 
+            key="-RESULTS-", 
+            enable_events=True, 
+            font=("Segoe UI", 12), 
+            visible=False, 
+            text_color=Layout.LIGHT_TEXT, 
+            background_color=Layout.DARK_FRAME_BG)
+
+        goto_button = Layout.create_button(
+            "Go to", 
+            key="-GOTO-", 
+            font_color=Layout.LIGHT_TEXT, 
+            button_color=Layout.BUTTON_BG, 
+            visible=False, 
+            font=("Garamond", 12, "bold"))
+        
+        clear_button = Layout.create_button(
+            "Clear", 
+            key="-CLEAR-", 
+            font_color=Layout.LIGHT_TEXT, 
+            button_color=Layout.BUTTON_BG, 
+            visible=False, 
+            font=("Garamond", 12, "bold"))
+
+        matches_frame = sg.Frame("", [
+            [matches_output],
+            [goto_button],
+            [clear_button]
+        ], background_color=Layout.LIGHT_FRAME_BG, element_justification="center", border_width=0)
+
+        search_frame = sg.Frame("", [
+            [sg.Push(Layout.LIGHT_FRAME_BG), search_label, sg.Push(Layout.LIGHT_FRAME_BG)],
+            [search_input],
+            [matches_checkbox],
+            [sg.Push(background_color=Layout.LIGHT_FRAME_BG), matches_frame, sg.Push(background_color=Layout.LIGHT_FRAME_BG)]
+        ], expand_y=True, 
+        pad=(10, 10), 
+        relief=sg.RELIEF_GROOVE, 
+        background_color=Layout.LIGHT_FRAME_BG, 
+        border_width=5, 
+        title_color=Layout.LIGHT_TEXT)
+
         return sg.Column([
-            [sg.Frame("", [
-                [sg.Push(Layout.LIGHT_FRAME_BG), 
-                    Layout.create_text_with_frame("Search", Layout.LIGHT_TEXT, Layout.RED_BANNER_BG),
-                sg.Push(Layout.LIGHT_FRAME_BG)],
-
-                [sg.Input(size=(30, 1), key="-SEARCH-", font=("Georgia", 12), enable_events=True, text_color=Layout.LIGHT_TEXT, background_color=Layout.DARK_FRAME_BG)],
-                [sg.Checkbox("Exact Matches?", key="-EXACT_MATCH-", enable_events=True, font=("Georgia", 11), text_color=Layout.LIGHT_TEXT, background_color=Layout.LIGHT_FRAME_BG)],
-
-                [sg.Push(background_color=Layout.LIGHT_FRAME_BG), sg.Frame("", [
-                    [sg.Listbox(values=[], size=(30, 5), key="-RESULTS-", enable_events=True, font=("Segoe UI", 12), visible=False, text_color=Layout.LIGHT_TEXT, background_color=Layout.SUNKEN_FRAME_BG)],
-                    [Layout.create_button("Go to", "-GOTO-", Layout.LIGHT_TEXT, Layout.BUTTON_BG, visible=False, font=("Garamond", 12, "bold"))],
-                    [Layout.create_button("Clear", "-CLEAR-", Layout.LIGHT_TEXT, Layout.BUTTON_BG, visible=False, font=("Garamond", 12, "bold"))]
-                ], background_color=Layout.LIGHT_FRAME_BG, element_justification="center", border_width=0),
-                sg.Push(background_color=Layout.LIGHT_FRAME_BG)]
-
-            ], expand_y=True, pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, title_color=Layout.LIGHT_TEXT)]
-        ], vertical_alignment="top", pad=(10, 10), expand_y=True, justification="left", background_color=Layout.DARK_FRAME_BG)
+            [search_frame]
+        ], vertical_alignment="top",
+        pad=(10, 10), 
+        expand_y=True, 
+        justification="left", 
+        background_color=Layout.MEDIUM_FRAME_BG)
 
     @staticmethod
     def create_geographic_province_info_frame():
@@ -271,6 +333,7 @@ class Layout:
             label_name="Province:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_field_size=(15, 1),
             text_key="-INFO_PROVINCE_NAME-",
             font=("Georgia", 14, "bold"))
 
@@ -278,6 +341,7 @@ class Layout:
             label_name="Capital:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_field_size=(15, 1),
             text_key="-INFO_CAPITAL-")
 
         area_label, area_field = Layout.create_text_with_inline_label(
@@ -285,17 +349,17 @@ class Layout:
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_key="-INFO_PROVINCE_AREA-",
+            text_field_size=(10, 1),
             font=("Georgia", 14, "bold"),
-            justification="right",
-            visible_field=False)
+            justification="right")
 
         region_label, region_field = Layout.create_text_with_inline_label(
             label_name="Region:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_field_size=(10, 1),
             text_key="-INFO_PROVINCE_REGION-",
-            justification="right",
-            visible_field=False)
+            justification="right")
 
         return sg.Frame("", [
             [sg.Column([
@@ -304,10 +368,20 @@ class Layout:
             ], background_color=Layout.TOP_BANNER_BG, element_justification="left", expand_x=True),
 
             sg.Column([
-                [area_label, area_field],
-                [region_label, region_field],
+                [area_label],
+                [region_label],
+            ], background_color=Layout.TOP_BANNER_BG, element_justification="left", expand_x=True),
+
+            sg.Column([
+                [area_field],
+                [region_field],
             ], background_color=Layout.TOP_BANNER_BG, element_justification="right", expand_x=True)]
-        ], background_color=Layout.TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=Layout.LIGHT_TEXT, pad=(5, 5), expand_x=True)
+        ], background_color=Layout.TOP_BANNER_BG, 
+        relief=sg.RELIEF_RAISED, 
+        border_width=4, 
+        title_color=Layout.LIGHT_TEXT, 
+        pad=(5, 5), 
+        expand_x=True)
 
     @staticmethod
     def create_development_info_frame(name: str):
@@ -319,49 +393,167 @@ class Layout:
         tax_label, tax_field = Layout.create_text_with_inline_label(
             label_name="Tax",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
-            text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.GREEN_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(4, 1),
             text_key=f"-INFO_{name}_BASE_TAX-")
 
         prod_label, prod_field = Layout.create_text_with_inline_label(
             label_name="Production",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
-            text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.GREEN_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(4, 1),
             text_key=f"-INFO_{name}_BASE_PRODUCTION-")
 
         pop_label, pop_field = Layout.create_text_with_inline_label(
             label_name="Manpower",
             label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
-            text_colors=(Layout.GREEN_TEXT, Layout.SUNKEN_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.GREEN_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(4, 1),
             text_key=f"-INFO_{name}_BASE_MANPOWER-")
 
         return sg.Frame("", [
             [tax_label, tax_field, prod_label, prod_field, pop_label, pop_field]
-        ], background_color=Layout.DARK_FRAME_BG, pad=(5, 5), relief=sg.RELIEF_SUNKEN, border_width=3, title_color=Layout.LIGHT_TEXT)
+        ], background_color=Layout.DARK_FRAME_BG, 
+        pad=(5, 5), 
+        relief=sg.RELIEF_SUNKEN, 
+        border_width=3, 
+        title_color=Layout.LIGHT_TEXT)
 
     @staticmethod
-    def create_demographic_info_frame():
-        """Creates the demographics frame section for a province.
+    def create_demographic_info_column():
+        """Creates the demographics column section for a province.
 
         Returns:
-            frame (Frame): The frame containing the demographic info.
+            column (Column): The column containing the demographic info.
         """
-        return sg.Frame("", [
-            [sg.Text("Cored by:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.DARK_FRAME_BG)],
-            [sg.Frame("", [
-                [sg.Text("", key="-INFO_OWNER-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNKEN_FRAME_BG, size=(20, 1))]
-            ], background_color=Layout.SUNKEN_FRAME_BG, pad=(5, 5), border_width=0)],
+        cored_by = Layout.create_text_with_header_label()
 
-            [sg.Text("Culture:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.DARK_FRAME_BG)],
-            [sg.Frame("", [
-                [sg.Text("", key="-INFO_CULTURE-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNKEN_FRAME_BG, size=(20, 1))]
-            ], background_color=Layout.SUNKEN_FRAME_BG, pad=(5, 5), border_width=0)],
 
-            [sg.Text("Religion:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.DARK_FRAME_BG)],
-            [sg.Frame("", [
-                [sg.Text("", key="-INFO_RELIGION-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNKEN_FRAME_BG, size=(20, 1))]
-            ], background_color=Layout.SUNKEN_FRAME_BG, pad=(5, 5), border_width=0)]
 
-        ], background_color=Layout.DARK_FRAME_BG, pad=(5, 5), relief=sg.RELIEF_SUNKEN, border_width=4, expand_x=True)
+        demographics_frame = sg.Frame("", [
+            [sg.Text("Cored by:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.MEDIUM_FRAME_BG)],
+            [sg.Frame("", [
+                [sg.Text("", key="-INFO_OWNER-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNK_FRAME_BG, size=(20, 1))]
+            ], background_color=Layout.SUNK_FRAME_BG, pad=(5, 5), border_width=0)],
+
+            [sg.Text("Culture:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.MEDIUM_FRAME_BG)],
+            [sg.Frame("", [
+                [sg.Text("", key="-INFO_CULTURE-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNK_FRAME_BG, size=(20, 1))]
+            ], background_color=Layout.SUNK_FRAME_BG, pad=(5, 5), border_width=0)],
+
+            [sg.Text("Religion:", font=("Georgia", 12), text_color=Layout.LIGHT_TEXT, background_color=Layout.MEDIUM_FRAME_BG)],
+            [sg.Frame("", [
+                [sg.Text("", key="-INFO_RELIGION-", font=("Georgia", 12), text_color=Layout.GREEN_TEXT, background_color=Layout.SUNK_FRAME_BG, size=(20, 1))]
+            ], background_color=Layout.SUNK_FRAME_BG, pad=(5, 5), border_width=0)]
+
+        ], background_color=Layout.DARK_FRAME_BG, pad=(5, 5), relief=sg.RELIEF_SUNKEN)
+
+        demographics_label = Layout.create_text_with_frame(
+            content="Demographics", 
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG)
+
+        return sg.Column([
+            [demographics_label],
+            [demographics_frame]
+        ], pad=(10, 10), background_color=Layout.LIGHT_FRAME_BG, vertical_alignment="top")
+
+    @staticmethod
+    def create_trade_info_column():
+        """Creates the trade column section for a province.
+
+        Returns:
+            column (Column): The column containing the trade info.
+        """
+        trade_power_label, trade_power_field = Layout.create_text_with_inline_label(
+            "Trade Power",
+            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(8, 1),
+            text_key="-INFO_PROVINCE_TRADE_POWER-",
+            expand_x=True)
+
+        goods_produced_label, goods_produced_field = Layout.create_text_with_inline_label(
+            "Goods Produced",
+            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(8, 1),
+            text_key="-INFO_PROVINCE_GOODS_PRODUCED-",
+            expand_x=True)
+
+        trade_good_label, trade_good_field = Layout.create_text_with_inline_label(
+            "Trade Good",
+            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(8, 1),
+            text_key="-INFO_PROVINCE_TRADE_GOOD-",
+            expand_x=True)
+
+        home_trade_node = Layout.create_text_with_frame(
+            "",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.BUTTON_BG,
+            justification="center",
+            key="-INFO_PROVINCE_HOME_NODE-",
+            size=(15, 1))
+
+        development_frame = sg.Frame("", [
+            [trade_power_label, trade_power_field],
+            [goods_produced_label, goods_produced_field],
+            [trade_good_label, trade_good_field],
+            [sg.Push(background_color=Layout.DARK_FRAME_BG), home_trade_node, sg.Push(background_color=Layout.DARK_FRAME_BG)]
+        ], background_color=Layout.DARK_FRAME_BG, pad=(5, 5), relief=sg.RELIEF_SUNKEN)
+
+        trade_column_header = Layout.create_text_with_frame(
+            "Trade",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG)
+
+        return sg.Column([
+            [trade_column_header],
+            [development_frame]
+        ], pad=(10, 10), background_color=Layout.LIGHT_FRAME_BG, vertical_alignment="top")
+
+    @staticmethod
+    def create_military_info_column():
+        military_column_header = Layout.create_text_with_frame(
+            "Military",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG)
+    
+        fort_level_label, fort_level_value = Layout.create_text_with_inline_label(
+            "Fort Level",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
+            text_field_size=(3, 1),
+            text_key="-INFO_PROVINCE_FORT_LEVEL-",
+            expand_x=True)
+
+        fort_column = sg.Column([
+            [fort_level_label, fort_level_value]])
+
+        garrison_label, garrison_value = Layout.create_text_with_inline_label(
+            "Garrison",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
+            justification="center",
+            text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
+            text_field_size=(5, 1),
+            text_key="-INFO_PROVINCE_GARRISON_SIZE-")
+
+        garrison_column = sg.Column([
+            [garrison_label, garrison_value]])
+    
+        return sg.Column([
+            [military_column_header],
+            [fort_column, sg.Push(), garrison_column]
+        ], pad=(10, 10), background_color=Layout.LIGHT_FRAME_BG, vertical_alignment="top")
 
     @staticmethod
     def create_province_info_column():
@@ -372,24 +564,39 @@ class Layout:
         Returns:
             column (Column): The column containing the province info.
         """
+        geographic_info_frame = Layout.create_geographic_province_info_frame()
+        
+        development_label = Layout.create_text_with_frame(
+            content="Development",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG)
+
+        development_info_frame = Layout.create_development_info_frame(name="PROVINCE")
+        demographic_info_column = Layout.create_demographic_info_column()
+        trade_info_column = Layout.create_trade_info_column()
+        military_info_column = Layout.create_military_info_column()
+
+        trade_and_mil_column = sg.Column([
+            [trade_info_column],
+            [military_info_column]])
+        
+        province_info_frame = sg.Frame("", [
+            [geographic_info_frame],
+            [development_label, development_info_frame, sg.Push(background_color=Layout.LIGHT_FRAME_BG)],
+            [demographic_info_column, trade_and_mil_column]
+        ], pad=(10, 10), 
+        relief=sg.RELIEF_GROOVE, 
+        background_color=Layout.LIGHT_FRAME_BG, 
+        border_width=5, 
+        title_color=Layout.LIGHT_TEXT)
+
         return sg.Column([
-            [sg.Frame("", [
-                [Layout.create_geographic_province_info_frame()],
-
-                [Layout.create_text_with_frame(
-                    content="Development",
-                    content_color=Layout.LIGHT_TEXT,
-                    frame_background_color=Layout.SECTION_BANNER_BG)],
-                [Layout.create_development_info_frame(name="PROVINCE"), sg.Push(background_color=Layout.LIGHT_FRAME_BG)],  
-
-                [Layout.create_text_with_frame(
-                    content="Demographics",
-                    content_color=Layout.LIGHT_TEXT,
-                    frame_background_color=Layout.SECTION_BANNER_BG)],
-                [Layout.create_demographic_info_frame(), sg.Push(background_color=Layout.LIGHT_FRAME_BG)]
-
-            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, title_color=Layout.LIGHT_TEXT)]
-        ], key="-PROVINCE_INFO-", vertical_alignment="top", pad=(10, 10), expand_y=True, background_color=Layout.DARK_FRAME_BG)
+            [province_info_frame]
+        ], key="-PROVINCE_INFO-", 
+        vertical_alignment="top", 
+        pad=(10, 10), 
+        expand_y=True, 
+        background_color=Layout.MEDIUM_FRAME_BG)
 
     @staticmethod
     def create_geographic_area_info_frame():
@@ -402,6 +609,7 @@ class Layout:
             label_name="Area:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
+            text_field_size=(15, 1),
             text_key="-INFO_AREA_NAME-",
             font=("Georgia", 14, "bold"))
 
@@ -409,36 +617,69 @@ class Layout:
             label_name="Region:",
             label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
             text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
-            text_key="-INFO_AREA_REGION-")
+            text_field_size=(15, 1),
+            text_key="-INFO_AREA_REGION-",
+            font=("Georgia", 14, "bold"),
+            justification="right")
+
+        area_info_column = sg.Column([
+                [area_label, area_field]
+            ], background_color=Layout.TOP_BANNER_BG, element_justification="left", expand_x=True)
+
+        region_info_column =  sg.Column([
+                [region_label, region_field],
+            ], background_color=Layout.TOP_BANNER_BG, element_justification="right", expand_x=True)
 
         return sg.Frame("", [
-            [sg.Column([
-                [area_label, area_field]
-            ], background_color=Layout.TOP_BANNER_BG, element_justification="left", expand_x=True),
-
-            sg.Column([
-                [region_label, region_field],
-            ], background_color=Layout.TOP_BANNER_BG, element_justification="right", expand_x=True)]
-        ], background_color=Layout.TOP_BANNER_BG, relief=sg.RELIEF_RAISED, border_width=4, title_color=Layout.LIGHT_TEXT, pad=(5, 5), expand_x=True)
+            [area_info_column, region_info_column]
+        ], background_color=Layout.TOP_BANNER_BG, 
+        relief=sg.RELIEF_RAISED, 
+        border_width=4, 
+        title_color=Layout.LIGHT_TEXT, 
+        pad=(5, 5), 
+        expand_x=True)
 
     @staticmethod
     def create_area_info_column():
+        area_provinces_output = sg.Listbox(
+            values=[], 
+            background_color=Layout.DARK_FRAME_BG, 
+            enable_events=True, 
+            font=("Garamond", 12,"bold"), 
+            key="-INFO_AREA_PROVINCES-", 
+            size=(30, 8),
+            text_color=Layout.LIGHT_TEXT)
+
         return sg.Column([
             [sg.Frame("", [
                 [Layout.create_geographic_area_info_frame()],
-                
                 [Layout.create_text_with_frame(
                     content="Development",
                     content_color=Layout.LIGHT_TEXT,
                     frame_background_color=Layout.SECTION_BANNER_BG)],
-                [Layout.create_development_info_frame(name="AREA")]
+                [Layout.create_development_info_frame(name="AREA")],
+                [Layout.create_text_with_frame(
+                    content="Provinces",
+                    content_color=Layout.LIGHT_TEXT,
+                    frame_background_color=Layout.SECTION_BANNER_BG)],
+                [area_provinces_output]
 
-            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, expand_y=True, border_width=5, title_color=Layout.LIGHT_TEXT)]
-        ], key="-AREA_INFO-", vertical_alignment="top", pad=(10, 10), expand_y=True, background_color=Layout.DARK_FRAME_BG, visible=False)
+            ], pad=(10, 10), 
+            relief=sg.RELIEF_GROOVE, 
+            background_color=Layout.LIGHT_FRAME_BG, 
+            expand_y=True, 
+            border_width=5, 
+            title_color=Layout.LIGHT_TEXT)]
+        ], key="-AREA_INFO-", 
+        vertical_alignment="top", 
+        pad=(10, 10), 
+        expand_y=True, 
+        background_color=Layout.MEDIUM_FRAME_BG, 
+        visible=False)
 
     @staticmethod
     def create_map_canvas_frame(canvas_size: tuple[int, int], key: str):
-        """Creates a frame containing the map canvas.
+        """Creates a bordered frame containing the map canvas.
         
         Args:
             canvas_size (tuple[int, int]): The `(x, y)` size of the canvas.
@@ -448,9 +689,15 @@ class Layout:
         Returns:
             frame (Frame): The frame containing the canvas.
         """
-        return sg.Frame("", [
-            [sg.Canvas(background_color="black", size=canvas_size, key=key, pad=(10, 10))]
-        ], background_color=Layout.LIGHT_FRAME_BG, relief=sg.RELIEF_GROOVE, pad=(10, 10), border_width=5)
+        canvas_frame =  sg.Frame("", [
+            [sg.Canvas(background_color="black", size=canvas_size, key=key, pad=(0, 0))]
+        ], background_color=Layout.LIGHT_FRAME_BG, relief=sg.RELIEF_GROOVE, pad=(5, 5), border_width=5)
+
+        return Layout.add_border(
+            layout=[[canvas_frame]], 
+            inner_border=(Layout.GOLD_FRAME_LOWER, 2),
+            outer_border=(Layout.GOLD_FRAME_UPPER, 2),
+            pad=(5, 5))
 
     @staticmethod
     def create_map_modes_frame(map_modes: dict):
@@ -462,12 +709,24 @@ class Layout:
         Returns:
             frame (Frame): The frame containing the map mode buttons.
         """
+        map_mode_label = sg.Text(
+            "Map Modes", 
+            font=("Garmond", 12, "bold"), 
+            background_color=Layout.MEDIUM_FRAME_BG, 
+            text_color=Layout.LIGHT_TEXT)
+
+        reset_button = Layout.create_button("Reset View", "-RESET-", Layout.LIGHT_TEXT, Layout.BUTTON_BG)
         return sg.Frame("", [
-            [sg.Text("Map Modes", font=("Garmond", 12, "bold"), background_color=Layout.DARK_FRAME_BG, text_color=Layout.LIGHT_TEXT)],
+            [map_mode_label],
             [Layout.create_button(mode.name, mode.value, Layout.LIGHT_TEXT, Layout.BUTTON_BG)
                 for mode in map_modes],
-            [Layout.create_button("Reset View", "-RESET-", Layout.LIGHT_TEXT, Layout.BUTTON_BG)]
-        ], element_justification="center", relief=sg.RELIEF_GROOVE, pad=(10, 10), background_color=Layout.DARK_FRAME_BG, border_width=5, title_color=Layout.LIGHT_TEXT)
+            [reset_button]
+        ], element_justification="center", 
+        relief=sg.RELIEF_GROOVE, 
+        pad=(10, 10), 
+        background_color=Layout.MEDIUM_FRAME_BG, 
+        border_width=5, 
+        title_color=Layout.LIGHT_TEXT)
 
     @staticmethod
     def build_layout(canvas_size: tuple[int, int], map_modes: dict):
@@ -478,14 +737,20 @@ class Layout:
             map_modes (dict[MapMode]): The possible map modes to choose from when displaying the map.
         """
         print("Building layout....")
+        selected_info_frame = sg.Frame("",
+            [
+                [Layout.create_search_column(), Layout.create_province_info_column(), Layout.create_area_info_column()]
+            ], pad=(10, 10), 
+            relief=sg.RELIEF_GROOVE, 
+            background_color=Layout.LIGHT_FRAME_BG, 
+            size=(600, 500), 
+            border_width=5, 
+            expand_x=True, 
+            expand_y=True)
+
         return [
             [Layout.create_window_header()],
-
-            [sg.Frame("", [
-                [Layout.create_search_column(), Layout.create_province_info_column(), Layout.create_area_info_column()]
-            ], pad=(10, 10), relief=sg.RELIEF_GROOVE, background_color=Layout.LIGHT_FRAME_BG, border_width=5, size=(1, 460), expand_x=True)],
-
+            [selected_info_frame],
             [Layout.create_map_canvas_frame(canvas_size=canvas_size, key="-CANVAS-")],
-
             [Layout.create_map_modes_frame(map_modes=map_modes)],
         ]
