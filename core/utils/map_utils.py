@@ -19,8 +19,8 @@ class MapUtils:
 
     Methods:
         - **seed_color(name: str)**: Generates a color based on the provided name by hashing 
-          the name and using the resulting hash to generate a unique hue, saturation, and brightness.
-          Returns an RGB color tuple.
+            the name and using the resulting hash to generate a unique hue, saturation, and brightness.
+            Returns an RGB color tuple.
     """
 
     @staticmethod

@@ -166,11 +166,11 @@ class MapDisplayer:
         if province.province_type == ProvinceType.OWNED:
             data = {
                 "-INFO_PROVINCE_NAME-": province.name,
-                "-INFO_OWNER-": province.owner.name or province.owner.tag,
-                "-INFO_CAPITAL-": province.capital,
-                "-INFO_PROVINCE_AREA-": self.world_data.province_to_area.get(province.province_id, None).name, 
+                "-INFO_PROVINCE_OWNER-": province.owner.name or province.owner.tag,
+                "-INFO_PROVINCE_CAPITAL-": province.capital,
+                "-INFO_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
                 "-INFO_PROVINCE_TOTAL_DEV-": province.development,
-                "-INFO_PROVINCE_REGION-": self.world_data.province_to_region.get(province.province_id, None).name,
+                "-INFO_PROVINCE_REGION_NAME-": self.world_data.province_to_region.get(province.province_id, None).name,
                 "-INFO_PROVINCE_BASE_TAX-": province.base_tax,
                 "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
                 "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
@@ -182,8 +182,8 @@ class MapDisplayer:
                 "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
                 "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
                 "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
-                "-INFO_CULTURE-": province.culture,
-                "-INFO_RELIGION-": province.religion,
+                "-INFO_PROVINCE_CULTURE-": province.culture,
+                "-INFO_PROVINCE_RELIGION-": province.religion,
             }
 
             window["-AREA_INFO-"].update(visible=False)
@@ -197,6 +197,28 @@ class MapDisplayer:
 
             trade_good_element = window["-INFO_PROVINCE_TRADE_GOOD-"]
             trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
+
+            fort_level_element = window["-INFO_PROVINCE_FORT_LEVEL-"]
+            forts = {
+                0: "no_fort",
+                1: "fort_15th",
+                2: "fort_16th",
+                3: "fort_17th",
+                4: "fort_18th"
+            }
+
+            fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
+
+            center_of_trade_element = window["-INFO_PROVINCE_CENTER_OF_TRADE-"]
+            centers_of_trade = {
+                1: "cot_emporium",
+                2: "cot_market_town",
+                3: "cot_world_trade_center"
+            }
+
+            if province.center_of_trade in centers_of_trade:
+                cot = icon_loader.get_icon(centers_of_trade[province.center_of_trade])
+                center_of_trade_element.update(filename=cot)
 
     def update_area_details(self, area: EUArea):
         window = self.window
