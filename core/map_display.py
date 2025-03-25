@@ -173,13 +173,15 @@ class MapDisplayer:
                 "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
                 "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
                 "-INFO_PROVINCE_GOODS_PRODUCED-": province.base_production / 10,
-                "-INFO_PROVINCE_TRADE_GOOD-": province.trade_goods,
+                "-INFO_PROVINCE_LOCAL_MANPOWER-": province.base_manpower * 125,
+                "-INFO_PROVINCE_LOCAL_SAILORS-": province.base_production * 30 + 100,
+                #"-INFO_PROVINCE_TRADE_GOOD-": province.trade_goods,
                 "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
-                "-INFO_PROVINCE_CENTER_OF_TRADE-": province.center_of_trade,
-                # "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
-                # "-INFO_PROVINCE_DEVASTATION-": province.devastation,
+                #"-INFO_PROVINCE_CENTER_OF_TRADE-": province.center_of_trade,
+                "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
+                "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
                 "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
-                "-INFO_PROVINCE_FORT_LEVEL-": province.fort_level,
+                #"-INFO_PROVINCE_FORT_LEVEL-": province.fort_level,
                 "-INFO_CULTURE-": province.culture,
                 "-INFO_RELIGION-": province.religion,
             }
@@ -188,7 +190,11 @@ class MapDisplayer:
             window["-PROVINCE_INFO-"].update(visible=True)
             for element, attr_value in data.items():
                 if attr_value is not None:
-                    window[element].update(value=attr_value, visible=True)
+                    window_element = window[element]
+                    
+                    if isinstance(window_element, sg.Image):
+                        window_element.update(filename=attr_value)
+                    window_element.update(value=attr_value, visible=True)
                 else:
                     window[element].update(visible=False)
 
