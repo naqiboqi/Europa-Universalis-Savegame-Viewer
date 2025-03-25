@@ -5,13 +5,11 @@ from .utils import IconLoader
 
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Correct the icons folder path
 icons_folder = os.path.join(base_dir, "data", "icons")
-print(icons_folder)
 
-loader = IconLoader()
-loader.icons_folder = icons_folder
+icon_loader = IconLoader()
+icon_loader.icons_folder = icons_folder
+print(icon_loader.icons_folder)
 
 
 
@@ -425,7 +423,7 @@ class Layout:
         Returns:
             frame (Frame): The frame containing the development info.
         """
-        development_icon = sg.Image(loader.get_icon("development"), size=(28, 28))
+        development_icon = sg.Image(icon_loader.get_icon("development"), size=(28, 28))
         total_dev_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,
@@ -441,7 +439,7 @@ class Layout:
         pad=(5, 5),
         relief=sg.RELIEF_GROOVE)
 
-        tax_icon = sg.Image(loader.get_icon("base_tax"), size=(28, 28), tooltip="Base tax")
+        tax_icon = sg.Image(icon_loader.get_icon("base_tax"), size=(28, 28), tooltip="Base tax")
         tax_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,
@@ -453,7 +451,7 @@ class Layout:
             [tax_icon, tax_value]
         ], background_color=Layout.SUNK_FRAME_BG, border_width=0, pad=(5, 5))
 
-        production_icon = sg.Image(loader.get_icon("base_production"), size=(28, 28))
+        production_icon = sg.Image(icon_loader.get_icon("base_production"), size=(28, 28))
         production_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,
@@ -465,7 +463,7 @@ class Layout:
             [production_icon, production_value]
         ], background_color=Layout.SUNK_FRAME_BG, border_width=0, pad=(5, 5))
 
-        manpower_icon = sg.Image(loader.get_icon("base_manpower"), size=(28, 28))
+        manpower_icon = sg.Image(icon_loader.get_icon("base_manpower"), size=(28, 28))
         manpower_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,
@@ -543,7 +541,7 @@ class Layout:
             text_key="-INFO_PROVINCE_INCOME-",
             expand_x=True)
 
-        income_icon = sg.Image(loader.get_icon("income"), size=(28, 28))
+        income_icon = sg.Image(icon_loader.get_icon("income"), size=(28, 28))
 
         trade_power_label, trade_power_field = Layout.create_text_with_inline_label(
             "Trade Power",
@@ -574,7 +572,7 @@ class Layout:
             background_color=Layout.SECTION_BANNER_BG,
             font=("Georgia", 12, "bold"),
             text_color=Layout.LIGHT_TEXT)
-        trade_icon = sg.Image(loader.get_icon("trade"), size=(28, 28))
+        trade_icon = sg.Image(icon_loader.get_icon("trade"), size=(28, 28))
         trade_header_frame = sg.Frame("", [
             [trade_header_label, trade_icon, sg.Push(background_color=Layout.SECTION_BANNER_BG)]
         ], background_color=Layout.SECTION_BANNER_BG, expand_x=True, expand_y=True, relief=sg.RELIEF_SOLID, vertical_alignment="top")
@@ -600,7 +598,7 @@ class Layout:
         expand_x=True,
         relief=sg.RELIEF_SUNKEN)
 
-        home_node_icon = sg.Image(loader.get_icon("trade_office"), size=(40, 40))
+        home_node_icon = sg.Image(icon_loader.get_icon("trade_office"), size=(40, 40))
         trade_influences_column = sg.Column([
             [home_node_icon, home_trade_node],
             [goods_and_trade_modifiers]
@@ -636,7 +634,7 @@ class Layout:
             [manpower_label, manpower_value, sailors_label, sailors_value],
         ], background_color=Layout.MEDIUM_FRAME_BG)
 
-        garrison_icon = sg.Image(loader.get_icon("fort_defense"), size=(28, 28))
+        garrison_icon = sg.Image(icon_loader.get_icon("fort_defense"), size=(28, 28))
         garrison_label, garrison_value = Layout.create_text_with_inline_label(
             "Garrison",
             label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
@@ -660,7 +658,7 @@ class Layout:
             background_color=Layout.SECTION_BANNER_BG,
             font=("Georgia", 12, "bold"),
             text_color=Layout.LIGHT_TEXT)
-        military_icon = sg.Image(loader.get_icon("military"), size=(28, 28))
+        military_icon = sg.Image(icon_loader.get_icon("military"), size=(28, 28))
         military_header_frame = sg.Frame("", [
             [military_label, military_icon, sg.Push(background_color=Layout.SECTION_BANNER_BG)]
         ], background_color=Layout.SECTION_BANNER_BG, expand_x=True, relief=sg.RELIEF_SOLID)
@@ -680,7 +678,7 @@ class Layout:
         Returns:
             column (Column): The column containing the province info.
         """
-        autonomy_icon = sg.Image(loader.get_icon("local_autonomy"), size=(28, 28))
+        autonomy_icon = sg.Image(icon_loader.get_icon("local_autonomy"), size=(28, 28))
         autonomy_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,
@@ -694,7 +692,7 @@ class Layout:
             [autonomy_icon, autonomy_value]
         ], background_color=Layout.MEDIUM_FRAME_BG, border_width=0)
 
-        devastation_icon = sg.Image(loader.get_icon("local_devastation"), size=(28, 28))
+        devastation_icon = sg.Image(icon_loader.get_icon("local_devastation"), size=(28, 28))
         devastation_value = sg.Text(
             "",
             background_color=Layout.SUNK_FRAME_BG,

@@ -17,6 +17,9 @@ from . import MapHandler, MapPainter
 from . import Layout
 from .models import EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
+from .utils import IconLoader
+
+icon_loader = IconLoader()
 
 
 CANVAS_WIDTH_MAX = 1200
@@ -175,13 +178,10 @@ class MapDisplayer:
                 "-INFO_PROVINCE_GOODS_PRODUCED-": province.base_production / 10,
                 "-INFO_PROVINCE_LOCAL_MANPOWER-": province.base_manpower * 125,
                 "-INFO_PROVINCE_LOCAL_SAILORS-": province.base_production * 30 + 100,
-                #"-INFO_PROVINCE_TRADE_GOOD-": province.trade_goods,
                 "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
-                #"-INFO_PROVINCE_CENTER_OF_TRADE-": province.center_of_trade,
                 "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
                 "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
                 "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
-                #"-INFO_PROVINCE_FORT_LEVEL-": province.fort_level,
                 "-INFO_CULTURE-": province.culture,
                 "-INFO_RELIGION-": province.religion,
             }
@@ -191,12 +191,12 @@ class MapDisplayer:
             for element, attr_value in data.items():
                 if attr_value is not None:
                     window_element = window[element]
-                    
-                    if isinstance(window_element, sg.Image):
-                        window_element.update(filename=attr_value)
                     window_element.update(value=attr_value, visible=True)
                 else:
-                    window[element].update(visible=False)
+                    window[element].update(value=0)
+
+            trade_good_element = window["-INFO_PROVINCE_TRADE_GOOD-"]
+            trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
 
     def update_area_details(self, area: EUArea):
         window = self.window
