@@ -24,21 +24,6 @@ icon_loader = IconLoader()
 
 CANVAS_WIDTH_MAX = 1300
 
-## Some color constants
-LIGHT_TEXT = "#d2d2d2"
-GOLD_FRAME_UPPER = "#b68950"
-GOLD_FRAME_LOWER = "#9f7240"
-RED_BANNER_BG = "#561b19"
-TOP_BANNER_BG = "#353c25"
-SECTION_BANNER_BG = "#172f48"
-LIGHT_FRAME_BG = "#344048"
-DARK_FRAME_BG = "#2a343b"
-SUNKEN_FRAME_BG = "#283239"
-WINDOW_BACKGROUND = ""
-BUTTON_BG = "#314b68"
-BUTTON_FG = "#394d66"
-GREEN_TEXT = "#2b8334"
-
 
 
 class MapDisplayer:
@@ -272,7 +257,12 @@ class MapDisplayer:
         layout = self.create_layout()
         self.map_image = self.scale_image_to_fit(self.original_map)
 
-        window = sg.Window("EU4 Map Viewer", layout, finalize=True, return_keyboard_events=True, background_color=LIGHT_FRAME_BG)
+        window = sg.Window("EU4 Map Viewer", 
+            layout, 
+            background_color=Layout.MEDIUM_FRAME_BG, 
+            finalize=True, 
+            return_keyboard_events=True)
+
         window.move_to_center()
         self.window = window
 
