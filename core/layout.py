@@ -939,7 +939,8 @@ class Layout:
             [province_status_column, development_label, development_info_frame],
             [demographic_info_column, trade_and_mil_column]
         ], background_color=Layout.LIGHT_FRAME_BG, 
-        border_width=5, 
+        border_width=5,
+        expand_x=True,
         expand_y=True,
         pad=(10, 10),   
         relief=sg.RELIEF_GROOVE, 
