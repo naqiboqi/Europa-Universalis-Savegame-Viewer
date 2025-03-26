@@ -575,7 +575,7 @@ class Layout:
             [demographics_frame]
         ], background_color=Layout.LIGHT_FRAME_BG, 
         expand_y=True, 
-        pad=(5, 5), 
+        pad=(10, 10), 
         vertical_alignment="top")
 
     @staticmethod
@@ -729,31 +729,44 @@ class Layout:
             borders=[
                 (Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE),
                 (Layout.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(15, 20),
+            border_pad=(0, 5),
             image_size=(64, 64))
         trade_good_value = sg.Text(
             "",
-            key="-INFO_TRADE_GOOD_VALUE-",
-            background_color=Layout.SUNK_FRAME_BG,
+            key="-INFO_PROVINCE_TRADE_GOOD_PRICE-",
+            background_color=Layout.DARK_FRAME_BG,
+            font=("Georgia", 12, "bold"),
             justification="center",
-            pad=(10, 5),
-            size=(5, 1))
+            pad=(0, 0),
+            size=(4, 1),
+            text_color=Layout.LIGHT_TEXT)
 
         ducat_income_icon = Layout.create_icon_with_frame(
             "income",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(5, 5),
-            image_size=(28, 28))
+            border_pad=(0, 0),
+            image_size=(24, 24))
+
+        value_frame = sg.Frame("", [
+            [trade_good_value, ducat_income_icon]
+        ], background_color=Layout.DARK_FRAME_BG, 
+        relief=sg.RELIEF_FLAT,
+        vertical_alignment="center")
 
         trade_good_frame = sg.Frame("", [
-            [sg.Push(Layout.DARK_FRAME_BG), trade_good_icon,sg.Push(Layout.DARK_FRAME_BG)],
-            [trade_good_value, ducat_income_icon]
+            [sg.Push(Layout.DARK_FRAME_BG), trade_good_icon, sg.Push(Layout.DARK_FRAME_BG)],
+            [sg.Push(Layout.DARK_FRAME_BG), value_frame, sg.Push(Layout.DARK_FRAME_BG)]
         ], background_color=Layout.DARK_FRAME_BG,
+        pad=(5, 5),
         relief=sg.RELIEF_FLAT)
+
+        trade_good_column = sg.Column([
+            [trade_good_frame]
+        ], background_color=Layout.LIGHT_FRAME_BG, pad=(5, 5), vertical_alignment="center")
 
         return sg.Column([
             [trade_header_frame],
-            [trade_info_column, trade_influences_column, trade_good_frame],
+            [trade_info_column, trade_influences_column, trade_good_column],
         ], background_color=Layout.LIGHT_FRAME_BG, 
         expand_x=True, 
         expand_y=True, 
@@ -846,7 +859,7 @@ class Layout:
             "",
             image_key="-INFO_PROVINCE_FORT_LEVEL-",
             borders=[(Layout.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(5, 5),
+            border_pad=(10, 10),
             image_size=(48, 48))
 
         return sg.Column([
@@ -854,7 +867,7 @@ class Layout:
             [military_info_frame, fort_level]
         ], background_color=Layout.LIGHT_FRAME_BG, 
         expand_x=True, 
-        pad=(10, 5), 
+        pad=(10, 10), 
         vertical_alignment="top")
 
     @staticmethod

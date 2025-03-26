@@ -153,6 +153,14 @@ class EUWorldData:
         self.trade_goods = self.load_trade_goods(savefile_lines)
 
     def load_trade_goods(self, savefile_lines: list[str]):
+        """Loads the trade good prices from the savefile.
+        
+        Args:
+            savefile_lines (list[str]): The lines from the savefile.
+        
+        Returns:
+            trade_goods (dict[str, float]): The trade good and its associated price.
+        """
         trade_goods: dict[str, float] = {}
 
         inside_goods_block = False

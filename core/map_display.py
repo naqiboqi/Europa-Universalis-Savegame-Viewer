@@ -183,6 +183,10 @@ class MapDisplayer:
             trade_good_element = window["-INFO_PROVINCE_TRADE_GOOD-"]
             trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
 
+            trade_good_price_element = window["-INFO_PROVINCE_TRADE_GOOD_PRICE-"]
+            trade_value = self.world_data.trade_goods.get(province.trade_goods) or 0.00
+            trade_good_price_element.update(value=f"{trade_value:.2f}")
+
             fort_level_element = window["-INFO_PROVINCE_FORT_LEVEL-"]
             forts = {
                 0: "no_fort",
@@ -192,7 +196,8 @@ class MapDisplayer:
                 4: "fort_18th"
             }
 
-            fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
+            if province.fort_level in forts:
+                fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
 
             center_of_trade_element = window["-INFO_PROVINCE_CENTER_OF_TRADE-"]
             centers_of_trade = {
