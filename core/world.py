@@ -66,7 +66,7 @@ class EUWorldData:
         self.default_area_data: dict[str, dict[str, str|set[int]]] = {}
         self.default_region_data: dict[str, dict[str, str|set[str]]] = {}
 
-        self.trade_good_prices: dict[str, float] = {}
+        self.trade_goods: dict[str, dict[str, list]] = {}
 
     @classmethod
     def load_world_data(cls, map_folder: str, colors: EUColors):
@@ -149,8 +149,42 @@ class EUWorldData:
                 for province_id in area.provinces:
                     self.province_to_region[province_id] = region
 
+        print("Building modifiers....")
+        self.trade_goods = self.load_trade_goods(savefile_lines)
+
     def load_trade_goods(self, savefile_lines: list[str]):
-        matches = re.findall(r"(\w+)=\{\s*current_price=(\d+\.\d+)(.*?)\}", savefile_lines, re.DOTALL)
+        trade_goods: dict[str, float] = {}
+
+        inside_goods_block = False
+        current_good = None
+        bracket_depth = 0
+
+        for line in savefile_lines:
+            line = line.strip()
+
+            if line == "change_price={":
+                inside_goods_block = True
+                bracket_depth += 1
+                continue
+
+            if inside_goods_block:
+                if line.endswith("={"):
+                    current_good = line.split("=")[0]
+                    bracket_depth += 1
+                    continue
+
+                elif line.startswith("current_price=") and current_good:
+                    current_price = float(line.split("=")[1])
+                    trade_goods[current_good] = current_price
+
+                elif line == "}":
+                    bracket_depth -= 1
+                    if bracket_depth == 1:
+                        current_good = None
+                    elif bracket_depth == 0:
+                        break  
+
+        return trade_goods
 
     def load_countries(self, colors: EUColors):
         """Builds the **countries** dictionary with game countries.
