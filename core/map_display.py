@@ -22,7 +22,7 @@ from .utils import IconLoader
 icon_loader = IconLoader()
 
 
-CANVAS_WIDTH_MAX = 1200
+CANVAS_WIDTH_MAX = 1300
 
 ## Some color constants
 LIGHT_TEXT = "#d2d2d2"

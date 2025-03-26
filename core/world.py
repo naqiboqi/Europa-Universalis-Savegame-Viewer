@@ -66,6 +66,8 @@ class EUWorldData:
         self.default_area_data: dict[str, dict[str, str|set[int]]] = {}
         self.default_region_data: dict[str, dict[str, str|set[str]]] = {}
 
+        self.trade_good_prices: dict[str, float] = {}
+
     @classmethod
     def load_world_data(cls, map_folder: str, colors: EUColors):
         """Driver class method that handles loading the default world data.
@@ -105,8 +107,8 @@ class EUWorldData:
             save_file (str): The savefile to read.
         """
         print("Building provinces....")
-        province_file_lines = self.read_save_file(save_folder, savefile)
-        self.current_province_data = self.load_world_provinces(province_file_lines)
+        savefile_lines = self.read_save_file(save_folder, savefile)
+        self.current_province_data = self.load_world_provinces(savefile_lines)
 
         for province_id, province_data in self.current_province_data.items():
             pixel_locations = self.province_locations.get(province_id)
@@ -146,6 +148,9 @@ class EUWorldData:
             for area in region:
                 for province_id in area.provinces:
                     self.province_to_region[province_id] = region
+
+    def load_trade_goods(self, savefile_lines: list[str]):
+        matches = re.findall(r"(\w+)=\{\s*current_price=(\d+\.\d+)(.*?)\}", savefile_lines, re.DOTALL)
 
     def load_countries(self, colors: EUColors):
         """Builds the **countries** dictionary with game countries.
