@@ -19,6 +19,7 @@ from .models import EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
 from .utils import IconLoader
 
+
 icon_loader = IconLoader()
 
 
@@ -187,6 +188,9 @@ class MapDisplayer:
             trade_value = self.world_data.trade_goods.get(province.trade_goods) or 0.00
             trade_good_price_element.update(value=f"{trade_value:.2f}")
 
+            trade_income_element = window["-INFO_PROVINCE_TRADE_VALUE-"]
+            trade_income_element.update(value=trade_value * province.base_production / 10)
+
             fort_level_element = window["-INFO_PROVINCE_FORT_LEVEL-"]
             forts = {
                 0: "no_fort",
@@ -199,6 +203,13 @@ class MapDisplayer:
             if province.fort_level in forts:
                 fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
 
+            inland_trade_element = window["-INFO_PROVINCE_INLAND_TRADE_CENTER-"]
+            inland_centers_of_trade = {
+                1: "cot_1",
+                2: "cot_2",
+                3: "cot_3"
+            }
+
             center_of_trade_element = window["-INFO_PROVINCE_CENTER_OF_TRADE-"]
             centers_of_trade = {
                 1: "cot_emporium",
@@ -207,21 +218,24 @@ class MapDisplayer:
             }
 
             if province.center_of_trade in centers_of_trade:
+                inland_cot = icon_loader.get_icon(inland_centers_of_trade[province.center_of_trade])
+                inland_trade_element.update(filename=inland_cot)
+
                 cot = icon_loader.get_icon(centers_of_trade[province.center_of_trade])
                 center_of_trade_element.update(filename=cot)
 
     def update_area_details(self, area: EUArea):
         window = self.window
-        area_province = list(area.provinces.values())[0]
 
+        area_province = list(area.provinces.values())[0]
         if area.is_land_area:
             data = {
                 "-INFO_AREA_NAME-" : area.name,
-                "-INFO_AREA_REGION-" : self.world_data.province_to_region.get(area_province.province_id, None).name,
-                "-INFO_AREA_BASE_TAX-" : sum(province.base_tax for province in area.provinces.values()),
-                "-INFO_AREA_BASE_PRODUCTION-" : sum(province.base_production for province in area.provinces.values()),
-                "-INFO_AREA_BASE_MANPOWER-" : sum(province.base_manpower for province in area.provinces.values()),
-                "-INFO_AREA_PROVINCES-" : [province.name for province in area.provinces.values()]
+                "-INFO_AREA_REGION_NAME-": self.world_data.province_to_region.get(area_province.province_id, None).name,
+                "-INFO_AREA_TOTAL_DEV-": sum(province.development for province in area.provinces.values()),
+                "-INFO_AREA_BASE_TAX-": sum(province.base_tax for province in area.provinces.values()),
+                "-INFO_AREA_BASE_PRODUCTION-": sum(province.base_production for province in area.provinces.values()),
+                "-INFO_AREA_BASE_MANPOWER-": sum(province.base_manpower for province in area.provinces.values()),
             }
 
             window["-PROVINCE_INFO-"].update(visible=False)
@@ -232,8 +246,20 @@ class MapDisplayer:
                         window[element].update(value=attr_value, visible=True)
                     except (AttributeError, TypeError):
                         window[element].update(values=attr_value, visible=True)
-                else:
-                    window[element].update(visible=False)
+
+            province_rows = []
+            for province in area.provinces.values():
+                row = [
+                    province.name,
+                    province.owner.name,
+                    province.development,
+                    province.religion,
+                    province.culture
+                ]
+                province_rows.append(row)
+
+            print(province_rows)
+            window["-INFO_AREA_PROVINCES_TABLE-"].update(values=province_rows)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
         if hasattr(selected_item, "province_type"):
@@ -241,6 +267,8 @@ class MapDisplayer:
 
         elif isinstance(selected_item, EUArea):
             self.update_area_details(selected_item)
+
+        self.window = self.window.refresh()
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV map viewer.
@@ -261,10 +289,12 @@ class MapDisplayer:
         self.original_map = self.painter.draw_map()
         layout = self.create_layout()
         self.map_image = self.scale_image_to_fit(self.original_map)
+        mode_names = {mode.value: mode for mode in self.painter.map_modes}
 
         window = sg.Window("EU4 Map Viewer", 
             layout, 
-            background_color=Layout.MEDIUM_FRAME_BG, 
+            background_color=Layout.MEDIUM_FRAME_BG,
+            #icon=icon_loader.get_icon("compass", image_type=".ico"),
             finalize=True, 
             return_keyboard_events=True)
 
@@ -280,10 +310,8 @@ class MapDisplayer:
         self.handler = MapHandler(self, self.tk_canvas)
         self.handler.bind_events()
 
-        mode_names = {mode.value: mode for mode in self.painter.map_modes}
-
         while True:
-            event, values = window.read()
+            event, values = window.read(timeout=1)
             if event in (sg.WIN_CLOSED, "Exit"):
                 break
 
@@ -313,6 +341,7 @@ class MapDisplayer:
 
             if event == "-RESULTS-":
                 selected = values["-RESULTS-"]
+
                 if selected:
                     item_name = selected[0]
                     selected_item = next(
