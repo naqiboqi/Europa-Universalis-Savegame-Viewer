@@ -93,7 +93,8 @@ class Layout:
         key: str=None,
         relief: str=None,
         size: tuple[int, int]=(None, None),
-        expand_x=False):
+        expand_x=False,
+        pad: tuple[int, int]=None):
         """
         Creates text with a framed background.
         
@@ -131,7 +132,7 @@ class Layout:
         ], background_color=frame_background_color, 
         border_width=frame_border_width,
         element_justification="left", 
-        pad=(5, 5), 
+        pad=pad if pad else (5, 5), 
         relief=relief,
         expand_x=expand_x)
 
@@ -260,7 +261,7 @@ class Layout:
             expand_x=True,
             frame_background_color=Layout.RED_BANNER_BG,
             justification="center",
-            relief=sg.RELIEF_SOLID)
+            relief=sg.RELIEF_RIDGE)
 
         search_input = sg.Input(
             key="-SEARCH-", 
@@ -329,18 +330,20 @@ class Layout:
             [sg.Push(Layout.LIGHT_FRAME_BG), output_frame, sg.Push(Layout.LIGHT_FRAME_BG)]
         ], background_color=Layout.LIGHT_FRAME_BG,
         border_width=5,
+        expand_x=True,
         expand_y=True, 
-        pad=(0, 10), 
+        pad=(10, 10), 
         relief=sg.RELIEF_GROOVE,  
         title_color=Layout.LIGHT_TEXT)
 
         return sg.Column([
             [search_frame]
         ], background_color=Layout.LIGHT_FRAME_BG,
+        expand_x=True,
         expand_y=True, 
         element_justification="left",
         justification="left",
-        pad=(5, 10), 
+        pad=((10, 5), (10, 10)), 
         vertical_alignment="top")
 
     @staticmethod
@@ -352,34 +355,34 @@ class Layout:
         """
         province_name = sg.Text(
             "",
+            key="-INFO_PROVINCE_NAME-",
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 14),
             justification="left",
-            key="-INFO_PROVINCE_NAME-",
             text_color=Layout.LIGHT_TEXT)
 
         capital_name = sg.Text(
             "",
+            key="-INFO_PROVINCE_CAPITAL-",
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 12),
             justification="left",
-            key="-INFO_PROVINCE_CAPITAL-",
             text_color=Layout.LIGHT_TEXT)
 
         area_name = sg.Text(
             "",
+            key="-INFO_PROVINCE_AREA_NAME-",
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 14),
             justification="right",
-            key="-INFO_PROVINCE_AREA_NAME-",
             text_color=Layout.LIGHT_TEXT)
 
         region_name = sg.Text(
             "",
+            key="-INFO_PROVINCE_REGION_NAME-",
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 12),
             justification="right",
-            key="-INFO_PROVINCE_REGION_NAME-",
             text_color=Layout.LIGHT_TEXT)
 
         return sg.Frame("", [
@@ -912,7 +915,6 @@ class Layout:
             [autonomy_frame, devastation_frame]
         ], background_color=Layout.MEDIUM_FRAME_BG,
         border_width=4,
-        expand_x=True,
         pad=(5, 5),
         relief=sg.RELIEF_SUNKEN)
 
@@ -940,9 +942,9 @@ class Layout:
 
         development_label = Layout.create_text_with_frame(
             content="Development",
-            expand_x=True,
             content_color=Layout.LIGHT_TEXT,
             frame_background_color=Layout.SECTION_BANNER_BG,
+            pad=(10, 10),
             relief=sg.RELIEF_SOLID,
             justification="center")
 
@@ -955,7 +957,9 @@ class Layout:
         border_width=5,
         expand_x=True,
         expand_y=True,
-        pad=(10, 10),   
+        key="-PROVINCE_INFO_FRAME-",
+        pad=(10, 10),
+        size=(985, 567),
         relief=sg.RELIEF_GROOVE)
 
         return sg.Column([
@@ -963,8 +967,8 @@ class Layout:
         ], background_color=Layout.LIGHT_FRAME_BG,
         expand_x=True,
         expand_y=True,
-        key="-PROVINCE_INFO-",
-        pad=(10, 10),
+        key="-PROVINCE_INFO_COLUMN-",
+        pad=((5, 10), (10, 10)),
         vertical_alignment="top")
 
     @staticmethod
@@ -974,28 +978,26 @@ class Layout:
         Returns:
             frame (Frame): The frame containing the area info.
         """
-        area_label, area_name = Layout.create_text_with_inline_label(
-            "The State of",
-            text_key="-INFO_AREA_NAME-",
+        area_name = sg.Text(
+            "",
+            key="-INFO_AREA_NAME-",
+            background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 14),
             justification="left",
-            label_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
-            text_colors=(Layout.LIGHT_TEXT, Layout.TOP_BANNER_BG),
-            text_field_size=(20, 1))
+            text_color=Layout.LIGHT_TEXT)
 
         spacer_left = sg.Text(
             "", 
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 12),
-            justification="left",
-            pad=(0, 0))
+            justification="left")
 
         region_name = sg.Text(
             "",
+            key="-INFO_AREA_REGION_NAME-",
             background_color=Layout.TOP_BANNER_BG,
             font=("Georgia", 14),
             justification="right",
-            key="-INFO_AREA_REGION_NAME-",
             text_color=Layout.LIGHT_TEXT)
 
         spacer_right = sg.Text(
@@ -1004,20 +1006,22 @@ class Layout:
             font=("Georgia", 12),
             justification="right")
 
-        return sg.Frame("", [
-            [sg.Column([
-                [area_label, area_name],
+        area_column = sg.Column([
+                [area_name],
                 [spacer_left]
             ], background_color=Layout.TOP_BANNER_BG,
             element_justification="left",
-            expand_x=True),
-            sg.Push(),
-            sg.Column([
+            expand_x=True)
+
+        region_column = sg.Column([
                 [region_name],
                 [spacer_right]
             ], background_color=Layout.TOP_BANNER_BG,
             element_justification="right",
-            expand_x=True)]
+            expand_x=True)
+
+        return sg.Frame("", [
+            [area_column, sg.Push(background_color=Layout.TOP_BANNER_BG), region_column]
         ], background_color=Layout.TOP_BANNER_BG,
         border_width=4,
         expand_x=True,
@@ -1026,47 +1030,117 @@ class Layout:
         vertical_alignment="center")
 
     @staticmethod
-    def create_area_provinces_table():
-        """Creates the area column section.
-        
-        This section contains the area's provinces table and the area's overall income and trade information.
+    def create_provinces_table_header():
+        """Creates the header for the province table.
         
         Returns:
-            column (Column): The column containing the area info.
+            frame (Frame): The frame containing the header icons.
         """
         province_icon = Layout.create_icon_with_frame(
             icon_name="map_province",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
+        province_header = sg.Frame("", [
+            [province_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(220, 40))
 
         owner_icon = Layout.create_icon_with_frame(
             icon_name="protective_attitude",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
+        owner_header = sg.Frame("", [
+            [owner_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(220, 40))
 
         development_icon = Layout.create_icon_with_frame(
             icon_name="development",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
+        development_header = sg.Frame("", [
+            [development_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(44, 40))
+
+        trade_power_icon = Layout.create_icon_with_frame(
+            icon_name="trade_power",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        trade_power_header = sg.Frame("", [
+            [trade_power_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(111, 40))
 
         religion_icon = Layout.create_icon_with_frame(
             icon_name="religion",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
+        religion_header = sg.Frame("", [
+            [religion_icon]
+        ], background_color=Layout.SECTION_BANNER_BG,
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(165, 40))
 
         culture_icon = Layout.create_icon_with_frame(
             icon_name="culture",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
+        culture_header = sg.Frame("", [
+            [culture_icon]
+        ], background_color=Layout.SECTION_BANNER_BG,
+        border_width=0, 
+        element_justification="center",
+        pad=(0, 0), 
+        size=(198, 40))
 
-        table_header_frame = sg.Frame("", [
-            [province_icon, owner_icon , development_icon, religion_icon, culture_icon]
-        ], background_color=Layout.SECTION_BANNER_BG, pad=(0, 0), relief=sg.RELIEF_SOLID)
+        icon_row = sg.Column([
+            [province_header, 
+            owner_header, 
+            development_header, 
+            trade_power_header, 
+            religion_header, 
+            culture_header]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        pad=(0, 0))
+
+        return sg.Frame("", 
+            layout=[[icon_row]], 
+            background_color=Layout.SECTION_BANNER_BG,
+            expand_x=True,
+            pad=(0, 0), 
+            relief=sg.RELIEF_SOLID)
+
+    @staticmethod
+    def create_area_provinces_table():
+        """Creates the table that will be used to display the an area's provinces.
+        
+        Includes fields for province name, owner, development, religion and culture.
+        
+        Returns:
+            column (Column): The table and its header packed into a column.
+        """
+        table_header = Layout.create_provinces_table_header()
 
         table = sg.Table(
             values=[],
@@ -1074,58 +1148,69 @@ class Layout:
             alternating_row_color=Layout.DARK_FRAME_BG,
             background_color=Layout.MEDIUM_FRAME_BG,
             auto_size_columns=False,
-            col_widths=[20, 20, 4, 10, 15],
-            headings=["Name", "Owner", "Dev", "Religion", "Culture"],
+            col_widths=[20, 20, 4, 10, 15, 18],
+            headings=["Name", "Owner", "Dev.", "Trade Power", "Religion", "Culture"],
             header_background_color=Layout.SECTION_BANNER_BG,
             font=("Georgia", 12),
-            hide_vertical_scroll=False,
+            hide_vertical_scroll=True,
             justification="left",
             num_rows=5,
             pad=(0, 0),
-            row_height=28)
+            row_height=28,
+            header_relief=sg.RELIEF_SOLID)
+
+        provinces_info = sg.Frame("", [
+            [table_header],
+            [table]
+        ], expand_x=True, pad=(10, 10))
 
         return sg.Column([
-            [table_header_frame],
-            [table]
+            [provinces_info]
         ], background_color=Layout.LIGHT_FRAME_BG,
-        expand_x=True,
         expand_y=True,
         pad=(5, 5))
 
     @staticmethod
     def create_area_info_column():
-        """"""
+        """Creates the area column section.
+        
+        This section contains the area's provinces table and the area's overall income and trade information.
+        
+        Returns:
+            column (Column): The column containing the area info.
+        """
         geographic_info_frame = Layout.create_geographic_area_info_frame()
-        area_status_column = Layout.create_status_column(name="AREA")
 
         development_info_frame = Layout.create_development_info_frame(name="AREA")
         development_label = Layout.create_text_with_frame(
             content="Development",
-            expand_x=True,
             content_color=Layout.LIGHT_TEXT,
             frame_background_color=Layout.SECTION_BANNER_BG,
+            pad=(10, 10),
             relief=sg.RELIEF_SOLID,
             justification="center")
 
         area_provinces_table = Layout.create_area_provinces_table()
         area_info_frame = sg.Frame("", [
             [geographic_info_frame],
-            [area_status_column, development_label, development_info_frame],
+            [development_label, development_info_frame],
             [area_provinces_table],
         ], background_color=Layout.LIGHT_FRAME_BG,
         border_width=5,
         expand_x=True,
         expand_y=True,
+        key="-AREA_INFO_FRAME-",
         pad=(10, 10),
-        relief=sg.RELIEF_GROOVE)
+        relief=sg.RELIEF_GROOVE,
+        size=(985, 567))
 
         return sg.Column([
             [area_info_frame]
         ], background_color=Layout.LIGHT_FRAME_BG,
         expand_x=True,
         expand_y=True,
-        key="-AREA_INFO-",
-        pad=(10, 10),
+        key="-AREA_INFO_COLUMN-",
+        pad=((5, 10), 10, 10),
         vertical_alignment="top",
         visible=False)
 
@@ -1220,13 +1305,14 @@ class Layout:
         window_header = Layout.create_window_header()
 
         selected_info_frame = sg.Frame("", [
-                [Layout.create_search_column(), sg.Push(), Layout.create_province_info_column(), Layout.create_area_info_column()]
-            ], background_color=Layout.LIGHT_FRAME_BG, 
-            border_width=5,
-            expand_x=True,  
-            expand_y=True,
-            pad=(0, 0), 
-            relief=sg.RELIEF_GROOVE)
+            [Layout.create_search_column(), Layout.create_province_info_column(), Layout.create_area_info_column()]
+        ], key="-WORLD_INFO-",
+        background_color=Layout.LIGHT_FRAME_BG, 
+        border_width=5,
+        expand_x=True,  
+        expand_y=True,
+        pad=(0, 0), 
+        relief=sg.RELIEF_GROOVE)
 
         bordered_info = Layout.add_border(
             layout=[[selected_info_frame]],

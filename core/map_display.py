@@ -51,6 +51,10 @@ class MapDisplayer:
 
         offset_x (int): The horizontal offset for panning.
         offset_y (int): The vertical offset for panning.
+
+        selected_item: (EUProvince|EUArea|EURegion|None): The current selected item, to get information for
+            and display in the window's information section, if any.
+        search_results: (list[EUProvince|EUArea|EURegion]): The results from the user's search, if any.
     """
     def __init__(self, painter: MapPainter):
         self.painter = painter
@@ -144,9 +148,18 @@ class MapDisplayer:
         map_width, map_height = self.original_map.size
         canvas_height = int(CANVAS_WIDTH_MAX * (map_height / map_width))
         self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
+
         return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
     def update_province_details(self, province: EUProvince):
+        """Updates the information displayed for a specific province in the UI.
+
+        This method retrieves the relevant data for a province, such as its name, owner, capital,
+        development, tax, production, manpower, trade power, and fort level, and trade goods.
+
+        Args:
+            province (EUProvince): The province to be displayed.
+        """
         window = self.window
 
         if province.province_type == ProvinceType.OWNED:
@@ -172,8 +185,8 @@ class MapDisplayer:
                 "-INFO_PROVINCE_RELIGION-": province.religion,
             }
 
-            window["-AREA_INFO-"].update(visible=False)
-            window["-PROVINCE_INFO-"].update(visible=True)
+            window["-AREA_INFO_COLUMN-"].update(visible=False)
+            window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
             for element, attr_value in data.items():
                 if attr_value is not None:
                     window_element = window[element]
@@ -225,6 +238,15 @@ class MapDisplayer:
                 center_of_trade_element.update(filename=cot)
 
     def update_area_details(self, area: EUArea):
+        """Updates the information displayed for a specific area in the UI.
+
+        This method retrieves the relevant data for an area, such as its name, region,
+        total development, base tax, base production, and base manpower. It also updates
+        the area provinces table with information for each province within the area.
+
+        Args:
+            area (EUArea): The area to be displayed.
+        """
         window = self.window
 
         area_province = list(area.provinces.values())[0]
@@ -238,8 +260,9 @@ class MapDisplayer:
                 "-INFO_AREA_BASE_MANPOWER-": sum(province.base_manpower for province in area.provinces.values()),
             }
 
-            window["-PROVINCE_INFO-"].update(visible=False)
-            window["-AREA_INFO-"].update(visible=True)
+            window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+            window["-AREA_INFO_COLUMN-"].update(visible=True)
+
             for element, attr_value in data.items():
                 if attr_value is not None:
                     try:
@@ -253,22 +276,32 @@ class MapDisplayer:
                     province.name,
                     province.owner.name,
                     province.development,
+                    province.trade_power,
                     province.religion,
-                    province.culture
+                    province.culture,
                 ]
                 province_rows.append(row)
 
-            print(province_rows)
             window["-INFO_AREA_PROVINCES_TABLE-"].update(values=province_rows)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
-        if hasattr(selected_item, "province_type"):
+        """Updates the information section in the window based on the user's seclected item.
+        
+        This can either be from the user searching for or clicking on a province, area, region, or country.
+        
+        Args:
+            selected_item (EUProvince|EUArea|EURegion): The selected item to display details for.
+        
+        Returns:
+            window (Window): The updated PySimpleGUI window.
+        """
+        if isinstance(selected_item, EUProvince):
             self.update_province_details(selected_item)
 
         elif isinstance(selected_item, EUArea):
             self.update_area_details(selected_item)
 
-        self.window = self.window.refresh()
+        return self.window.refresh()
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV map viewer.
@@ -294,15 +327,12 @@ class MapDisplayer:
         window = sg.Window("EU4 Map Viewer", 
             layout, 
             background_color=Layout.MEDIUM_FRAME_BG,
-            #icon=icon_loader.get_icon("compass", image_type=".ico"),
             finalize=True, 
             return_keyboard_events=True)
 
-        window.move_to_center()
         self.window = window
-
-        canvas = window["-CANVAS-"]
-        self.tk_canvas: tk.Canvas = canvas.TKCanvas
+        self.window.move_to_center()
+        self.tk_canvas = window["-CANVAS-"].TKCanvas
 
         self.tk_image = self.image_to_tkimage(self.map_image)
         self.image_id = self.tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
@@ -322,6 +352,7 @@ class MapDisplayer:
                 window["-CLEAR-"].update(visible=True)
                 exact_matches_only = values["-EXACT_MATCH-"]
                 search_param = values["-SEARCH-"].strip().lower()
+
                 if not search_param:
                     window["-RESULTS-"].update(values=[], visible=False)
                     window["-CLEAR-"].update(visible=False)
@@ -341,20 +372,18 @@ class MapDisplayer:
 
             if event == "-RESULTS-":
                 selected = values["-RESULTS-"]
-
                 if selected:
                     item_name = selected[0]
-                    selected_item = next(
-                        (item for item in self.search_results
-                        if item.name.lower() == item_name.lower()),
-                        None)
+                    selected_item = next((
+                        item for item in self.search_results
+                        if item.name.lower() == item_name.lower()), None)
 
                     self.selected_item = selected_item
 
             if event == "-GOTO-":
                 if self.selected_item:
                     self.handler.go_to_entity_location(self.selected_item)
-                    self.update_details(self.selected_item)
+                    self.window = self.update_details(self.selected_item)
 
             if event == "-RESET-":
                 self.reset_display()
