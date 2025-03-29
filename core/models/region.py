@@ -43,6 +43,20 @@ class EURegion:
         return " ".join(name.capitalize() for name in name_split)
 
     @property
+    def area_km2(self):
+        """Returns the estimated area of the region in square kilometers 
+            using the total world map size and its pixel resolution.
+
+            Returns:
+                area (float): The regions's estimated area in km².
+        """
+        world_area_km2 = 510_100_100
+        map_width, map_height = 5632, 2304
+        scale_factor = world_area_km2 / (map_width * map_height)
+
+        return len(self.pixel_locations) * scale_factor
+
+    @property
     def bounding_box(self):
         """Gets the bounding box for the region.
         
