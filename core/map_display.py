@@ -171,12 +171,12 @@ class MapDisplayer:
                 "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
                 "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
                 "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
-                "-INFO_PROVINCE_GOODS_PRODUCED-": province.base_production / 10,
-                "-INFO_PROVINCE_LOCAL_MANPOWER-": province.base_manpower * 125,
-                "-INFO_PROVINCE_LOCAL_SAILORS-": province.base_production * 30 + 100,
+                "-INFO_PROVINCE_GOODS_PRODUCED-": province.goods_produced,
+                "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
+                "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
                 "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
-                "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
-                "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
+                # "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
+                # "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
                 "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
                 "-INFO_PROVINCE_CULTURE-": province.culture,
                 "-INFO_PROVINCE_RELIGION-": province.religion,
@@ -251,10 +251,13 @@ class MapDisplayer:
             data = {
                 "-INFO_AREA_NAME-" : area.name,
                 "-INFO_AREA_REGION_NAME-": self.world_data.province_to_region.get(area_province.province_id, None).name,
-                "-INFO_AREA_TOTAL_DEV-": sum(province.development for province in area.provinces.values()),
-                "-INFO_AREA_BASE_TAX-": sum(province.base_tax for province in area.provinces.values()),
-                "-INFO_AREA_BASE_PRODUCTION-": sum(province.base_production for province in area.provinces.values()),
-                "-INFO_AREA_BASE_MANPOWER-": sum(province.base_manpower for province in area.provinces.values()),
+                "-INFO_AREA_TOTAL_DEV-": area.development,
+                "-INFO_AREA_BASE_TAX-": area.base_tax,
+                "-INFO_AREA_BASE_PRODUCTION-": area.base_production,
+                "-INFO_AREA_BASE_MANPOWER-": area.base_manpower,
+                "-INFO_AREA_INCOME-": area.income,
+                "-INFO_AREA_TAX_INCOME-": area.tax_income,
+                "-INFO_AREA_SIZE_KM-": area.area_km2
             }
 
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
@@ -268,7 +271,7 @@ class MapDisplayer:
                         window[element].update(values=attr_value, visible=True)
 
             province_rows = []
-            for province in area.provinces.values():
+            for province in area:
                 row = [
                     province.name,
                     province.owner.name,
@@ -280,6 +283,13 @@ class MapDisplayer:
                 province_rows.append(row)
 
             window["-INFO_AREA_PROVINCES_TABLE-"].update(values=province_rows)
+
+            total_production_element = window["-INFO_AREA_PRODUCTION_INCOME-"]
+            total_production_income = round(sum(
+                province.goods_produced * self.world_data.trade_goods.get(province.trade_goods, 0.00)
+                for province in area), 2)
+
+            total_production_element.update(value=total_production_income)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
         """Updates the information section in the window based on the user's seclected item.

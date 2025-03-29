@@ -137,9 +137,6 @@ class EUProvince:
     def area_km2(self):
         """Returns the estimated area of the province in square kilometers 
         using the total world map size and its pixel resolution.
-        
-        Returns:
-            area (float): The province's estimated area in km².
         """
         world_area_km2 = 510_100_100
         map_width, map_height = 5632, 2304
@@ -181,15 +178,21 @@ class EUProvince:
         return 0
 
     @property
+    def autonomy_modifier(self):
+        if self.local_autonomy:
+            return 1 - (self.local_autonomy / 100)
+        return 1.00
+
+    @property
     def tax_income(self):
         """The monthly tax income of the province in ducats."""
-        annual_income = self.base_tax * 0.5 * (1 - self.local_autonomy / 100)
+        annual_income = self.base_tax * 0.5 * self.autonomy_modifier
         return round(annual_income / 12, 2)
 
     @property
     def base_production_income(self):
         """The monthly production income of the province before applying the trade good price."""
-        annual_income = self.goods_produced * (1 - self.local_autonomy / 100)
+        annual_income = self.goods_produced * self.autonomy_modifier
         return round(annual_income, 2)
 
     @property
@@ -200,17 +203,17 @@ class EUProvince:
     @property
     def goods_produced(self):
         """The amount of goods produced by the province. Is based on the province's `base_production`."""
-        return round(self.base_production * 0.10 * (1 - self.local_autonomy / 100), 2)
+        return round(self.base_production * 0.10 * self.autonomy_modifier, 2)
 
     @property
     def manpower(self):
         """The amount of manpower contributed by the province. Is based on the province's `base_manpower`."""
-        return floor(self.base_manpower * 125 * (1 - self.local_autonomy / 100)) + 250
+        return floor(self.base_manpower * 125 * self.autonomy_modifier) + 250
 
     @property
     def sailors(self):
         """The amount of sailors contributed by the province. Is based on the province's `base_production`."""
-        return floor(self.base_production * 30 * (1 - self.local_autonomy / 100))
+        return floor(self.base_production * 30 * self.autonomy_modifier)
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
