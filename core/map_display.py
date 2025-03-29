@@ -23,9 +23,6 @@ from .utils import IconLoader
 icon_loader = IconLoader()
 
 
-CANVAS_WIDTH_MAX = 1300
-
-
 
 class MapDisplayer:
     """Handles displaying the map and managing user interactions.
@@ -143,11 +140,11 @@ class MapDisplayer:
             layout (list[list]): The layout for the Window.
         """
         screen_width, screen_height = sg.Window.get_screen_size()
-        CANVAS_WIDTH_MAX = min(1200, int(screen_width * 0.9))
+        canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
 
         map_width, map_height = self.original_map.size
-        canvas_height = int(CANVAS_WIDTH_MAX * (map_height / map_width))
-        self.canvas_size = (CANVAS_WIDTH_MAX, canvas_height)
+        canvas_height = int(canvas_width_max * (map_height / map_width))
+        self.canvas_size = (canvas_width_max, canvas_height)
 
         return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
