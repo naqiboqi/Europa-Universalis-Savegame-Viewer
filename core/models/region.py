@@ -54,7 +54,7 @@ class EURegion:
         map_width, map_height = 5632, 2304
         scale_factor = world_area_km2 / (map_width * map_height)
 
-        return len(self.pixel_locations) * scale_factor
+        return round(len(self.pixel_locations) * scale_factor, 2)
 
     @property
     def bounding_box(self):
