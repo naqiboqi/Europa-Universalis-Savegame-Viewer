@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from math import floor
 from typing import Optional
 from typing import TYPE_CHECKING
 
@@ -182,33 +183,34 @@ class EUProvince:
     @property
     def tax_income(self):
         """The monthly tax income of the province in ducats."""
-        annual_income = self.base_tax * 0.5 * (1 - self.local_autonomy)
+        annual_income = self.base_tax * 0.5 * (1 - self.local_autonomy / 100)
         return round(annual_income / 12, 2)
 
     @property
     def base_production_income(self):
         """The monthly production income of the province before applying the trade good price."""
-        annual_income = self.goods_produced * (1 - self.local_autonomy)
+        annual_income = self.goods_produced * (1 - self.local_autonomy / 100)
         return round(annual_income, 2)
 
     @property
     def income(self):
+        """The total monthly income of the province in ducats."""
         return self.tax_income + self.base_production_income
 
     @property
     def goods_produced(self):
         """The amount of goods produced by the province. Is based on the province's `base_production`."""
-        return self.base_production * 0.10
+        return round(self.base_production * 0.10 * (1 - self.local_autonomy / 100), 2)
 
     @property
     def manpower(self):
         """The amount of manpower contributed by the province. Is based on the province's `base_manpower`."""
-        return self.base_manpower * 125 + 250
+        return floor(self.base_manpower * 125 * (1 - self.local_autonomy / 100)) + 250
 
     @property
     def sailors(self):
         """The amount of sailors contributed by the province. Is based on the province's `base_production`."""
-        return self.base_production * 30 + 125
+        return floor(self.base_production * 30 * (1 - self.local_autonomy / 100))
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
