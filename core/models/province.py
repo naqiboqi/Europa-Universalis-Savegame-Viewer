@@ -49,9 +49,6 @@ class ProvinceTypeColor(Enum):
 @dataclass
 class EUProvince:
     """Represents a province on the map.
-    
-    Has an **update** method that can be used to update the province when loading save data,
-    since the default data is always loaded first.
 
     Attributes:
         province_id (int): The unique ID of the province.
@@ -59,6 +56,8 @@ class EUProvince:
         province_type (ProvinceType): The type of province.
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
+        is_capital (Optional[bool]): If the province is the capital of its country.
+        is_hre (Optional[bool]): If the province is within the Holy Roman Empire.
         culture (Optional[str]): The province's culture.
         religion (Optional[str]): The province's religion.
         base_tax (Optional[int]): The province's tax development.
@@ -73,12 +72,14 @@ class EUProvince:
             Higher levels indicate less production and power contribution to the owning country.
         devastation (Optional[int]): The amount of devastation in the province.
             Higher levels indicate less production and power contribution to the owning country.
+        unrest (Optional[int]): The amount of unrest in the province.
+            Higher levels indicate a higher likelyhood of rebellion.
         trade_node (Optional[str]): The trade node that the province belongs to.
         garrison (Optional[int]): The province's fort garrison population.
         fort_level (Optional[int]): The province's fort level. 
-            Higher levels indicate a stronger fort.
+            Higher levels indicate a stronger fort and make the province harder to siege and occupy.
         native_size (Optional[int]): The number of natives in the province.
-        patrol (Optional[int]): The number of game ticks it takes to patrol the province.
+        patrol (Optional[int]): The number of game ticks it takes to patrol the province (only if it a sea province).
         pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the province.
     """
     province_id: int
@@ -86,6 +87,8 @@ class EUProvince:
     province_type: ProvinceType
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
+    is_capital: Optional[bool] = False
+    is_hre: Optional[bool] = False
     culture: Optional[str] = None
     religion: Optional[str] = None
     base_tax: Optional[int] = None
@@ -96,10 +99,10 @@ class EUProvince:
     center_of_trade: Optional[int] = None
     local_autonomy: Optional[float] = None
     devastation: Optional[int] = None
+    unrest: Optional[int] = None
     trade_node: Optional[str] = None
     garrison: Optional[int] = None
     fort_level: Optional[int] = None
-    is_hre: Optional[bool] = False
     native_size: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)
@@ -133,9 +136,7 @@ class EUProvince:
     def bounding_box(self):
         """Gets the bounding box for the province.
         
-        The bounding box is defined as the inclusive limits of its x and y values, by
-        checking its contained pixels.
-        
+        The bounding box is defined as the inclusive limits of its `(x, y)` pixel locations.
         Returns:
             tuple[int]: The bounding box.
         """
@@ -164,28 +165,20 @@ class EUProvince:
 
         return 0
 
+    @property
+    def goods_produced(self):
+        """The amount of goods produced by the province. Is based on the province's `base_production`."""
+        return self.base_production / 10
+
+    @property
+    def manpower(self):
+        """The amount of manpower contributed by the province. Is based on the province's `base_manpower`."""
+        return self.base_manpower * 125 + 250
+
+    @property
+    def sailors(self):
+        """The amount of sailors contributed by the province. Is based on the province's `base_production`."""
+        return self.base_production * 30 + 125
+
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
-
-    def update(self, data: dict[str, str]):
-        """Updates the province's attributes.
-        
-        Checks each key-value pair in the dictionary and updates the associated attribute with that key's name.
-        
-        Args:
-            data (dict[str, str]): The province information to use for updating.
-        """
-        for key, value in data.items():
-            if hasattr(self, key):
-                attr_type = type(getattr(self, key))
-                try:
-                    if attr_type in [str, Optional[str]]:
-                        setattr(self, key, value)
-                    elif attr_type in [int, Optional[int]]:
-                        setattr(self, key, int(value))
-                    elif attr_type in [float, Optional[float]]:
-                        setattr(self, key, int(float(value)))
-                    elif attr_type is ProvinceType:
-                        setattr(self, key, ProvinceType(value))
-                except:
-                    print(f"Error getting data for attribute {key} val {value} for province {self.name}'s attribute type {attr_type}")
