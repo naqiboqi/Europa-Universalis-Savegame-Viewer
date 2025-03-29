@@ -180,9 +180,25 @@ class EUProvince:
         return 0
 
     @property
+    def tax_income(self):
+        """The monthly tax income of the province in ducats."""
+        annual_income = self.base_tax * 0.5 * (1 - self.local_autonomy)
+        return round(annual_income / 12, 2)
+
+    @property
+    def base_production_income(self):
+        """The monthly production income of the province before applying the trade good price."""
+        annual_income = self.goods_produced * (1 - self.local_autonomy)
+        return round(annual_income, 2)
+
+    @property
+    def income(self):
+        return self.tax_income + self.base_production_income
+
+    @property
     def goods_produced(self):
         """The amount of goods produced by the province. Is based on the province's `base_production`."""
-        return self.base_production / 10
+        return self.base_production * 0.10
 
     @property
     def manpower(self):
