@@ -14,9 +14,10 @@ from typing import Optional
 from typing import TYPE_CHECKING
 
 
-
 if TYPE_CHECKING:
     from . import EUCountry
+    from . import TerrainType
+
 
 
 class ProvinceType(Enum):
@@ -54,7 +55,8 @@ class EUProvince:
     Attributes:
         province_id (int): The unique ID of the province.
         name (str): The province's name.
-        province_type (ProvinceType): The type of province.
+        province_type (ProvinceType): The type of province (Owned, Native, Wasteland, or Sea).
+        terrain_type (TerrainType)
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
         is_capital (Optional[bool]): If the province is the capital of its country.
@@ -90,6 +92,7 @@ class EUProvince:
     province_id: int
     name: str
     province_type: ProvinceType
+    TerrainType: TerrainType
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
     is_capital: Optional[bool] = False

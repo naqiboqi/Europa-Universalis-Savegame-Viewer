@@ -1,5 +1,5 @@
 # Cleaned and ordered
-# IDs sorted numerically (duh)
+# IDs sorted numerically
 #
 # preserve the order
 # do NOT remove final spaces in ID lists

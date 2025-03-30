@@ -21,6 +21,7 @@ from .country import EUCountry
 from .area import EUArea
 from .mapmode import MapMode
 from .region import EURegion
+from .terrain import TerrainType
 
 __all__ = [
     'EUProvince', 
@@ -29,5 +30,6 @@ __all__ = [
     'EUCountry', 
     'EUArea', 
     'MapMode', 
-    'EURegion'
+    'EURegion',
+    'TerrainType'
 ]
