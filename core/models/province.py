@@ -69,17 +69,21 @@ class EUProvince:
             Higher levels indicate stronger influence on that province's trade node.
         center_of_trade (Optional[int]): The province's center of trade level.
             Higher levels indicate stronger trade power and development.
+        trade_node (Optional[str]): The trade node that the province belongs to.
         local_autonomy (Optional[float]): The province's autonomy and degree of separation.
             Higher levels indicate less production and power contribution to the owning country.
         devastation (Optional[int]): The amount of devastation in the province.
             Higher levels indicate less production and power contribution to the owning country.
         unrest (Optional[int]): The amount of unrest in the province.
             Higher levels indicate a higher likelyhood of rebellion.
-        trade_node (Optional[str]): The trade node that the province belongs to.
         garrison (Optional[int]): The province's fort garrison population.
         fort_level (Optional[int]): The province's fort level. 
             Higher levels indicate a stronger fort and make the province harder to siege and occupy.
         native_size (Optional[int]): The number of natives in the province.
+        native_ferocity (Optional[int]): The ferocity of natives in the province.
+            Represents their strength during an uprising.
+        native_hostileness (Optional[int]): The hostility of natives in the province.
+            Represents the likelyhood of an uprising.
         patrol (Optional[int]): The number of game ticks it takes to patrol the province (only if it a sea province).
         pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the province.
     """
@@ -98,13 +102,15 @@ class EUProvince:
     trade_goods: Optional[str] = None
     trade_power: Optional[float] = None
     center_of_trade: Optional[int] = None
+    trade_node: Optional[str] = None
     local_autonomy: Optional[float] = None
     devastation: Optional[int] = None
     unrest: Optional[int] = None
-    trade_node: Optional[str] = None
     garrison: Optional[int] = None
     fort_level: Optional[int] = None
     native_size: Optional[int] = None
+    native_ferocity: Optional[int] = None
+    native_hostileness: Optional[int] = None
     patrol: Optional[int] = None
     pixel_locations: set[tuple[int, int]] = field(default_factory=set)
 
