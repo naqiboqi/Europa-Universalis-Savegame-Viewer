@@ -251,7 +251,7 @@ class Layout:
             element_justification="center", 
             expand_x=True,
             justification="center", 
-            pad=(10, 10))
+            pad=(0, 0))
 
         return Layout.add_border(
             layout=[[header_column]],
@@ -312,6 +312,11 @@ class Layout:
             font=("Georgia", 12), 
             pad=(0, 10),
             size=(26, 5),
+            sbar_arrow_color=Layout.GOLD_FRAME_UPPER,
+            sbar_background_color=Layout.RED_BANNER_BG,
+            sbar_trough_color=Layout.GOLD_FRAME_LOWER,
+            sbar_relief=sg.RELIEF_GROOVE,
+            sbar_width=5,
             text_color=Layout.LIGHT_TEXT,
             visible=False)
 
@@ -445,7 +450,7 @@ class Layout:
             [development_icon, total_dev_value]
         ], background_color=Layout.SUNK_FRAME_BG, 
         border_width=3, 
-        pad=(10, 5),
+        pad=(10, 0),
         relief=sg.RELIEF_FLAT)
 
         tax_icon = Layout.create_icon_with_border(
@@ -464,7 +469,7 @@ class Layout:
             [tax_icon, tax_value]
         ], background_color=Layout.SUNK_FRAME_BG, 
         border_width=2, 
-        pad=(5, 5),
+        pad=(5, 0),
         relief=sg.RELIEF_FLAT)
 
         production_icon = Layout.create_icon_with_border(
@@ -483,7 +488,7 @@ class Layout:
             [production_icon, production_value]
         ], background_color=Layout.SUNK_FRAME_BG, 
         border_width=2,
-        pad=(5, 5),
+        pad=(5, 0),
         relief=sg.RELIEF_FLAT)
 
         manpower_icon = Layout.create_icon_with_border(
@@ -502,7 +507,7 @@ class Layout:
             [manpower_icon, manpower_value]
         ], background_color=Layout.SUNK_FRAME_BG, 
         border_width=2, 
-        pad=(5, 5),
+        pad=(5, 0),
         relief=sg.RELIEF_FLAT)
 
         return sg.Frame("", [
@@ -661,7 +666,7 @@ class Layout:
             [goods_produced_label, goods_produced_icon, goods_produced_field],
         ], background_color=Layout.DARK_FRAME_BG,
         border_width=3,
-        expand_x=True,
+        expand_x=True,  
         pad=(10, 5), 
         relief=sg.RELIEF_SUNKEN,
         vertical_alignment="top")
@@ -968,14 +973,35 @@ class Layout:
             content="Development",
             content_color=Layout.LIGHT_TEXT,
             frame_background_color=Layout.SECTION_BANNER_BG,
+            pad=(20, 15),
+            relief=sg.RELIEF_SOLID,
+            justification="center")
+
+        area_km2_label = Layout.create_text_with_frame(
+            "Area in km^2",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG,
             pad=(15, 15),
             relief=sg.RELIEF_SOLID,
             justification="center")
+        area_km2_value = Layout.create_text_with_frame(
+            "",
+            key="-INFO_PROVINCE_SIZE_KM-",
+            content_color=Layout.LIGHT_TEXT,
+            font=("Georgia", 12),
+            frame_background_color=Layout.SUNK_FRAME_BG,
+            frame_border_width=2,
+            justification="center",
+            pad=((5, 15), (15, 15)),
+            relief=sg.RELIEF_SUNKEN,
+            size=(15, 1))
 
         geographic_info_frame = Layout.create_geographic_province_info_frame()
         province_info_frame = sg.Frame("", [
             [geographic_info_frame],
-            [development_label, development_info_frame],
+            [development_label, development_info_frame,
+                sg.Push(background_color=Layout.LIGHT_FRAME_BG),
+            area_km2_label, area_km2_value],
             [demographic_info_column, trade_and_mil_column]
         ], background_color=Layout.LIGHT_FRAME_BG, 
         border_width=5,
@@ -1185,7 +1211,9 @@ class Layout:
             row_height=28,
             sbar_arrow_color=Layout.GOLD_FRAME_UPPER,
             sbar_background_color=Layout.RED_BANNER_BG,
-            sbar_trough_color=Layout.GOLD_FRAME_LOWER)
+            sbar_trough_color=Layout.GOLD_FRAME_LOWER,
+            sbar_relief=sg.RELIEF_GROOVE,
+            sbar_width=5)
 
         provinces_info = sg.Frame("", [
             [table_header],
@@ -1195,10 +1223,10 @@ class Layout:
         return sg.Column([
             [provinces_info]
         ], background_color=Layout.LIGHT_FRAME_BG,
-        pad=(10, 5))
+        pad=(10, 0))
 
     @staticmethod
-    def create_area_income_column():
+    def create_income_column(name: str):
         total_income_icon = Layout.create_icon_with_border(
             icon_name="total_income",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
@@ -1206,8 +1234,8 @@ class Layout:
             image_size=(28, 28))
         total_income_label, total_income_value = Layout.create_text_with_inline_label(
             "Total Income",
-            text_key="-INFO_AREA_INCOME-",
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            text_key=f"-INFO_{name}_INCOME-",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
             text_field_size=(10, 1),
@@ -1215,7 +1243,8 @@ class Layout:
 
         total_income_column = sg.Column([
             [total_income_label, total_income_icon, total_income_value]
-        ])
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
 
         tax_income_icon = Layout.create_icon_with_border(
             icon_name="income",
@@ -1224,16 +1253,17 @@ class Layout:
             image_size=(28, 28))
         tax_income_label, tax_income_value = Layout.create_text_with_inline_label(
             "Tax",
-            text_key="-INFO_AREA_TAX_INCOME-", 
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            text_key=f"-INFO_{name}_TAX_INCOME-", 
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
-            text_field_size=(6, 1),
+            text_field_size=(10, 1),
             expand_x=True)
 
         tax_income_column = sg.Column([
             [tax_income_label, tax_income_icon, tax_income_value]
-        ])
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
 
         goods_income_icon = Layout.create_icon_with_border(
             icon_name="trade_value_income",
@@ -1242,16 +1272,17 @@ class Layout:
             image_size=(28, 28))
         goods_income_label, goods_income_value = Layout.create_text_with_inline_label(
             "Production",
-            text_key="-INFO_AREA_PRODUCTION_INCOME-",
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            text_key=f"-INFO_{name}_PRODUCTION_INCOME-",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
-            text_field_size=(5, 1),
+            text_field_size=(15, 1),
             expand_x=True)  
 
         goods_income_column = sg.Column([
             [goods_income_label, goods_income_icon, goods_income_value]
-        ])
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
 
         income_info_frame = sg.Frame("", [
             [total_income_column, tax_income_column, goods_income_column]
@@ -1265,11 +1296,11 @@ class Layout:
         return sg.Column([
             [income_info_frame]
         ], background_color=Layout.LIGHT_FRAME_BG,
-        pad=(10, 10),
+        pad=((10, 10), (10, 0)),
         vertical_alignment="top")
 
     @staticmethod
-    def create_area_trade_column():
+    def create_trade_column(name: str):
         trade_power_icon = Layout.create_icon_with_border(
             icon_name="trade_power",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
@@ -1277,12 +1308,17 @@ class Layout:
             image_size=(28, 28))
         trade_power_label, trade_power_value = Layout.create_text_with_inline_label(
             "Trade Power",
-            text_key="-INFO_AREA_TRADE_POWER-",
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            text_key=f"-INFO_{name}_TRADE_POWER-",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
-            text_field_size=(6, 1),
+            text_field_size=(10, 1),
             expand_x=True)
+
+        trade_power_column = sg.Column([
+            [trade_power_label, trade_power_icon, trade_power_value]
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
 
         goods_produced_icon = Layout.create_icon_with_border(
             icon_name="goods_produced",
@@ -1291,31 +1327,39 @@ class Layout:
             image_size=(28, 28))
         goods_produced_label, goods_produced_value = Layout.create_text_with_inline_label(
             "Goods Produced",
-            text_key="-INFO_AREA_GOODS_PRODUCED-", 
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            text_key=f"-INFO_{name}_GOODS_PRODUCED-", 
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
-            text_field_size=(6, 1),
+            text_field_size=(10, 1),
             expand_x=True)
 
-        dominant_good_icon = Layout.create_icon_with_border(
+        goods_produced_column = sg.Column([
+            [goods_produced_label, goods_produced_icon, goods_produced_value]
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
+
+        dominant_good_icon = Layout.create_icon_with_border (
             icon_name="warehouse",
             borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
             image_size=(28, 28))
         dominant_good_label, dominant_good_value = Layout.create_text_with_inline_label(
-            "Dominant Good",
-            text_key="-INFO_AREA_DOMINANT_TRADE_GOOD-",
-            label_colors=(Layout.LIGHT_TEXT, Layout.DARK_FRAME_BG),
+            "Dominant Trade Good",
+            text_key=f"-INFO_{name}_DOMINANT_TRADE_GOOD-",
+            label_colors=(Layout.LIGHT_TEXT, Layout.MEDIUM_FRAME_BG),
             justification="center",
             text_colors=(Layout.LIGHT_TEXT, Layout.SUNK_FRAME_BG),
             text_field_size=(15, 1),
             expand_x=True)  
 
-        trade_info_frame = sg.Frame("", [
-            [trade_power_label, trade_power_icon, trade_power_value],
-            [goods_produced_label, goods_produced_icon, goods_produced_value],
-            [dominant_good_label, dominant_good_icon, dominant_good_value],
+        dominant_good_column = sg.Column([
+            [dominant_good_label, dominant_good_icon, dominant_good_value]
+        ], background_color=Layout.MEDIUM_FRAME_BG,
+        pad=(0, 0))
+
+        income_info_frame = sg.Frame("", [
+            [trade_power_column, goods_produced_column, dominant_good_column]
         ], background_color=Layout.DARK_FRAME_BG,
         border_width=3,
         expand_x=True,
@@ -1324,9 +1368,9 @@ class Layout:
         vertical_alignment="top")
 
         return sg.Column([
-            [trade_info_frame]
+            [income_info_frame]
         ], background_color=Layout.LIGHT_FRAME_BG,
-        pad=(10, 10),
+        pad=((10, 10), (0, 10)),
         vertical_alignment="top")
 
     @staticmethod
@@ -1351,8 +1395,8 @@ class Layout:
 
         area_provinces_table = Layout.create_area_provinces_table()
 
-        income_info_column = Layout.create_area_income_column()
-        trade_info_column = Layout.create_area_trade_column()
+        income_info_column = Layout.create_income_column(name="AREA")
+        trade_info_column = Layout.create_trade_column(name="AREA")
 
         area_km2_label = Layout.create_text_with_frame(
             "Area in km^2",
@@ -1379,7 +1423,8 @@ class Layout:
                 sg.Push(background_color=Layout.LIGHT_FRAME_BG),
             area_km2_label, area_km2_value],
             [area_provinces_table],
-            [income_info_column]
+            [income_info_column],
+            [trade_info_column]
         ], background_color=Layout.LIGHT_FRAME_BG,
         border_width=5,
         expand_x=True,
@@ -1395,6 +1440,224 @@ class Layout:
         expand_x=True,
         expand_y=True,
         key="-AREA_INFO_COLUMN-",
+        pad=((5, 10), 10, 10),
+        vertical_alignment="top",
+        visible=False)
+
+    @staticmethod
+    def create_geographic_region_info_frame():
+        """Creates the geographical frame section for an area.
+
+        Returns:
+            frame (Frame): The frame containing the area info.
+        """
+        region_name = sg.Text(
+            "",
+            key="-INFO_REGION_NAME-",
+            background_color=Layout.TOP_BANNER_BG,
+            font=("Georgia", 14),
+            justification="right",
+            text_color=Layout.LIGHT_TEXT)
+
+        spacer_left = sg.Text(
+            "", 
+            background_color=Layout.TOP_BANNER_BG,
+            font=("Georgia", 12),
+            justification="left")
+
+        region_column = sg.Column([
+            [region_name],
+            [spacer_left]
+        ], background_color=Layout.TOP_BANNER_BG,
+        element_justification="left",
+        expand_x=True)
+
+        spacer_right = sg.Text(
+            "",
+            background_color=Layout.TOP_BANNER_BG,
+            font=("Georgia", 12),
+            justification="right")
+
+        spacer_column = sg.Column([
+            [spacer_right],
+        ], background_color=Layout.TOP_BANNER_BG,
+        element_justification="left",
+        expand_x=True)
+
+        return sg.Frame("", [
+            [region_column, sg.Push(background_color=Layout.TOP_BANNER_BG), spacer_column]
+        ], background_color=Layout.TOP_BANNER_BG,
+        border_width=4,
+        expand_x=True,
+        pad=(5, 5),
+        relief=sg.RELIEF_RAISED,
+        vertical_alignment="center")
+
+
+    @staticmethod
+    def create_areas_table_header():
+        """Creates the header for the area table.
+        
+        Returns:
+            frame (Frame): The frame containing the header icons.
+        """
+        area_icon = Layout.create_icon_with_border(
+            icon_name="map_area",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        area_header = sg.Frame("", [
+            [area_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(220, 40))
+
+        development_icon = Layout.create_icon_with_border(
+            icon_name="development",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        development_header = sg.Frame("", [
+            [development_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(44, 40))
+
+        trade_power_icon = Layout.create_icon_with_border(
+            icon_name="trade_power",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        trade_power_header = sg.Frame("", [
+            [trade_power_icon]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(111, 40))
+
+        icon_row = sg.Column([
+            [area_header, 
+            development_header, 
+            trade_power_header]
+        ], background_color=Layout.SECTION_BANNER_BG, 
+        pad=(0, 0))
+
+        return sg.Frame("", 
+            layout=[[icon_row]], 
+            background_color=Layout.SECTION_BANNER_BG,
+            expand_x=True,
+            pad=(0, 0), 
+            relief=sg.RELIEF_SOLID)
+
+    @staticmethod
+    def create_region_areas_table():
+        table_header = Layout.create_areas_table_header()
+
+        table = sg.Table(
+            values=[],
+            key="-INFO_REGION_AREAS_TABLE-",
+            alternating_row_color=Layout.DARK_FRAME_BG,
+            background_color=Layout.MEDIUM_FRAME_BG,
+            auto_size_columns=False,
+            col_widths=[20, 4, 10],
+            headings=["Name", "Dev.", "Trade Power"],
+            header_background_color=Layout.SECTION_BANNER_BG,
+            header_relief=sg.RELIEF_SOLID,
+            font=("Georgia", 12),
+            text_color=Layout.LIGHT_TEXT,
+            hide_vertical_scroll=False,
+            justification="left",
+            num_rows=5,
+            pad=(0, 0),
+            row_height=28,
+            sbar_arrow_color=Layout.GOLD_FRAME_UPPER,
+            sbar_background_color=Layout.RED_BANNER_BG,
+            sbar_trough_color=Layout.GOLD_FRAME_LOWER,
+            sbar_relief=sg.RELIEF_GROOVE,
+            sbar_width=5)
+
+        areas_info = sg.Frame("", [
+            [table_header],
+            [table]
+        ], expand_x=True, pad=(0, 0))
+
+        return sg.Column([
+            [areas_info]
+        ], background_color=Layout.LIGHT_FRAME_BG,
+        pad=(10, 0))
+
+    @staticmethod
+    def create_region_info_column():
+        """Creates the region column section.
+        
+        This section contains the region's areas table and the regions's overall income and trade information.
+        
+        Returns:
+            column (Column): The column containing the region info.
+        """
+        geographic_info_frame = Layout.create_geographic_region_info_frame()
+
+        development_label = Layout.create_text_with_frame(
+            content="Development",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG,
+            pad=(15, 15),
+            relief=sg.RELIEF_SOLID,
+            justification="center")
+        development_info_frame = Layout.create_development_info_frame(name="REGION")
+
+        region_areas_table = Layout.create_region_areas_table()
+
+        income_info_column = Layout.create_income_column(name="REGION")
+        trade_info_column = Layout.create_trade_column(name="REGION")
+
+        area_km2_label = Layout.create_text_with_frame(
+            "Area in km^2",
+            content_color=Layout.LIGHT_TEXT,
+            frame_background_color=Layout.SECTION_BANNER_BG,
+            pad=(15, 15),
+            relief=sg.RELIEF_SOLID,
+            justification="center")
+        area_km2_value = Layout.create_text_with_frame(
+            "",
+            key="-INFO_REGION_SIZE_KM-",
+            content_color=Layout.LIGHT_TEXT,
+            font=("Georgia", 12),
+            frame_background_color=Layout.SUNK_FRAME_BG,
+            frame_border_width=2,
+            justification="center",
+            pad=((5, 15), (15, 15)),
+            relief=sg.RELIEF_SUNKEN,
+            size=(15, 1))
+
+        region_info_frame = sg.Frame("", [
+            [geographic_info_frame],
+            [development_label, development_info_frame,
+                sg.Push(background_color=Layout.LIGHT_FRAME_BG),
+            area_km2_label, area_km2_value],
+            [region_areas_table],
+            [income_info_column],
+            [trade_info_column]
+        ], background_color=Layout.LIGHT_FRAME_BG,
+        border_width=5,
+        expand_x=True,
+        expand_y=True,
+        key="REGION_INFO_FRAME-",
+        pad=(10, 10),
+        relief=sg.RELIEF_GROOVE,
+        size=(985, 510))
+
+        return sg.Column([
+            [region_info_frame]
+        ], background_color=Layout.LIGHT_FRAME_BG,
+        expand_x=True,
+        expand_y=True,
+        key="-REGION_INFO_COLUMN-",
         pad=((5, 10), 10, 10),
         vertical_alignment="top",
         visible=False)
@@ -1489,7 +1752,10 @@ class Layout:
         window_header = Layout.create_window_header()
 
         selected_info_frame = sg.Frame("", [
-            [Layout.create_search_column(), Layout.create_province_info_column(), Layout.create_area_info_column()]
+            [Layout.create_search_column(), 
+                Layout.create_province_info_column(), 
+                Layout.create_area_info_column(),
+                Layout.create_region_info_column()]
         ], key="-WORLD_INFO-",
         background_color=Layout.LIGHT_FRAME_BG, 
         border_width=5,
@@ -1521,8 +1787,10 @@ class Layout:
         ], background_color=Layout.MEDIUM_FRAME_BG,
         vertical_alignment="center")
 
-        return [
+        layout = [
             [window_header],
             [display_column],
             [bordered_info],
         ]
+        
+        return layout
