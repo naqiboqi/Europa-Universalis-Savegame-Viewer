@@ -1,12 +1,9 @@
-# Brian
-# cleaned and ordered
+# Cleaned and ordered
 # IDs sorted numerically (duh)
 #
 # preserve the order
 # do NOT remove final spaces in ID lists
 
-# Terrain Categories
-#Reorganised by Draiocht
 #First flat lands, Farmland-Grassland-Dryland-Steppe
 #Then normal types, Woods-Forest-Coastline-Marsh
 #Then hilly types, Hills-Highlands-Mountains
@@ -14,12 +11,6 @@
 #Other unused types at the bottom, except pti, which I dont want to mess with because I have no idea what it is for
 #Also organised modifers into Colour-Sound-Supply-Movement Cost-Development Cost-Allowed Buildings-ND Cost-Defense-Defensiveness
 
-# Brian
-# terrain assignment to do:
-# 4846--4869 in Australia
-# 4871--4889, 4891, 4894--4919, 4921, 4922, 4923 in N.A.
-# 4937, 4938, 4939 in Oceania
-# 6001--6041 in Anatolia
 
 categories = {
 	pti = {
@@ -174,7 +165,7 @@ categories = {
 	hills = { # 563
 		color = { 113 176 151 }
 		type = hills
-		sound_type = mountains # Brian fixed
+		sound_type = mountains
 		defence = 2 # BT; 1
 		movement_cost = 1.8 # BT; 1.4
 		supply_limit = 2 # BT; 5
@@ -196,7 +187,7 @@ categories = {
 	highlands = { # 254
 		color = { 176 129 21 }
 		type = hills
-		sound_type = mountains # Brian fixed
+		sound_type = mountains
 		defence = 1
 		movement_cost = 1.7 # BT; 1.4
 		supply_limit = 1 # BT; 6
@@ -214,7 +205,7 @@ categories = {
 	mountain = { # 322
 		color = { 105 24 4 }
 		type = mountains
-		sound_type = mountains # Brian fixed
+		sound_type = mountains
 		defence = 3 # BT; 2
 		movement_cost = 2.5 # BT; 1.5
 		supply_limit = 1 # BT; 4
