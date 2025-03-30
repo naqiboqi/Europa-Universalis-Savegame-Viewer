@@ -1540,10 +1540,38 @@ class Layout:
         pad=(0, 0), 
         size=(111, 40))
 
+        religion_icon = Layout.create_icon_with_border(
+            icon_name="religion",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        religion_header = sg.Frame("", [
+            [religion_icon]
+        ], background_color=Layout.SECTION_BANNER_BG,
+        border_width=0, 
+        element_justification="center", 
+        pad=(0, 0), 
+        size=(198, 40))
+
+        culture_icon = Layout.create_icon_with_border(
+            icon_name="culture",
+            borders=[(Layout.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        culture_header = sg.Frame("", [
+            [culture_icon]
+        ], background_color=Layout.SECTION_BANNER_BG,
+        border_width=0, 
+        element_justification="center",
+        pad=(0, 0), 
+        size=(198, 40))
+
         icon_row = sg.Column([
             [area_header, 
             development_header, 
-            trade_power_header]
+            trade_power_header,
+            religion_header,
+            culture_header]
         ], background_color=Layout.SECTION_BANNER_BG, 
         pad=(0, 0))
 
@@ -1564,8 +1592,8 @@ class Layout:
             alternating_row_color=Layout.DARK_FRAME_BG,
             background_color=Layout.MEDIUM_FRAME_BG,
             auto_size_columns=False,
-            col_widths=[20, 4, 10],
-            headings=["Name", "Dev.", "Trade Power"],
+            col_widths=[20, 4, 10, 18, 18],
+            headings=["Name", "Dev.", "Trade Power", "Dominant Religion", "Dominant Culture"],
             header_background_color=Layout.SECTION_BANNER_BG,
             header_relief=sg.RELIEF_SOLID,
             font=("Georgia", 12),

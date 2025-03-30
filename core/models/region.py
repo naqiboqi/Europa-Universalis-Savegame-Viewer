@@ -129,6 +129,26 @@ class EURegion:
         return round(sum(area.trade_power for area in self), 2)
 
     @property
+    def dominant_culture(self):
+        """The dominant culture in the region determined by the number of provinces."""
+        return MapUtils.get_dominant_attribute(self.provinces, "culture")
+
+    @property
+    def dominant_religion(self):
+        """The dominant religion in the region determined by the number of provinces."""
+        return MapUtils.get_dominant_attribute(self.provinces, "religion")
+
+    @property
+    def dominant_trade_good(self):
+        """The dominant trade good produced in the region determined by the total goods produced."""
+        return MapUtils.get_dominant_attribute(self.provinces, "trade_goods", "goods_produced")
+
+    @property
+    def provinces(self):
+        """The provinces in the region."""
+        return [province for area in self for province in area]
+
+    @property
     def is_land_region(self):
         """Checks if the region contains any land areas. A region can only contain one type
             of province"""

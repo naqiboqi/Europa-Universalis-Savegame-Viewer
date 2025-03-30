@@ -300,7 +300,6 @@ class MapDisplayer:
         """Updates the information displayed for a specific region in the UI."""
         window = self.window
 
-        ## REMEMBER TO WORK ON THESE AFTER UPDATING THE APPROPRIATE METHODS
         if region.is_land_region:
             data = {
                 "-INFO_REGION_NAME-": region.name,
@@ -312,6 +311,8 @@ class MapDisplayer:
                 "-INFO_REGION_TAX_INCOME-": region.tax_income,
                 "-INFO_REGION_TRADE_POWER-": region.trade_power,
                 "-INFO_REGION_GOODS_PRODUCED-": region.goods_produced,
+                "-INFO_REGION_DOMINANT_TRADE_GOOD-": MapUtils.format_name(region.dominant_trade_good),
+                "-INFO_REGION_SIZE_KM-": region.area_km2
             }
 
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
@@ -324,17 +325,19 @@ class MapDisplayer:
                         window[element].update(value=attr_value, visible=True)
                     except (AttributeError, TypeError):
                         window[element].update(values=attr_value, visible=True)
-            
+
             area_rows = []
             for area in region:
                 row = [
                     area.name,
-                    area.dev,
+                    area.development,
                     area.trade_power,
+                    MapUtils.format_name(area.dominant_religion),
+                    MapUtils.format_name(area.dominant_culture)
                 ]
 
                 area_rows.append(row)
-            
+
             window["-INFO_REGION_AREAS_TABLE-"].update(values=area_rows)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
