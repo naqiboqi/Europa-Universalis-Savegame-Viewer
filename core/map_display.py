@@ -296,6 +296,9 @@ class MapDisplayer:
 
             total_production_element.update(value=total_production_income)
 
+            total_income_element = window["-INFO_AREA_INCOME-"]
+            total_income_element.update(value=round(area.tax_income + total_production_income, 2))
+
     def update_region_details(self, region: EURegion):
         """Updates the information displayed for a specific region in the UI."""
         window = self.window
@@ -307,7 +310,6 @@ class MapDisplayer:
                 "-INFO_REGION_BASE_TAX-": region.base_tax,
                 "-INFO_REGION_BASE_PRODUCTION-": region.base_production,
                 "-INFO_REGION_BASE_MANPOWER-": region.base_manpower,
-                "-INFO_REGION_INCOME-": region.income,
                 "-INFO_REGION_TAX_INCOME-": region.tax_income,
                 "-INFO_REGION_TRADE_POWER-": region.trade_power,
                 "-INFO_REGION_GOODS_PRODUCED-": region.goods_produced,
@@ -339,6 +341,15 @@ class MapDisplayer:
                 area_rows.append(row)
 
             window["-INFO_REGION_AREAS_TABLE-"].update(values=area_rows)
+            total_production_element = window["-INFO_REGION_PRODUCTION_INCOME-"]
+            total_production_income = round(sum(
+                province.goods_produced * self.world_data.trade_goods.get(province.trade_goods, 0.00)
+                for province in region.provinces), 2)
+
+            total_production_element.update(value=total_production_income)
+
+            total_income_element = window["-INFO_REGION_INCOME-"]
+            total_income_element.update(value=round(region.tax_income + total_production_income, 2))
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
         """Updates the information section in the window based on the user's seclected item.
