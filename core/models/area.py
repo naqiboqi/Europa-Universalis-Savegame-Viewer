@@ -141,7 +141,7 @@ class EUArea:
     @property
     def dominant_trade_good(self):
         """The dominant trade good produced in the area determined by the total goods produced."""
-        return MapUtils.get_dominant_attribute(self, "trade_good", "goods_produced")
+        return MapUtils.get_dominant_attribute(self, "trade_goods", "goods_produced")
 
     @property
     def is_land_area(self):

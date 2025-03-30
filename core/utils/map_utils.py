@@ -55,11 +55,11 @@ class MapUtils:
             if not attr_value:
                 continue
 
-            weight_attr = getattr(item, weight_attr, 1) if weight_attr else 1
-            attr_counts[attr_value] = attr_counts.get(attr_value, 0) + weight_attr
+            weight = getattr(item, weight_attr, 1) if weight_attr else 1
+            attr_counts[attr_value] = attr_counts.get(attr_value, 0) + weight
 
         return max(attr_counts, key=attr_counts.get) if attr_counts else None
-    
+
     @staticmethod
     def format_name(name: str):
         """Converts an internal name format (e.g., 'cosmopolitan_french') 
