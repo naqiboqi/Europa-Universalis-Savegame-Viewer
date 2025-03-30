@@ -78,6 +78,75 @@ class EURegion:
         return min_x, max_x, min_y, max_y
 
     @property
+    def development(self):
+        """Returns the total development of the region.
+        
+        As wasteland and sea regions have no development, returns 0 in those cases.
+        """
+        return sum(area.development for area in self)
+
+    @property
+    def base_tax(self):
+        """The total base tax of the region."""
+        return sum(area.base_tax for area in self)
+
+    @property
+    def base_production(self):
+        """The total base production of the region."""
+        return sum(area.base_production for area in self)
+
+    @property
+    def base_manpower(self):
+        """The total base manpower of the region."""
+        return sum(area.base_manpower for area in self)
+
+    @property
+    def tax_income(self):
+        """The monthly tax income of the region in ducats."""
+        annual_income = sum(area.tax_income for area in self)
+        return round(annual_income, 2)
+
+    @property
+    def base_production_income(self):
+        """The monthly production income of the region before applying the trade good price."""
+        annual_income = sum(area.base_production_income for area in self)
+        return round(annual_income, 2)
+
+    @property
+    def income(self):
+        """The total monthly income of the area in ducats."""
+        return self.tax_income + self.base_production_income
+
+    @property
+    def goods_produced(self):
+        """The amount of goods produced by the area. Is based on the province's `base_production`."""
+        return round(sum(province.goods_produced for province in self), 2)
+
+    @property
+    def dominant_trade_good(self):
+        """Returns the trade good with the highest total goods produced in the region."""
+        trade_goods: dict[str, float] = {}
+
+        for area in self:
+            trade_good = area.dominant_trade_good
+            if not trade_good:
+                continue
+
+            if trade_good in trade_goods:
+                trade_goods[trade_good] += area.goods_produced
+            else:
+                trade_goods[trade_good] = area.goods_produced
+
+        if trade_goods:
+            return max(trade_goods, key=trade_goods.get)
+        return None
+
+    @property
+    def trade_power(self):
+        """The regions's trade power."""
+        return round(sum(area.trade_power for area in self), 2)
+
+    @property
     def is_land_region(self):
         """Checks if the region contains any land areas. A region can only contain one type
             of province"""
