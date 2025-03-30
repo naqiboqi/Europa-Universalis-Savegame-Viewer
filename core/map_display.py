@@ -17,7 +17,7 @@ from . import MapHandler, MapPainter
 from . import Layout
 from .models import EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
-from .utils import IconLoader
+from .utils import IconLoader, MapUtils
 
 
 icon_loader = IconLoader()
@@ -175,15 +175,16 @@ class MapDisplayer:
                 "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
                 "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
                 "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
-                # "-INFO_PROVINCE_LOCAL_AUTONOMY-": province.local_autonomy,
-                # "-INFO_PROVINCE_LOCAL_DEVASTATION-": province.devastation,
+                "-INFO_PROVINCE_SIZE_KM-": province.area_km2,
                 "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
-                "-INFO_PROVINCE_CULTURE-": province.culture,
-                "-INFO_PROVINCE_RELIGION-": province.religion,
+                "-INFO_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
+                "-INFO_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
             }
 
+            window["-REGION_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=False)
             window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
+
             for element, attr_value in data.items():
                 if attr_value is not None:
                     window_element = window[element]
@@ -257,9 +258,13 @@ class MapDisplayer:
                 "-INFO_AREA_BASE_MANPOWER-": area.base_manpower,
                 "-INFO_AREA_INCOME-": area.income,
                 "-INFO_AREA_TAX_INCOME-": area.tax_income,
+                "-INFO_AREA_TRADE_POWER-": area.trade_power,
+                "-INFO_AREA_GOODS_PRODUCED-": area.goods_produced,
+                "-INFO_AREA_DOMINANT_TRADE_GOOD-": MapUtils.format_name(area.dominant_trade_good),
                 "-INFO_AREA_SIZE_KM-": area.area_km2
             }
 
+            window["-REGION_INFO_COLUMN-"].update(visible=False)
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=True)
 
@@ -277,8 +282,8 @@ class MapDisplayer:
                     province.owner.name,
                     province.development,
                     province.trade_power,
-                    province.religion,
-                    province.culture,
+                    MapUtils.format_name(province.religion),
+                    MapUtils.format_name(province.culture),
                 ]
                 province_rows.append(row)
 
@@ -290,6 +295,47 @@ class MapDisplayer:
                 for province in area), 2)
 
             total_production_element.update(value=total_production_income)
+
+    def update_region_details(self, region: EURegion):
+        """Updates the information displayed for a specific region in the UI."""
+        window = self.window
+
+        ## REMEMBER TO WORK ON THESE AFTER UPDATING THE APPROPRIATE METHODS
+        if region.is_land_region:
+            data = {
+                "-INFO_REGION_NAME-": region.name,
+                "-INFO_REGION_TOTAL_DEV-": region.development,
+                "-INFO_REGION_BASE_TAX-": region.base_tax,
+                "-INFO_REGION_BASE_PRODUCTION-": region.base_production,
+                "-INFO_REGION_BASE_MANPOWER-": region.base_manpower,
+                "-INFO_REGION_INCOME-": region.income,
+                "-INFO_REGION_TAX_INCOME-": region.tax_income,
+                "-INFO_REGION_TRADE_POWER-": region.trade_power,
+                "-INFO_REGION_GOODS_PRODUCED-": region.goods_produced,
+            }
+
+            window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+            window["-AREA_INFO_COLUMN-"].update(visible=False)
+            window["-REGION_INFO_COLUMN-"].update(visible=True)
+
+            for element, attr_value in data.items():
+                if attr_value is not None:
+                    try:
+                        window[element].update(value=attr_value, visible=True)
+                    except (AttributeError, TypeError):
+                        window[element].update(values=attr_value, visible=True)
+            
+            area_rows = []
+            for area in region:
+                row = [
+                    area.name,
+                    area.dev,
+                    area.trade_power,
+                ]
+
+                area_rows.append(row)
+            
+            window["-INFO_REGION_AREAS_TABLE-"].update(values=area_rows)
 
     def update_details(self, selected_item: EUProvince|EUArea|EURegion):
         """Updates the information section in the window based on the user's seclected item.
@@ -307,6 +353,9 @@ class MapDisplayer:
 
         elif isinstance(selected_item, EUArea):
             self.update_area_details(selected_item)
+
+        elif isinstance(selected_item, EURegion):
+            self.update_region_details(selected_item)
 
         return self.window.refresh()
 
