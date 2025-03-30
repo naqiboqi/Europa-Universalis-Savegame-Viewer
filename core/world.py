@@ -412,7 +412,10 @@ class EUWorldData:
             "local_autonomy": r'local_autonomy=([\d.]+)',
             "devastation": r'devastation=([\d.]+)',
             "native_size": r'native_size=(\d+)',
-            "patrol": r'patrol=(\d+)'
+            "native_ferocity": r'native_ferocity=([\d.]+)',
+            "native_hostileness": r'native_hostileness=(\d+)',
+            "patrol": r'patrol=(\d+)',
+            "unrest": r'unrest=([\d.]+)'
         }
 
         fort_buildings = {
