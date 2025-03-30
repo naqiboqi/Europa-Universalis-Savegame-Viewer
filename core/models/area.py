@@ -87,14 +87,17 @@ class EUArea:
 
     @property
     def base_tax(self):
+        """The total base tax of the area."""
         return sum(province.base_tax for province in self)
 
     @property
     def base_production(self):
+        """The total base production of the area."""
         return sum(province.base_production for province in self)
 
     @property
     def base_manpower(self):
+        """The total base manpower of the area."""
         return sum(province.base_manpower for province in self)
 
     @property
@@ -117,7 +120,31 @@ class EUArea:
     @property
     def goods_produced(self):
         """The amount of goods produced by the area. Is based on the province's `base_production`."""
-        return sum(province.goods_produced for province in self)
+        return round(sum(province.goods_produced for province in self), 2)
+
+    @property
+    def dominant_trade_good(self):
+        """Returns the trade good with the highest total goods produced in the area."""
+        trade_goods: dict[str, float] = {}
+
+        for province in self:
+            trade_good = province.trade_goods
+            if not trade_good:
+                continue
+
+            if trade_good in trade_goods:
+                trade_goods[trade_good] += province.goods_produced
+            else:
+                trade_goods[trade_good] = province.goods_produced
+
+        if trade_goods:
+            return max(trade_goods, key=trade_goods.get)
+        return None
+
+    @property
+    def trade_power(self):
+        """The area's trade power."""
+        return round(sum(province.trade_power for province in self), 2)
 
     @property
     def is_land_area(self):
