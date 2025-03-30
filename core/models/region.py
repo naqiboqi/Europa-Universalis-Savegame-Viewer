@@ -123,25 +123,6 @@ class EURegion:
         return round(sum(province.goods_produced for province in self), 2)
 
     @property
-    def dominant_trade_good(self):
-        """Returns the trade good with the highest total goods produced in the region."""
-        trade_goods: dict[str, float] = {}
-
-        for area in self:
-            trade_good = area.dominant_trade_good
-            if not trade_good:
-                continue
-
-            if trade_good in trade_goods:
-                trade_goods[trade_good] += area.goods_produced
-            else:
-                trade_goods[trade_good] = area.goods_produced
-
-        if trade_goods:
-            return max(trade_goods, key=trade_goods.get)
-        return None
-
-    @property
     def trade_power(self):
         """The regions's trade power."""
         return round(sum(area.trade_power for area in self), 2)
