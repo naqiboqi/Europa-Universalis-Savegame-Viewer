@@ -1296,7 +1296,7 @@ class Layout:
         return sg.Column([
             [income_info_frame]
         ], background_color=Layout.LIGHT_FRAME_BG,
-        pad=((10, 10), (10, 0)),
+        pad=((10, 10), (15, 10)),
         vertical_alignment="top")
 
     @staticmethod
