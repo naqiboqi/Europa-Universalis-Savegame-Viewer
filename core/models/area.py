@@ -7,6 +7,7 @@ This module defines EUArea, which represents a collection of provinces in Europa
 from dataclasses import dataclass
 
 from . import EUProvince, ProvinceType
+from ..utils import MapUtils
 
 
 
@@ -126,6 +127,21 @@ class EUArea:
     def trade_power(self):
         """The area's trade power."""
         return round(sum(province.trade_power for province in self), 2)
+
+    @property
+    def dominant_culture(self):
+        """The dominant culture in the area determined by the number of provinces."""
+        return MapUtils.get_dominant_attribute(self, "culture")
+
+    @property
+    def dominant_religion(self):
+        """The dominant religion in the area determined by the number of provinces."""
+        return MapUtils.get_dominant_attribute(self, "religion")
+
+    @property
+    def dominant_trade_good(self):
+        """The dominant trade good produced in the area determined by the total goods produced."""
+        return MapUtils.get_dominant_attribute(self, "trade_good", "goods_produced")
 
     @property
     def is_land_area(self):

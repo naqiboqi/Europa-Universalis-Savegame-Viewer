@@ -35,6 +35,30 @@ class MapUtils:
             Generates a unique color based on the given name by hashing 
             the input and mapping it to an RGB color.
     """
+    @staticmethod
+    def get_dominant_attribute(items, attr_name: str, weight_attr: str=None):
+        """Determines the most dominant attribute in a given collection based on a weighted count.
+
+        Args:
+            items (iterable): A collection of objects (e.g., Areas, Provinces) to analyze.
+            attribute (str): The attribute to determine dominance (e.g., "trade_good", "religion").
+            weight_attr (str, optional): The attribute used to weigh dominance (e.g., "goods_produced" for production).
+                If None, each instance is counted equally.
+
+        Returns:
+            attr (str|None): The most dominant attribute or None if no valid data exists.
+        """
+        attr_counts: dict[str, float|int] = {}
+
+        for item in items:
+            attr_value = getattr(item, attr_name, None)
+            if not attr_value:
+                continue
+
+            weight_attr = getattr(item, weight_attr, 1) if weight_attr else 1
+            attr_counts[attr_value] = attr_counts.get(attr_value, 0) + weight_attr
+
+        return max(attr_counts, key=attr_counts.get) if attr_counts else None
     
     @staticmethod
     def format_name(name: str):

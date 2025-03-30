@@ -7,6 +7,7 @@ This module defines EURegion, which represents a collection of areas in Europa U
 from dataclasses import dataclass
 
 from . import EUArea
+from ..utils import MapUtils
 
 
 
@@ -119,8 +120,8 @@ class EURegion:
 
     @property
     def goods_produced(self):
-        """The amount of goods produced by the area. Is based on the province's `base_production`."""
-        return round(sum(province.goods_produced for province in self), 2)
+        """The amount of goods produced by the region. Is based on the province's `base_production`."""
+        return round(sum(area.goods_produced for area in self), 2)
 
     @property
     def trade_power(self):
