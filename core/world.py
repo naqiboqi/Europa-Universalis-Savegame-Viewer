@@ -68,6 +68,7 @@ class EUWorldData:
         self.province_to_region: dict[int, EURegion] = {}
         self.world_image: Image.Image = None 
 
+        self.current_save_data: str = None
         self.default_province_data: dict[int, dict[str, str]] = {}
         self.province_locations: dict[int, set[tuple[int]]] = {}
         self.current_province_data: dict[int, dict[str, str]] = {}

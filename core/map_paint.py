@@ -10,9 +10,9 @@ Map Modes:
     - **Political**: Displays provinces colored by their owning country (tag)'s color.
     - **Area**: Groups provinces by area with a single color for each area.
     - **Region**: Groups provinces and areas by region with a single color for each region.
-    - **Development**: Colors provinces based on development level, with higher intensities 
-      representing higher total development.
-    - **Religion**: Shows provinces colored according to the dominant religion.
+    - **Development**: Colors provinces based on development level, with higher intensities of green 
+        representing higher total development.
+    - **Religion**: Shows provinces colored according to their dominant religion.
 """
 
 
@@ -39,18 +39,19 @@ class MapPainter:
         colors (EUColors): Stores default province and country (tag) colors.
         world_data (EUWorldData): Stores the save game state, including definitions for 
             provinces, areas, regions, and countries.
-        map_mode (MapMode): The currently active map mode (e.g., political, religious).
-        world_image (PIL.Image.Image): The world map image, retrieved from `EUWorldData`, 
-            which updates when a new map is drawn.
-        map_modes (dict[MapMode, Callable]): Maps `MapMode` values to their respective 
+        world_image (Image): The world map image, retrieved from `EUWorldData`, 
+            which updates when a new map is drawn upon first opening the UI or changing the map mode.
+        
+        map_mode (MapMode): The currently active map mode (e.g., Political, Area). Is set to `Political` by default.
+        map_modes (dict[MapMode, Callable]): Mapping `MapMode` values to their respective 
             drawing methods for rendering different map visualizations.
     """
     def __init__(self, colors: EUColors, world_data: EUWorldData):
         self.colors = colors
         self.world_data = world_data
-        self.map_mode = MapMode.POLITICAL
         self.world_image = self.world_data.world_image
 
+        self.map_mode = MapMode.POLITICAL
         self.map_modes = {
             MapMode.POLITICAL: self.draw_map_political,
             MapMode.AREA: self.draw_map_area,
@@ -159,7 +160,7 @@ class MapPainter:
                 x_coords, y_coords = zip(*region_pixels)
                 map_pixels[y_coords, x_coords] = region_color
 
-        ## Separate check because wastelands belong to an area, but is not part of any region.
+        ## Separate check because wastelands belong to an area, but are not part of any region.
         wasteland_pixels = set()
         for province in self.world_data.areas.get("wasteland_area"):
             wasteland_pixels.update(province.pixel_locations)
@@ -167,7 +168,7 @@ class MapPainter:
         x_wasteland_coords, y_wasteland_coords = zip(*wasteland_pixels)
         map_pixels[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
 
-        ## Separate check because lakes belong to an area, but is not part of any region.
+        ## Separate check because lakes belong to an area, but are not part of any region.
         lake_pixels = set()
         for province in self.world_data.areas.get("lake_area"):
             lake_pixels.update(province.pixel_locations)
@@ -177,12 +178,12 @@ class MapPainter:
 
         return map_pixels
 
-    def development_to_color(self, development: int|float, max_development: float=150.000):
+    def development_to_color(self, development: int, max_development: float=150):
         """Gets the green color for province given its development.
         
         Args:
-            development (int|float): The development of the province.
-            max_development (float): The max development in the world or a default value for comparisons.
+            development (int): The development of the province.
+            max_development (int): The max development in the world or a default value for comparisons.
         
         Returns:
             tuple[int]: The computed province color.
@@ -223,5 +224,38 @@ class MapPainter:
         return map_pixels
 
     def draw_map_religion(self):
-        """Placeholder"""
-        pass
+        """Draws the map in the **Religion** map mode.
+        
+        In this mode, each province is colored based on its dominant religion.  
+        - **Land** provinces are assigned a seeded color.  
+        - **Sea** provinces remain blue.  
+        - **Wasteland** provinces remain grey.  
+
+        Returns:
+            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+        """
+        world_provinces = self.world_data.provinces
+        map_pixels = np.array(self.world_image)
+
+        ## Default colors
+        province_type_colors = {
+            ProvinceType.SEA: ProvinceTypeColor.SEA.value,
+            ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
+        }
+
+        for province in world_provinces.values():
+            province_type = province.province_type
+
+            if province_type in province_type_colors:
+                province_color = province_type_colors.get(province_type, None)
+            else:
+                province_religion = province.religion
+                if province_religion:
+                    province_color = MapUtils.seed_color(name=province_religion)
+                else:
+                    province_color = MapUtils.seed_color(name="No Religion")
+
+            x_coords, y_coords = zip(*province.pixel_locations)
+            map_pixels[y_coords, x_coords] = province_color
+
+        return map_pixels

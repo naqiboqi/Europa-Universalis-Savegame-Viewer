@@ -25,6 +25,7 @@ from PIL import Image
 from typing import TYPE_CHECKING
 from .models import MapMode
 from .models import EUProvince, ProvinceType, EUArea, EURegion
+from .utils import MapUtils
 
 
 if TYPE_CHECKING:
@@ -205,7 +206,7 @@ class MapHandler:
         if not province:
             return
 
-        area = displayer.painter.world_data.province_to_area[province.province_id]
+        area = displayer.painter.world_data.province_to_area.get(province.province_id)
         if not area:
             return
 
@@ -215,24 +216,46 @@ class MapHandler:
         elif area.area_id == "lake_area":
             info = f"The waters of {province.name}"
         else:
-            if map_mode == MapMode.POLITICAL or map_mode == MapMode.DEVELOPMENT:
+            if map_mode == MapMode.POLITICAL:
                 if province.province_type == ProvinceType.SEA:
                     info = f"The waters of {province.name}"
                 else:
-                    info = f"The province of {province.name}"
+                    if province.province_type == ProvinceType.NATIVE:
+                        info = f"The native lands of {province.name}"
+                    else:
+                        province_owner = province.owner.name or province.owner.tag
+                        info = f"The province of {province.name} ({province_owner})"
 
             elif map_mode == MapMode.AREA:
                 if area.is_sea_area:
                     info = f"The waters of {area.name}"
                 else:
-                    info = f"The area of {area.name}"
+                    info = f"The province of {province.name} ({area.name})"
 
             elif map_mode == MapMode.REGION:
-                region = displayer.painter.world_data.province_to_region[province.province_id]
+                region = displayer.painter.world_data.province_to_region.get(province.province_id)
+                if not region:
+                    return
+
                 if region.is_sea_region:
                     info = f"The waters of {region.name}"
                 else:
-                    info = f"The region of {region.name}"
+                    info = f"The province of {province.name} ({region.name})"
+
+            elif map_mode == MapMode.DEVELOPMENT:
+                if province.province_type == ProvinceType.SEA:
+                    info = f"The waters of {province.name}"
+                else:
+                    info = f"The province of {province.name} (Total Development: {province.development})"
+
+            elif map_mode == MapMode.RELIGION:
+                if province.province_type == ProvinceType.SEA:
+                    info = f"The waters of {province.name}"
+                else:
+                    province_religion = province.religion
+                    info = (
+                        f"The province of {province.name} " 
+                        f"(Religion: {MapUtils.format_name(province_religion) if province_religion else 'No Religion'})")
 
         if not info:
             return
