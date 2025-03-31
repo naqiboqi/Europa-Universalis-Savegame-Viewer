@@ -108,7 +108,7 @@ class EUWorldData:
 
     def build_world(self, save_folder: str, savefile: str):
         """Builds the **EUProvince**, **EUArea**, **EURegion**, and Country objects by
-        applying the savegame data to the default world data.
+        updating the default data with the savefile's data.
         
         Populates the **provinces**, **areas**, and **regions** dictionaries to provide
         easier access.

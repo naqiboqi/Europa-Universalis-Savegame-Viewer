@@ -373,46 +373,29 @@ class MapDisplayer:
 
         return self.window.refresh()
 
-    def display_map(self):
-        """Displays the main UI window for the Europa Universalis IV map viewer.
+    def ui_read_loop(self):
+        """Main event loop for handling user interactions within the PySimpleGUI window.
 
-        This method initializes the graphical user interface (GUI) using the `PySimpleGUI` library.
-        It includes:
+        This method listens for and processes all user input events, including:
         
-        - **Map Display:** A canvas that renders the scaled game map.
-        - **Information Panel:** Displays details about hovered provinces.
-        - **Search Bar:** Allows users to search for provinces by name.
-        - **Map Modes:** Buttons to switch between different map visualizations.
-        - **Reset Button:** Resets the map view to its original state.
+        - **Map Mode Changes:** Handles switching between different map modes.
+        - **Search Functionality:** Processes user input for searching and displaying results.
+        - **Results Navigation:** Allows users to select and navigate to provinces or entities based on search results.
+        - **Reset Functionality:** Resets the map view to its original state.
 
-        The event loop continuously listens for user actions to update the UI.
+        The loop continues to run until the window is closed or the user selects "Exit".
+        It updates the window dynamically based on the events triggered by the user, 
+        such as searching for provinces, going to specific entity locations, or changing map modes.
+        
+        Returns:
+            None
         """
-        sg.theme("DarkBlue")
-
-        self.original_map = self.painter.draw_map()
-        layout = self.create_layout()
-        self.map_image = self.scale_image_to_fit(self.original_map)
+        window = self.window
         mode_names = {mode.value: mode for mode in self.painter.map_modes}
-
-        window = sg.Window("EU4 Map Viewer", 
-            layout, 
-            background_color=Layout.MEDIUM_FRAME_BG,
-            finalize=True, 
-            return_keyboard_events=True)
-
-        self.window = window
-        self.window.move_to_center()
-        self.tk_canvas = window["-CANVAS-"].TKCanvas
-
-        self.tk_image = self.image_to_tkimage(self.map_image)
-        self.image_id = self.tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
-
-        self.handler = MapHandler(self, self.tk_canvas)
-        self.handler.bind_events()
 
         while True:
             event, values = window.read(timeout=1)
-            if event in (sg.WIN_CLOSED, "Exit"):
+            if event in {sg.WIN_CLOSED, "Exit"}:
                 break
 
             if event in mode_names:
@@ -458,4 +441,32 @@ class MapDisplayer:
             if event == "-RESET-":
                 self.reset_display()
 
-        window.close()
+    def display_map(self):
+        """Displays the main UI window for the Europa Universalis IV map viewer.
+
+        Initializes the GUI using the `PySimpleGUI` library.
+        """
+        sg.theme("DarkBlue")
+
+        self.original_map = self.painter.draw_map()
+        layout = self.create_layout()
+        self.map_image = self.scale_image_to_fit(self.original_map)
+
+        window = sg.Window("EU4 Map Viewer", 
+            layout, 
+            background_color=Layout.MEDIUM_FRAME_BG,
+            finalize=True, 
+            return_keyboard_events=True)
+
+        self.window = window
+        self.window.move_to_center()
+        self.tk_canvas = window["-CANVAS-"].TKCanvas
+
+        self.tk_image = self.image_to_tkimage(self.map_image)
+        self.image_id = self.tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
+
+        self.handler = MapHandler(self, self.tk_canvas)
+        self.handler.bind_events()
+
+        self.ui_read_loop()
+        self.window.close()
