@@ -92,7 +92,7 @@ class EUProvince:
     province_id: int
     name: str
     province_type: ProvinceType
-    TerrainType: TerrainType
+    TerrainType: Optional[TerrainType] = None
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
     is_capital: Optional[bool] = False

@@ -17,8 +17,9 @@ from PIL import Image
 from typing import Optional, Union
 
 from .colors import EUColors
-from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion
+from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion, TerrainType
 from .utils import MapUtils
+
 
 
 class EUWorldData:
@@ -36,37 +37,44 @@ class EUWorldData:
         - **Regions** consist of multiple **areas**.
         - **Areas consist of multiple **provinces**.
         - **Countries can own **provinces** but are not restricted by **regions** or **areas**
-    
+
     Attributes:
-        areas (dict[str, EUArea]): A mapping of area names to their corresponding `EUArea` objects.
-        countries (dict[str, EUCountry]): A mapping of country **tags** (in game identifiers) to `EUCountry` objects.
-        provinces (dict[int, EUProvince]): A mapping of province IDs to `EUProvince` objects.
-        regions (dict[str, EURegion]): A mapping of region names to `EURegion` objects.
-        province_to_area (dict[int, EUArea]): A mapping of province IDs to their respective `EUArea`.
-        province_to_region (dict[int, EURegion]): A mapping of province IDs to their respective `EURegion`.
+        areas (dict[str, EUArea]): A mapping of area names to the `EUArea` that they reperesent.
+        countries (dict[str, EUCountry]): A mapping of country tags (in game identifiers) to `EUCountry` .
+        provinces (dict[int, EUProvince]): A mapping of province IDs to the that `EUProvince` they represent.
+        terrain (int, TerrainType): A mapping of province Ids to their terrain type.
+        regions (dict[str, EURegion]): A mapping of region names to the `EURegion` that they represent.
+
+        province_to_area (dict[int, EUArea]): A mapping of province IDs to the `EUArea` that they reside in.
+        province_to_region (dict[int, EURegion]): A mapping of province IDs to the `EURegion` that they reside.
         world_image (Image.Image | None): The world map image, loaded from a definition file.
-        default_province_data (dict[int, dict[str, str]]): Default properties for each province before modifications.
+
+        default_province_data (dict[int, dict[str, str]]): Default attributes for each province before modifications are loaded from a save file.
         current_province_data (dict[int, dict[str, str]]): Stores current province data, which updates as the game progresses.
         province_locations (dict[int, set[tuple[int]]]): A mapping of province IDs to a set of pixel coordinates in the world image.
         default_area_data (dict[str, dict[str, str | set[int]]]): Default attributes for areas, including associated province IDs.
         default_region_data (dict[str, dict[str, str | set[str]]]): Default attributes for regions, including associated area names.
+
+        trade_goods: dict[str, float]: Trade goods and their respective prices loaded from a savefile.
     """
     def __init__(self):
         self.areas: dict[str, EUArea] = {}
         self.countries: dict[str, EUCountry] = {}
         self.provinces: dict[int, EUProvince] = {}
+        self.terrain: dict[int, TerrainType] = {}
         self.regions: dict[str, EURegion] = {}
+
         self.province_to_area: dict[int, EUArea] = {}
         self.province_to_region: dict[int, EURegion] = {}
         self.world_image: Image.Image = None 
 
         self.default_province_data: dict[int, dict[str, str]] = {}
-        self.current_province_data: dict[int, dict[str, str]] = {}
         self.province_locations: dict[int, set[tuple[int]]] = {}
+        self.current_province_data: dict[int, dict[str, str]] = {}
         self.default_area_data: dict[str, dict[str, str|set[int]]] = {}
         self.default_region_data: dict[str, dict[str, str|set[str]]] = {}
 
-        self.trade_goods: dict[str, dict[str, list]] = {}
+        self.trade_goods: dict[str, float] = {}
 
     @classmethod
     def load_world_data(cls, map_folder: str, colors: EUColors):
@@ -81,6 +89,9 @@ class EUWorldData:
 
         print("Loading countries....")
         world.countries = world.load_countries(colors)
+
+        print("Loading terrain....")
+        world.terrain = world.load_province_terrain(map_folder)
 
         print("Loading provinces....")
         world.default_province_data = world.load_world_provinces(world.read_province_file(map_folder))
@@ -116,6 +127,9 @@ class EUWorldData:
                 continue
 
             province_data["pixel_locations"] = pixel_locations
+
+            ## Evidently, not every land province is defined in terrain.txt.....
+            #province_data["terrain"] = self.terrain[province_id]
             self.provinces[province_id] = EUProvince.from_dict({**province_data})
 
         print("Building areas....")
@@ -152,48 +166,6 @@ class EUWorldData:
         print("Building modifiers....")
         self.trade_goods = self.load_trade_goods(savefile_lines)
 
-    def load_trade_goods(self, savefile_lines: list[str]):
-        """Loads the trade good prices from the savefile.
-        
-        Args:
-            savefile_lines (list[str]): The lines from the savefile.
-        
-        Returns:
-            trade_goods (dict[str, float]): The trade good and its associated price.
-        """
-        trade_goods: dict[str, float] = {}
-
-        inside_goods_block = False
-        current_good = None
-        bracket_depth = 0
-
-        for line in savefile_lines:
-            line = line.strip()
-
-            if line == "change_price={":
-                inside_goods_block = True
-                bracket_depth += 1
-                continue
-
-            if inside_goods_block:
-                if line.endswith("={"):
-                    current_good = line.split("=")[0]
-                    bracket_depth += 1
-                    continue
-
-                elif line.startswith("current_price=") and current_good:
-                    current_price = float(line.split("=")[1])
-                    trade_goods[current_good] = current_price
-
-                elif line == "}":
-                    bracket_depth -= 1
-                    if bracket_depth == 1:
-                        current_good = None
-                    elif bracket_depth == 0:
-                        break  
-
-        return trade_goods
-
     def load_countries(self, colors: EUColors):
         """Builds the **countries** dictionary with game countries.
         
@@ -222,6 +194,62 @@ class EUWorldData:
                 name=EUCountry.fix_name(country_name))
 
         return countries
+
+    def load_province_terrain(self, map_folder: str):
+        terrain_data_path = os.path.join(map_folder, "terrain.txt")
+        with open(terrain_data_path, "r") as file:
+            terrain_lines = file.readlines()
+
+        terrain: dict[int, TerrainType] = {}
+
+        current_terrain = None
+        current_terrain_provinces = []
+        bracket_depth = 0
+
+        for line in terrain_lines:
+            line = line.strip()
+            line = line.split("#")[0].strip()
+
+            # Detect start of categories block
+            if line == "categories = {":
+                bracket_depth += 1
+                continue
+
+            ## Inside categories block
+            if bracket_depth == 1:
+                if line.endswith("= {"):
+                    current_terrain = line.split("=")[0].strip()
+                    bracket_depth += 1
+                    continue
+                elif line == "}":
+                    bracket_depth -= 1
+                    continue
+
+            ## Inside a terrain block
+            if bracket_depth == 2:
+                if "terrain_override" in line:
+                    bracket_depth += 1
+                    continue
+
+                elif line == "}":
+                    bracket_depth -= 1
+                    current_terrain = None
+                    continue
+
+            ## Inside of the terrain provinces block
+            if bracket_depth == 3:
+                if line == "}":
+                    bracket_depth -= 1
+
+                    province_ids = [int(num) for num in re.findall(r"\b\d+\b", ' '.join(current_terrain_provinces))]
+                    for province_id in province_ids:
+                        terrain[province_id] = current_terrain
+
+                    current_terrain_provinces = []
+                    continue
+                current_terrain_provinces.append(line)
+
+        return terrain
 
     def get_tag_pixel_locations(self, tag: str):
         """Builds the pixel locations that are occupied by a particular country.
@@ -253,8 +281,8 @@ class EUWorldData:
         Returns:
             province_color_map (PIL.Image): The map image.
         """
-        province_bmp_path = os.path.join(map_folder, "provinces.bmp")
-        province_color_map = Image.open(province_bmp_path).convert("RGB")
+        provinces_bmp_path = os.path.join(map_folder, "provinces.bmp")
+        province_color_map = Image.open(provinces_bmp_path).convert("RGB")
         return province_color_map
 
     def read_province_file(self, map_folder: str):
@@ -289,6 +317,8 @@ class EUWorldData:
         Lines that start a province definition block start with a '-' followed by an integer:
         
             '-1={
+            ......
+            ......
             ......
             }'
         
@@ -325,8 +355,7 @@ class EUWorldData:
 
             return ProvinceType.NATIVE
 
-        ## EU4 assigns a patrol varaible for all sea provinces, that is used for ship patrols.
-        ## Of course, you can't patrol a ship on land.
+        ## Can only patrol a ship on the sea.
         if province_data.get("patrol"):
             return ProvinceType.SEA
 
@@ -459,7 +488,7 @@ class EUWorldData:
                     if match and not key in current_province:
                         if key == "owner":
                             country_tag = match.group(1)
-                            ## Check if that tag exists, if not we build a new country.
+                            ## Check if that tag exists, if not we build a country.
                             ## Commonly happens for user created countries or native federations.
                             if not country_tag in self.countries:
                                 country = EUCountry(tag=country_tag, tag_color=MapUtils.seed_color(country_tag))
@@ -497,6 +526,7 @@ class EUWorldData:
 
         for i, pixel in enumerate(flat):
             pixel_tuple = tuple(pixel)
+
             if pixel_tuple in default_province_colors:
                 province_id = default_province_colors[pixel_tuple]
                 x = i % width
@@ -615,6 +645,48 @@ class EUWorldData:
                 }
 
         return regions
+
+    def load_trade_goods(self, savefile_lines: list[str]):
+        """Loads the trade good prices from the savefile.
+        
+        Args:
+            savefile_lines (list[str]): The lines from the savefile.
+        
+        Returns:
+            trade_goods (dict[str, float]): The trade good and its associated price.
+        """
+        trade_goods: dict[str, float] = {}
+
+        inside_goods_block = False
+        current_good = None
+        bracket_depth = 0
+
+        for line in savefile_lines:
+            line = line.strip()
+
+            if line == "change_price={":
+                inside_goods_block = True
+                bracket_depth += 1
+                continue
+
+            if inside_goods_block:
+                if line.endswith("={"):
+                    current_good = line.split("=")[0]
+                    bracket_depth += 1
+                    continue
+
+                elif line.startswith("current_price=") and current_good:
+                    current_price = float(line.split("=")[1])
+                    trade_goods[current_good] = current_price
+
+                elif line == "}":
+                    bracket_depth -= 1
+                    if bracket_depth == 1:
+                        current_good = None
+                    elif bracket_depth == 0:
+                        break  
+
+        return trade_goods
 
     def search(self, exact_matches_only: bool, search_param: str) -> list[Union[EUProvince, EUArea, EURegion]]:
         """Searches for a location given a name. Can optionally return only exact matches.
