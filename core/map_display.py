@@ -53,8 +53,9 @@ class MapDisplayer:
             and display in the window's information section, if any.
         search_results: (list[EUProvince|EUArea|EURegion]): The results from the user's search, if any.
     """
-    def __init__(self, painter: MapPainter):
+    def __init__(self, painter: MapPainter, saves_folder: str):
         self.painter = painter
+        self.save_folder = saves_folder
         self.world_data = painter.world_data
 
         self.canvas_size = ()
@@ -373,6 +374,17 @@ class MapDisplayer:
 
         return self.window.refresh()
 
+    def refresh(self):
+        """Refreshes the map display after loading a new savefile.
+        
+        Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
+        """
+        ## TODO Maybe add a loading screen that takes the place of the map while drawing it....
+        ## Also maybe add asynchronous functionality so that the UI doesnt freeze while busy
+        self.original_map = self.painter.draw_map()
+        self.map_image = self.scale_image_to_fit(self.original_map)
+        self.reset_display()
+
     def ui_read_loop(self):
         """Main event loop for handling user interactions within the PySimpleGUI window.
 
@@ -395,11 +407,19 @@ class MapDisplayer:
 
         while True:
             event, values = window.read(timeout=1)
-            if event in {sg.WIN_CLOSED, "Exit"}:
+            if event in {sg.WIN_CLOSED, "Exit", "-EXIT-"}:
                 break
 
             if event in mode_names:
                 self.update_map_mode(mode_names[event])
+
+            if event == "-LOAD_SAVEFILE-":
+                new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
+                if new_savefile:
+                    print(f"Loading new savefile: {new_savefile}....")
+
+                    self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
+                    self.refresh()
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 window["-CLEAR-"].update(visible=True)

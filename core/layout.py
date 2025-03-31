@@ -11,6 +11,7 @@ icon_loader = IconLoader()
 icon_loader.icons_folder = icons_folder
 
 
+
 class Layout:
     CANVAS_WIDTH_MAX = 1200
     """Maximum width for the canvas."""
@@ -211,6 +212,25 @@ class Layout:
         return label_text, value_text
 
     @staticmethod
+    def create_options_frame():
+        load_save_button = sg.Button(
+            "LOAD SAVEFILE", 
+            key="-LOAD_SAVEFILE-",
+            button_color=(Layout.GOLD_FRAME_UPPER, Layout.BUTTON_BG), 
+            font=("Garamond", 12, "bold"))
+
+        button_frame = sg.Frame("", [
+            [load_save_button]
+        ], background_color=Layout.SUNK_FRAME_BG,
+        border_width=0,
+        element_justification="center",
+        expand_x=True,
+        relief=sg.RELIEF_GROOVE, 
+        pad=(10, 10))
+
+        return button_frame
+
+    @staticmethod
     def create_window_header():
         """Creates the header for the window.
         
@@ -222,12 +242,12 @@ class Layout:
         header_text = sg.Text(
             "Map Information", 
             background_color=Layout.RED_BANNER_BG,
-            border_width=4,
-            font=("Georgia", 16, "bold"), 
+            border_width=2,
+            font=("Georgia", 14), 
             justification="center", 
             pad=(5, 5),
-            relief=sg.RELIEF_RAISED,
-            size=(30, 1), 
+            relief=sg.RELIEF_RIDGE,
+            size=(15, 1), 
             text_color=Layout.LIGHT_TEXT)
 
         info_text = sg.Multiline(
@@ -244,10 +264,31 @@ class Layout:
             text_color=Layout.LIGHT_TEXT,
             write_only=True)
 
-        header_column = sg.Column([
-                [header_text],
-                [info_text],
-            ], background_color=Layout.LIGHT_FRAME_BG,
+        load_savefile_button = sg.Button(
+            "LOAD SAVEFILE",
+            key="-LOAD_SAVEFILE-",
+            border_width=2,
+            font=("Georgia", 12),
+            button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
+            pad=(10, 5),
+            size=(15, 1))
+
+        exit_button = sg.Button(
+            "EXIT",
+            key="-EXIT-",
+            border_width=2,
+            font=("Georgia", 12),
+            button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
+            pad=(10, 5),
+            size=(15, 1))
+
+        header_row = [
+            header_text, sg.Push(), info_text, sg.Push(), load_savefile_button, exit_button
+        ]
+
+        header_column = sg.Column(
+            [header_row], 
+            background_color=Layout.LIGHT_FRAME_BG,
             element_justification="center", 
             expand_x=True,
             justification="center", 
@@ -1493,7 +1534,6 @@ class Layout:
         relief=sg.RELIEF_RAISED,
         vertical_alignment="center")
 
-
     @staticmethod
     def create_areas_table_header():
         """Creates the header for the area table.
@@ -1820,5 +1860,5 @@ class Layout:
             [display_column],
             [bordered_info],
         ]
-        
+
         return layout
