@@ -270,7 +270,7 @@ class Layout:
             border_width=2,
             font=("Georgia", 12),
             button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
-            pad=(10, 5),
+            pad=(5, 5),
             size=(15, 1))
 
         exit_button = sg.Button(
@@ -279,11 +279,15 @@ class Layout:
             border_width=2,
             font=("Georgia", 12),
             button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
-            pad=(10, 5),
+            pad=(5, 5),
             size=(15, 1))
 
         header_row = [
-            header_text, sg.Push(), info_text, sg.Push(), load_savefile_button, exit_button
+            header_text, 
+            sg.Push(background_color=Layout.LIGHT_FRAME_BG), 
+            info_text, 
+            sg.Push(background_color=Layout.LIGHT_FRAME_BG), 
+            load_savefile_button, exit_button
         ]
 
         header_column = sg.Column(
