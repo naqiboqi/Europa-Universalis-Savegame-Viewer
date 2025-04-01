@@ -82,6 +82,15 @@ class MapDisplayer:
         """Converts a PIL Image to a TkInter Image."""
         return ImageTk.PhotoImage(image)
 
+    def send_message_to_multiline(self, message: str):
+        """Sends a message to display to the multiline element at the top of the layout.
+
+        Args:
+            message (str): The message to display in the multiline element.
+        """
+        self.window["-MULTILINE-"].update(value=message)
+        self.window.refresh()
+
     def scale_image_to_fit(self, image: Image.Image):
         """Scales the image to fit within the canvas.
         
@@ -468,6 +477,7 @@ class MapDisplayer:
                     loading_image = self.display_loading_screen(message="Loading map....")
 
                     def load_savefile():
+                        self.world_data.update_status_callback = self.send_message_to_multiline
                         self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
                         self.window.write_event_value("-MAP_LOADED-", None)
 

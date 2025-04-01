@@ -77,6 +77,8 @@ class EUWorldData:
 
         self.trade_goods: dict[str, float] = {}
 
+        self.update_status_callback = None
+
     @classmethod
     def load_world_data(cls, map_folder: str, colors: EUColors):
         """Driver class method that handles loading the default world data.
@@ -118,7 +120,9 @@ class EUWorldData:
             save_folder (str): The folder containing the user save file.
             save_file (str): The savefile to read.
         """
-        print("Building provinces....")
+        if self.update_status_callback:
+            self.update_status_callback("Building provinces....")
+
         savefile_lines = self.read_save_file(save_folder, savefile)
         self.current_province_data = self.load_world_provinces(savefile_lines)
 
@@ -133,14 +137,16 @@ class EUWorldData:
             #province_data["terrain"] = self.terrain[province_id]
             self.provinces[province_id] = EUProvince.from_dict({**province_data})
 
-        print("Building areas....")
+        if self.update_status_callback:
+            self.update_status_callback("Building areas....")
+
         for area_id, area_data in self.default_area_data.items():
             area_province_ids = area_data["provinces"]
             area_provinces = {
                 province_id: self.provinces[province_id] for province_id in self.provinces
                 if province_id in area_province_ids
             }
-
+        
             area_data["provinces"] = area_provinces
             self.areas[area_id] = EUArea.from_dict(area_data)
 
@@ -148,7 +154,9 @@ class EUWorldData:
             for province_id in area.provinces:
                 self.province_to_area[province_id] = area
 
-        print("Building regions....")
+        if self.update_status_callback:
+            self.update_status_callback("Building regions....")
+
         for region_id, region_data in self.default_region_data.items():
             region_area_ids = region_data["areas"]
             region_areas = {
@@ -164,7 +172,6 @@ class EUWorldData:
                 for province_id in area.provinces:
                     self.province_to_region[province_id] = region
 
-        print("Building modifiers....")
         self.trade_goods = self.load_trade_goods(savefile_lines)
 
     def load_countries(self, colors: EUColors):

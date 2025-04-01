@@ -1820,7 +1820,6 @@ class Layout:
             canvas_size (tuple[int, int]): The `(x, y)` size of the canvas determined by the display size.
             map_modes (dict[MapMode]): The possible map modes to choose from when displaying the map.
         """
-        print("Building layout....")
         window_header = Layout.create_window_header()
 
         selected_info_frame = sg.Frame("", [
