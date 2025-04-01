@@ -78,6 +78,21 @@ class MapDisplayer:
         self.selected_item = None
         self.search_results = []
 
+    def create_layout(self):
+        """Creates the layout that will be used for the UI and sets the canvas size.
+        
+        Returns:
+            layout (list[list]): The layout for the Window.
+        """
+        screen_width, screen_height = sg.Window.get_screen_size()
+        canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
+
+        map_width, map_height = self.original_map.size
+        canvas_height = int(canvas_width_max * (map_height / map_width))
+        self.canvas_size = (canvas_width_max, canvas_height)
+
+        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
+
     def image_to_tkimage(self, image: Image.Image):
         """Converts a PIL Image to a TkInter Image."""
         return ImageTk.PhotoImage(image)
@@ -148,19 +163,25 @@ class MapDisplayer:
         draw.text((text_center_x, text_center_y), text=message, fill="white", font=font)
 
         self.map_image = map_image
-        self.update_canvas()
+        self.update_canvas(offset_x=0, offset_y=0)
+
         self.window.refresh()
 
-        return map_image
-
-    def update_canvas(self):
+    def update_canvas(self, offset_x: int=None, offset_y: int=None):
         """Updates the canvas by applying all pan and/or zoom adjustments to the image.
         
         This is done after every zoom and pan event, and after changing the map mode or selected savefile.
         """
+        if offset_x == None:
+            offset_x = self.offset_x
+        if offset_y == None:
+            offset_y = self.offset_y
+
         self.tk_image = self.image_to_tkimage(self.map_image)
         self.tk_canvas.itemconfig(self.image_id, image=self.tk_image)
-        self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+        self.tk_canvas.coords(self.image_id, offset_x, offset_y)
+
+        self.window.refresh()
 
     def reset_canvas_to_initial(self):
         """Resets the canvas to its initial zoom and pan settings.
@@ -197,22 +218,7 @@ class MapDisplayer:
         self.original_map = self.painter.draw_map()
 
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
-        self.update_canvas()
-
-    def create_layout(self):
-        """Creates the layout that will be used for the UI and sets the canvas size.
-        
-        Returns:
-            layout (list[list]): The layout for the Window.
-        """
-        screen_width, screen_height = sg.Window.get_screen_size()
-        canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
-
-        map_width, map_height = self.original_map.size
-        canvas_height = int(canvas_width_max * (map_height / map_width))
-        self.canvas_size = (canvas_width_max, canvas_height)
-
-        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
+        self.reset_canvas_to_initial()
 
     def update_province_details(self, province: EUProvince):
         """Updates the information displayed for a specific province in the UI.
@@ -465,6 +471,7 @@ class MapDisplayer:
                 break
 
             if event == "-MAP_LOADED-":
+                self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
                 self.refresh_canvas_image()
 
             if event in mode_names:
@@ -474,7 +481,7 @@ class MapDisplayer:
                 new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
                 if new_savefile:
                     print(f"Loading new savefile: {new_savefile}....")
-                    loading_image = self.display_loading_screen(message="Loading map....")
+                    self.display_loading_screen(message="Loading map....")
 
                     def load_savefile():
                         self.world_data.update_status_callback = self.send_message_to_multiline
@@ -524,7 +531,7 @@ class MapDisplayer:
                 self.reset_canvas_to_initial()
 
     def display_map(self):
-        """Displays the main UI window for the Europa Universalis IV map viewer.
+        """Displays the main UI window for the Europa Universalis IV savefile viewer.
 
         Initializes the GUI using the `PySimpleGUI` library.
         """
@@ -542,6 +549,8 @@ class MapDisplayer:
 
         self.window = window
         self.window.move_to_center()
+
+        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
         self.tk_canvas = window["-CANVAS-"].TKCanvas
 
         self.tk_image = self.image_to_tkimage(self.map_image)
@@ -551,4 +560,5 @@ class MapDisplayer:
         self.handler.bind_events()
 
         self.ui_read_loop()
+
         self.window.close()

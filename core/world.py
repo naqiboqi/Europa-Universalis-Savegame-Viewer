@@ -68,13 +68,13 @@ class EUWorldData:
         self.province_to_region: dict[int, EURegion] = {}
         self.world_image: Image.Image = None 
 
-        self.current_save_data: str = None
         self.default_province_data: dict[int, dict[str, str]] = {}
         self.province_locations: dict[int, set[tuple[int]]] = {}
         self.current_province_data: dict[int, dict[str, str]] = {}
         self.default_area_data: dict[str, dict[str, str|set[int]]] = {}
         self.default_region_data: dict[str, dict[str, str|set[str]]] = {}
 
+        self.current_save_date: str = None
         self.trade_goods: dict[str, float] = {}
 
         self.update_status_callback = None
@@ -124,6 +124,8 @@ class EUWorldData:
             self.update_status_callback("Building provinces....")
 
         savefile_lines = self.read_save_file(save_folder, savefile)
+        self.current_save_date = savefile_lines[1].split("=")[1].strip()
+
         self.current_province_data = self.load_world_provinces(savefile_lines)
 
         for province_id, province_data in self.current_province_data.items():
@@ -146,7 +148,7 @@ class EUWorldData:
                 province_id: self.provinces[province_id] for province_id in self.provinces
                 if province_id in area_province_ids
             }
-        
+
             area_data["provinces"] = area_provinces
             self.areas[area_id] = EUArea.from_dict(area_data)
 

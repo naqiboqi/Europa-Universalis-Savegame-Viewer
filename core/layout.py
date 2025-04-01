@@ -240,14 +240,15 @@ class Layout:
             frame (Frame): The frame containing the map info.
         """
         header_text = sg.Text(
-            "Map Information", 
+            "", 
+            key="-SAVEFILE_DATE-",
             background_color=Layout.RED_BANNER_BG,
             border_width=2,
-            font=("Georgia", 14), 
+            font=("Georgia", 12, "bold"), 
             justification="center", 
             pad=(5, 5),
             relief=sg.RELIEF_RIDGE,
-            size=(15, 1), 
+            size=(20, 1), 
             text_color=Layout.LIGHT_TEXT)
 
         info_text = sg.Multiline(
@@ -256,7 +257,7 @@ class Layout:
             background_color=Layout.SUNK_FRAME_BG,
             border_width=3,
             disabled=True,
-            font=("Georgia", 14),
+            font=("Georgia", 12),
             justification="center",
             no_scrollbar=True,
             pad=(5, 5),
@@ -267,8 +268,8 @@ class Layout:
         load_savefile_button = sg.Button( 
             "LOAD SAVEFILE",
             key="-LOAD_SAVEFILE-",
-            border_width=2,
-            font=("Georgia", 12),
+            border_width=2, 
+            font=("Georgia", 10, "bold"),
             button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
             pad=(5, 5),
             size=(15, 1))
@@ -277,7 +278,7 @@ class Layout:
             "EXIT",
             key="-EXIT-",
             border_width=2,
-            font=("Georgia", 12),
+            font=("Georgia", 10, "bold"),
             button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
             pad=(5, 5),
             size=(15, 1))
@@ -1768,16 +1769,17 @@ class Layout:
             frame (Frame): The frame containing the map mode buttons.
         """
         map_mode_label = Layout.create_text_with_frame(
-            "MAP MODES",
+            "Map Modes",
             content_color=Layout.LIGHT_TEXT,
             font=("Georgia", 12, "bold"),
             frame_background_color=Layout.RED_BANNER_BG,
             justification="center",
-            relief=sg.RELIEF_SOLID,
+            pad=(10, 10),
+            relief=sg.RELIEF_RIDGE,
             size=(10, 1))
 
         reset_button = sg.Button(
-            "RESET",
+            "RESET VIEW",
             key="-RESET-",
             button_color=(Layout.LIGHT_TEXT, Layout.BUTTON_BG),
             font=("Garamond", 10, "bold"),
