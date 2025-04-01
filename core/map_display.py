@@ -10,9 +10,10 @@ and managing UI elements using PySimpleGUI and Tkinter.
 from __future__ import annotations
 
 import FreeSimpleGUI as sg
+import threading
 import tkinter as tk
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 from . import MapHandler, MapPainter
 from . import Layout
 from .models import EUProvince, ProvinceType, EUArea, EURegion
@@ -53,7 +54,7 @@ class MapDisplayer:
             and display in the window's information section, if any.
         search_results: (list[EUProvince|EUArea|EURegion]): The results from the user's search, if any.
     """
-    def __init__(self, painter: MapPainter, saves_folder: str):
+    def __init__(self, painter: MapPainter=None, saves_folder: str=None):
         self.painter = painter
         self.save_folder = saves_folder
         self.world_data = painter.world_data
@@ -78,11 +79,11 @@ class MapDisplayer:
         self.search_results = []
 
     def image_to_tkimage(self, image: Image.Image):
-        """Converts a PIL image to a TkInter image."""
+        """Converts a PIL Image to a TkInter Image."""
         return ImageTk.PhotoImage(image)
 
     def scale_image_to_fit(self, image: Image.Image):
-        """Scales the image down to fit within the canvas.
+        """Scales the image to fit within the canvas.
         
         Sets the new size of the image and also sets the minimum and maximum scales for the canvas.
         
@@ -101,41 +102,96 @@ class MapDisplayer:
 
         return image.resize((self.canvas_size), Image.Resampling.LANCZOS)
 
-    def reset_display(self):
-        """Resets the canvas and image to their inital settings."""
-        self.offset_x = 0
-        self.offset_y = 0
-        self.map_image = self.scale_image_to_fit(self.original_map)
-        self.update_display()
+    def display_loading_screen(
+        self,
+        canvas_size: tuple[int, int]=None, 
+        color: tuple[int, int, int]=(25, 25, 25),
+        message: str=""):
+        """Displays a loading screen with an optional message.
 
-    def update_display(self):
-        """Updates the canvas and image.
+        Args:
+            canvas_size (tuple[int, int], optional): The `(x, y)` dimensions of the loading image.
+                Defaults to the size of the canvas if not provided.
+            color (tuple[int, int, int], optional): The background color of the loading image in RGB format.
+                Defaults to a dark gray (25, 25, 25).
+            message (str, optional): The optional message to display on the loading screen.
+
+        Returns:
+            PIL.Image.Image: The generated loading image.
+        """
+        if not canvas_size:
+            canvas_size = self.canvas_size
+
+        map_image = Image.new(mode="RGB", size=canvas_size, color=color)
+        draw = ImageDraw.Draw(map_image)
+
+        try:
+            font = ImageFont.truetype("georgia.ttf", 36)
+        except IOError:
+            font = ImageFont.load_default()
+
+        text_size = draw.textbbox((0, 0), text=message, font=font)
+        text_width, text_height = text_size[2] - text_size[0], text_size[3] - text_size[1]
+
+        text_center_x = (canvas_size[0] - text_width) // 2
+        text_center_y = (canvas_size[1] - text_height) // 2
+
+        draw.text((text_center_x, text_center_y), text=message, fill="white", font=font)
+
+        self.map_image = map_image
+        self.update_canvas()
+        self.window.refresh()
+
+        return map_image
+
+    def update_canvas(self):
+        """Updates the canvas by applying all pan and/or zoom adjustments to the image.
         
-        Applies any pan or zoom adjustments to the canvas for user interaction.
+        This is done after every zoom and pan event, and after changing the map mode or selected savefile.
         """
         self.tk_image = self.image_to_tkimage(self.map_image)
         self.tk_canvas.itemconfig(self.image_id, image=self.tk_image)
         self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
 
+    def reset_canvas_to_initial(self):
+        """Resets the canvas to its initial zoom and pan settings.
+        
+        Centers the map and zooms out to the minimum level.
+        """
+        self.offset_x = 0
+        self.offset_y = 0
+        self.map_image = self.scale_image_to_fit(self.original_map)
+        self.update_canvas()
+
+    def refresh_canvas_image(self):
+        """Refreshes the canvas after loading a new savefile.
+        
+        Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
+        """
+        ## TODO Also maybe add asynchronous functionality so that the UI doesnt freeze while busy
+        self.original_map = self.painter.draw_map()
+        self.map_image = self.scale_image_to_fit(self.original_map)
+        self.reset_canvas_to_initial()
+
     def update_map_mode(self, map_mode: MapMode):
-        """Updates the map mode and redraws the map.
+        """Updates the map mode and redraws the map for that mode.
         
         Args:
-            map_mode (MapMode): The new map mode.
+            map_mode (MapMode): The new map mod selected by the user.
         """
         if map_mode == self.painter.map_mode:
             return
+
+        self.display_loading_screen(message="Loading map....")
 
         self.painter.map_mode = map_mode
         self.original_map = self.painter.draw_map()
 
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
-        self.tk_image = self.image_to_tkimage(self.map_image)
-        self.tk_canvas.itemconfig(self.image_id, image=self.tk_image)
-        self.tk_canvas.coords(self.image_id, self.offset_x, self.offset_y)
+        self.update_canvas()
 
     def create_layout(self):
-        """Creates the UI layout for the map viewer.
+        """Creates the layout that will be used for the UI and sets the canvas size.
         
         Returns:
             layout (list[list]): The layout for the Window.
@@ -352,7 +408,7 @@ class MapDisplayer:
             total_income_element = window["-INFO_REGION_INCOME-"]
             total_income_element.update(value=round(region.tax_income + total_production_income, 2))
 
-    def update_details(self, selected_item: EUProvince|EUArea|EURegion):
+    def update_details_from_selected_item(self, selected_item: EUProvince|EUArea|EURegion):
         """Updates the information section in the window based on the user's seclected item.
         
         This can either be from the user searching for or clicking on a province, area, region, or country.
@@ -373,17 +429,6 @@ class MapDisplayer:
             self.update_region_details(selected_item)
 
         return self.window.refresh()
-
-    def refresh(self):
-        """Refreshes the map display after loading a new savefile.
-        
-        Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
-        """
-        ## TODO Maybe add a loading screen that takes the place of the map while drawing it....
-        ## Also maybe add asynchronous functionality so that the UI doesnt freeze while busy
-        self.original_map = self.painter.draw_map()
-        self.map_image = self.scale_image_to_fit(self.original_map)
-        self.reset_display()
 
     def ui_read_loop(self):
         """Main event loop for handling user interactions within the PySimpleGUI window.
@@ -410,6 +455,9 @@ class MapDisplayer:
             if event in {sg.WIN_CLOSED, "Exit", "-EXIT-"}:
                 break
 
+            if event == "-MAP_LOADED-":
+                self.refresh_canvas_image()
+
             if event in mode_names:
                 self.update_map_mode(mode_names[event])
 
@@ -417,9 +465,13 @@ class MapDisplayer:
                 new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
                 if new_savefile:
                     print(f"Loading new savefile: {new_savefile}....")
+                    loading_image = self.display_loading_screen(message="Loading map....")
 
-                    self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
-                    self.refresh()
+                    def load_savefile():
+                        self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
+                        self.window.write_event_value("-MAP_LOADED-", None)
+
+                    threading.Thread(target=load_savefile, daemon=True).start()
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 window["-CLEAR-"].update(visible=True)
@@ -456,10 +508,10 @@ class MapDisplayer:
             if event == "-GOTO-":
                 if self.selected_item:
                     self.handler.go_to_entity_location(self.selected_item)
-                    self.window = self.update_details(self.selected_item)
+                    self.window = self.update_details_from_selected_item(self.selected_item)
 
             if event == "-RESET-":
-                self.reset_display()
+                self.reset_canvas_to_initial()
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV map viewer.

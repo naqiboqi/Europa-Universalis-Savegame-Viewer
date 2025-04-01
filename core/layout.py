@@ -264,7 +264,7 @@ class Layout:
             text_color=Layout.LIGHT_TEXT,
             write_only=True)
 
-        load_savefile_button = sg.Button(
+        load_savefile_button = sg.Button( 
             "LOAD SAVEFILE",
             key="-LOAD_SAVEFILE-",
             border_width=2,

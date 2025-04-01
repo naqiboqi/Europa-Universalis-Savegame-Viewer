@@ -206,7 +206,7 @@ class MapHandler:
         if not province:
             return
 
-        area = displayer.painter.world_data.province_to_area.get(province.province_id)
+        area = displayer.world_data.province_to_area.get(province.province_id)
         if not area:
             return
 
@@ -233,7 +233,7 @@ class MapHandler:
                     info = f"The province of {province.name} ({area.name})"
 
             elif map_mode == MapMode.REGION:
-                region = displayer.painter.world_data.province_to_region.get(province.province_id)
+                region = displayer.world_data.province_to_region.get(province.province_id)
                 if not region:
                     return
 
@@ -364,7 +364,7 @@ class MapHandler:
 
         self.displayer.map_image = self.displayer.original_map.resize(
             (scaled_width, scaled_height), Image.Resampling.LANCZOS)
-        self.displayer.update_display()
+        self.displayer.update_canvas()
 
         self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
 
