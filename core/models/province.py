@@ -154,6 +154,30 @@ class EUProvince:
         return round(len(self.pixel_locations) * scale_factor, 2)
 
     @property
+    def border_pixels(self):
+        """The border pixels of a province.
+
+        Defined as pixels that are adjacent to other provinces (not in the same set).
+        
+        Returns:
+            set: The set of `(x, y)` tuples for the border pixels.
+        """
+        border_pixels: set[tuple[int, int]] = set()
+
+        directions = [
+            (-1, 0), (1, 0), (0, -1), (0, 1),
+            (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+        for (x, y) in self.pixel_locations:
+            for dx, dy in directions:
+                neighbor = (x + dx, y + dy)
+                if neighbor not in self.pixel_locations:
+                    border_pixels.add((x, y))
+                    break
+
+        return border_pixels
+
+    @property
     def bounding_box(self):
         """Gets the bounding box for the province.
         

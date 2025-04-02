@@ -50,6 +50,7 @@ class MapPainter:
         self.colors = colors
         self.world_data = world_data
         self.world_image = self.world_data.world_image
+        self.world_image_borderless = self.world_image
 
         self.map_mode = MapMode.POLITICAL
         self.map_modes = {
@@ -67,9 +68,11 @@ class MapPainter:
             PIL.Image: The current map image.
         """
         draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
-        map_pixels = draw_method()
+        map_pixels, map_pixels_borderless = draw_method()
 
         self.world_image = Image.fromarray(map_pixels)
+        self.world_image_borderless = Image.fromarray(map_pixels_borderless)
+
         return self.world_image
 
     def draw_map_political(self):
@@ -83,7 +86,9 @@ class MapPainter:
             map_pixels (NDArray): A NumPy array representing the updated map pixels.
         """
         world_provinces = self.world_data.provinces
+
         map_pixels = np.array(self.world_image)
+        map_pixels_borderless = np.array(self.world_image_borderless)
 
         ## Default colors
         province_type_colors = {
@@ -103,8 +108,12 @@ class MapPainter:
 
             x_coords, y_coords = zip(*province.pixel_locations)
             map_pixels[y_coords, x_coords] = province_color
+            map_pixels_borderless[y_coords, x_coords] = province_color
 
-        return map_pixels
+            x_border_coords, y_border_coords = zip(*province.border_pixels)
+            map_pixels[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+
+        return map_pixels, map_pixels_borderless
 
     def draw_map_area(self):
         """Draws the map in the **Areas** map mode.

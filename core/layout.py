@@ -1759,7 +1759,7 @@ class Layout:
             pad=(15, 10))
 
     @staticmethod
-    def create_map_modes_frame(map_modes: dict):
+    def create_options_frame(map_modes: dict):
         """Creates the map modes frame for selecting map modes.
         
         Args:
@@ -1777,6 +1777,15 @@ class Layout:
             pad=(10, 10),
             relief=sg.RELIEF_RIDGE,
             size=(10, 1))
+
+        borders_checkbox = sg.Checkbox(
+            "Show Province Borders?",
+            default=True,
+            key="-PROVINCE_BORDERS-", 
+            background_color=Layout.DARK_FRAME_BG,
+            enable_events=True, 
+            font=("Georgia", 11), 
+            text_color=Layout.LIGHT_TEXT)
 
         reset_button = sg.Button(
             "RESET VIEW",
@@ -1799,6 +1808,7 @@ class Layout:
 
         map_mode_frame = sg.Frame("", [
             [map_mode_label],
+            [borders_checkbox],
             [reset_button],
             *[[button] for button in map_mode_buttons]
         ], background_color=Layout.SUNK_FRAME_BG,
@@ -1830,7 +1840,7 @@ class Layout:
                 Layout.create_area_info_column(),
                 Layout.create_region_info_column()]
         ], key="-WORLD_INFO-",
-        background_color=Layout.LIGHT_FRAME_BG, 
+        background_color=Layout.MEDIUM_FRAME_BG, 
         border_width=5,
         expand_x=True,  
         expand_y=True,
@@ -1847,7 +1857,7 @@ class Layout:
             expand_y=True)
 
         canvas_frame = Layout.create_map_canvas_frame(canvas_size=canvas_size, key="-CANVAS-")
-        map_mode_frame = Layout.create_map_modes_frame(map_modes=map_modes)
+        map_mode_frame = Layout.create_options_frame(map_modes=map_modes)
 
         display_frame = sg.Frame("", [
             [canvas_frame, map_mode_frame]
