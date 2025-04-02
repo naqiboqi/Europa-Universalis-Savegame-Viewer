@@ -75,6 +75,7 @@ class MapDisplayer:
         self.offset_x = 0
         self.offset_y = 0
 
+        self.show_map_borders = True
         self.selected_item = None
         self.search_results = []
 
@@ -199,7 +200,7 @@ class MapDisplayer:
         Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
         """
         ## TODO Also maybe add asynchronous functionality so that the UI doesnt freeze while busy
-        self.original_map = self.painter.draw_map()
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         self.map_image = self.scale_image_to_fit(self.original_map)
         self.reset_canvas_to_initial()
 
@@ -215,7 +216,7 @@ class MapDisplayer:
         self.display_loading_screen(message="Loading map....")
 
         self.painter.map_mode = map_mode
-        self.original_map = self.painter.draw_map()
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
 
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
         self.reset_canvas_to_initial()
@@ -470,6 +471,12 @@ class MapDisplayer:
             if event in {sg.WIN_CLOSED, "Exit", "-EXIT-"}:
                 break
 
+            if event == "-SHOW_MAP_BORDERS-":
+                self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
+                self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
+                self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+                self.update_canvas()
+
             if event == "-MAP_LOADED-":
                 self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
                 self.refresh_canvas_image()
@@ -537,7 +544,7 @@ class MapDisplayer:
         """
         sg.theme("DarkBlue")
 
-        self.original_map = self.painter.draw_map()
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         layout = self.create_layout()
         self.map_image = self.scale_image_to_fit(self.original_map)
 

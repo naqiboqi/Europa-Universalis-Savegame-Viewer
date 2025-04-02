@@ -39,18 +39,33 @@ class MapPainter:
         colors (EUColors): Stores default province and country (tag) colors.
         world_data (EUWorldData): Stores the save game state, including definitions for 
             provinces, areas, regions, and countries.
-        world_image (Image): The world map image, retrieved from `EUWorldData`, 
-            which updates when a new map is drawn upon first opening the UI or changing the map mode.
         
-        map_mode (MapMode): The currently active map mode (e.g., Political, Area). Is set to `Political` by default.
+        _world_image (Image): The base world map image, loaded from `EUWorldData`.
+        _world_image_borderless (Image): A reference to `_world_image`, used for drawing maps 
+            without borders.
+        
+        _image_cache (dict[MapMode, dict]): A cache storing previously rendered map images 
+            for each map mode. Each mode stores a bordered and borderless version.
+            
+            ex: {
+                MapMode.POLITICAL: {
+                    "border": Image (with borders),
+                    "no_border": Image (without borders)
+                }
+            }
+        
+        map_mode (MapMode): The currently active map mode (e.g., Political, Area). Set to `MapMode.POLITICAL` by default.
         map_modes (dict[MapMode, Callable]): Mapping `MapMode` values to their respective 
             drawing methods for rendering different map visualizations.
     """
     def __init__(self, colors: EUColors, world_data: EUWorldData):
         self.colors = colors
         self.world_data = world_data
-        self.world_image = self.world_data.world_image
-        self.world_image_borderless = self.world_image
+
+        self._world_image = self.world_data.world_image
+        self._world_image_borderless = self._world_image
+
+        self._image_cache: dict[MapMode, dict] = {}
 
         self.map_mode = MapMode.POLITICAL
         self.map_modes = {
@@ -61,6 +76,25 @@ class MapPainter:
             MapMode.RELIGION: self.draw_map_religion
         }
 
+    def get_cached_map_image(self, borders: bool=True) -> Image.Image:
+        """Retrieves the cached map image for the current map mode.
+        
+        If the requested map image is not in the cache, draws it and then adds it to the cache for future use.
+
+        Args:
+            borders (bool, optional): Whether to retrieve the bordered version of the map.
+                Defaults to True.
+
+        Returns:
+            Image: The cached map image.
+        """
+        cache_border_key = "border" if borders else "no_border"
+
+        if self.map_mode not in self._image_cache:
+            self.draw_map()
+
+        return self._image_cache[self.map_mode].get(cache_border_key)
+
     def draw_map(self):
         """Driver that calls the draw method for the current map mode and updates the **map image**.
         
@@ -70,10 +104,15 @@ class MapPainter:
         draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
         map_pixels, map_pixels_borderless = draw_method()
 
-        self.world_image = Image.fromarray(map_pixels)
-        self.world_image_borderless = Image.fromarray(map_pixels_borderless)
+        self._world_image = Image.fromarray(map_pixels)
+        self._world_image_borderless = Image.fromarray(map_pixels_borderless)
 
-        return self.world_image
+        self._image_cache[self.map_mode] = {
+            "border": Image.fromarray(map_pixels),
+            "no_border": Image.fromarray(map_pixels_borderless)
+        }
+
+        return self._world_image
 
     def draw_map_political(self):
         """Draws the map in the **Political** map mode.
@@ -83,12 +122,14 @@ class MapPainter:
         - **Uncolonized/native** provinces are assigned a default color.  
 
         Returns:
-            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the political map with province borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_provinces = self.world_data.provinces
 
-        map_pixels = np.array(self.world_image)
-        map_pixels_borderless = np.array(self.world_image_borderless)
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
 
         ## Default colors
         province_type_colors = {
@@ -107,13 +148,14 @@ class MapPainter:
                 province_color = province_type_colors.get(province_type, None)
 
             x_coords, y_coords = zip(*province.pixel_locations)
-            map_pixels[y_coords, x_coords] = province_color
+
+            map_pixels_bordered[y_coords, x_coords] = province_color
             map_pixels_borderless[y_coords, x_coords] = province_color
 
             x_border_coords, y_border_coords = zip(*province.border_pixels)
-            map_pixels[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+            map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
-        return map_pixels, map_pixels_borderless
+        return map_pixels_bordered, map_pixels_borderless
 
     def draw_map_area(self):
         """Draws the map in the **Areas** map mode.
@@ -124,10 +166,12 @@ class MapPainter:
         - **Wasteland** provinces remain grey.  
 
         Returns:
-            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the area map with area borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_areas = self.world_data.areas
-        map_pixels = np.array(self.world_image)
+        map_pixels = np.array(self._world_image)
 
         for area in world_areas.values():
             area_pixels = area.pixel_locations
@@ -153,10 +197,12 @@ class MapPainter:
         - **Wasteland** provinces remain grey.  
 
         Returns:
-            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the region map with region borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_regions = self.world_data.regions
-        map_pixels = np.array(self.world_image)
+        map_pixels = np.array(self._world_image)
 
         for region in world_regions.values():
             region_pixels = region.pixel_locations
@@ -208,11 +254,16 @@ class MapPainter:
         - **Provinces** are colored green, with higher intensities at higher development.  
         - **Sea** provinces remain blue.
         - **Wasteland** provinces remain grey.
+
         Returns:
-            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the development map with province borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_provinces = self.world_data.provinces
-        map_pixels = np.array(self.world_image)
+
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()        
 
         max_development = max(province.development for province in world_provinces.values())
 
@@ -228,9 +279,14 @@ class MapPainter:
                 province_color = self.development_to_color(province.development, max_development)
 
             x_coords, y_coords = zip(*province.pixel_locations)
-            map_pixels[y_coords, x_coords] = province_color
 
-        return map_pixels
+            map_pixels_bordered[y_coords, x_coords] = province_color
+            map_pixels_borderless[y_coords, x_coords] = province_color
+
+            x_border_coords, y_border_coords = zip(*province.border_pixels)
+            map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+
+        return map_pixels_bordered, map_pixels_borderless
 
     def draw_map_religion(self):
         """Draws the map in the **Religion** map mode.
@@ -241,10 +297,14 @@ class MapPainter:
         - **Wasteland** provinces remain grey.  
 
         Returns:
-            map_pixels (NDArray): A NumPy array representing the updated map pixels.
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the religion map with province borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_provinces = self.world_data.provinces
-        map_pixels = np.array(self.world_image)
+
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
 
         ## Default colors
         province_type_colors = {
@@ -265,6 +325,11 @@ class MapPainter:
                     province_color = MapUtils.seed_color(name="No Religion")
 
             x_coords, y_coords = zip(*province.pixel_locations)
-            map_pixels[y_coords, x_coords] = province_color
 
-        return map_pixels
+            map_pixels_bordered[y_coords, x_coords] = province_color
+            map_pixels_borderless[y_coords, x_coords] = province_color
+
+            x_border_coords, y_border_coords = zip(*province.border_pixels)
+            map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+
+        return map_pixels_bordered, map_pixels_borderless

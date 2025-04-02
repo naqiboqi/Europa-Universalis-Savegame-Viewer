@@ -1779,9 +1779,9 @@ class Layout:
             size=(10, 1))
 
         borders_checkbox = sg.Checkbox(
-            "Show Province Borders?",
+            "Show Map Borders?",
             default=True,
-            key="-PROVINCE_BORDERS-", 
+            key="-SHOW_MAP_BORDERS-", 
             background_color=Layout.DARK_FRAME_BG,
             enable_events=True, 
             font=("Georgia", 11), 
