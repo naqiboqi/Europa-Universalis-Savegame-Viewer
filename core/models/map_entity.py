@@ -95,5 +95,11 @@ class EUMapEntity(ABC):
     @property
     @abstractmethod
     def development(self) -> int:
-        """Returns the total development of the province."""
+        """Returns the total development of the entity."""
+        pass
+
+    @property
+    @abstractmethod
+    def goods_produced(self) -> float:
+        """The amount of goods produced by the entity."""
         pass
