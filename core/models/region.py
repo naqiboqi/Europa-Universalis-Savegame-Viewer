@@ -5,52 +5,35 @@ This module defines EURegion, which represents a collection of areas in Europa U
 
 
 from dataclasses import dataclass, field
+from typing import Optional
 
-from . import EUArea
+from . import EUMapEntity, EUArea
 from ..utils import MapUtils
 
 
 
 @dataclass
-class EURegion:
+class EURegion(EUMapEntity):
     """Represents a region on the map.
+
+    Inherits attributes from `EUMapEntity`.
     
     Attributes:
         region_id (str): The regions's in-game identifier.
-        name (str): The regions's name.
         areas (dict[str, EUArea]): A mapping of area IDs to EUAreas
             that belong to the region.
+
+        pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the entity.
     """
     region_id: str
-    name: str
     areas: dict[str, EUArea]
 
-    pixel_locations: set[tuple[int, int]] = field(init=False)
-    border_pixel_locations: set[tuple[int, int]] = field(init=False)
+    pixel_locations: Optional[set[tuple[int, int]]] = field(init=False)
 
     def __post_init__(self):
+        """Aggregate pixel locations from the contained areas."""
         self.pixel_locations = set(loc for area in self.areas.values() for loc in area.pixel_locations)
-        self.border_pixel_locations = self._get_border_pixels()
-
-    def _get_border_pixels(self):
-        """The border pixels of an area.
-
-        Defined as pixels that are adjacent to other areas (not in the same set).
-        """
-        border_pixels: set[tuple[int, int]] = set()
-
-        directions = [
-            (-1, 0), (1, 0), (0, -1), (0, 1),
-            (-1, -1), (-1, 1), (1, -1), (1, 1)]
-
-        for (x, y) in self.pixel_locations:
-            for dx, dy in directions:
-                neighbor = (x + dx, y + dy)
-                if neighbor not in self.pixel_locations:
-                    border_pixels.add((x, y))
-                    break
-
-        return border_pixels
+        super().__post_init__()
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -69,41 +52,6 @@ class EURegion:
         """
         name_split = region_id.removesuffix("region").replace("_", " ").split()
         return " ".join(name.capitalize() for name in name_split)
-
-    @property
-    def area_km2(self):
-        """Returns the estimated area of the region in square kilometers 
-            using the total world map size and its pixel resolution.
-        """
-        world_area_km2 = 510_100_100
-        map_width, map_height = 5632, 2304
-        scale_factor = world_area_km2 / (map_width * map_height)
-
-        return round(len(self.pixel_locations) * scale_factor, 2)
-
-    @property
-    def bounding_box(self):
-        """Gets the bounding box for the region.
-        
-        The bounding box is defined as the inclusive limits of its x and y values, by
-        checking its contained provinces.
-        
-        Returns:
-            tuple[int]: The bounding box.
-        """
-        locations = self.pixel_locations
-        if not locations:
-            return None
-
-        x_values = [x for x, y in locations]
-        y_values = [y for x, y in locations]
-
-        min_x = min(x_values)
-        max_x = max(x_values)
-        min_y = min(y_values)
-        max_y = max(y_values)
-
-        return min_x, max_x, min_y, max_y
 
     @property
     def development(self):
@@ -141,11 +89,6 @@ class EURegion:
         return round(annual_income, 2)
 
     @property
-    def income(self):
-        """The total monthly income of the area in ducats."""
-        return self.tax_income + self.base_production_income
-
-    @property
     def goods_produced(self):
         """The amount of goods produced by the region. Is based on the province's `base_production`."""
         return round(sum(area.goods_produced for area in self), 2)
@@ -171,11 +114,6 @@ class EURegion:
         return MapUtils.get_dominant_attribute(self.provinces, "trade_goods", "goods_produced")
 
     @property
-    def provinces(self):
-        """The provinces in the region."""
-        return [province for area in self for province in area]
-
-    @property
     def is_land_region(self):
         """Checks if the region contains any land areas. A region can only contain one type
             of province"""
@@ -186,6 +124,11 @@ class EURegion:
         """Checks if the region contains any sea areas. Aregion only contain one type
             of province"""
         return any(area.is_sea_area for area in self)
+
+    @property
+    def provinces(self):
+        """The provinces in the region."""
+        return [province for area in self for province in area]
 
     def __iter__(self):
         for area in self.areas.values():

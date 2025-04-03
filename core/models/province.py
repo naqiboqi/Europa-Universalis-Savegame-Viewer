@@ -7,11 +7,12 @@ Europa Universalis IV.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, fields
 from enum import Enum
 from math import floor
 from typing import Optional
 from typing import TYPE_CHECKING
+from .import EUMapEntity
 
 
 if TYPE_CHECKING:
@@ -49,8 +50,10 @@ class ProvinceTypeColor(Enum):
 
 
 @dataclass
-class EUProvince:
+class EUProvince(EUMapEntity):
     """Represents a province on the map.
+    
+    Inherits attributes from `EUMapEntity`.
 
     Attributes:
         province_id (int): The unique ID of the province.
@@ -59,7 +62,7 @@ class EUProvince:
         terrain_type (TerrainType)
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
-        is_capital (Optional[bool]): If the province is the capital of its country.
+        is_capital (Optional[bool]): If the province is the capital of its owning country.
         is_hre (Optional[bool]): If the province is within the Holy Roman Empire.
         culture (Optional[str]): The province's culture.
         religion (Optional[str]): The province's religion.
@@ -87,12 +90,10 @@ class EUProvince:
         native_hostileness (Optional[int]): The hostility of natives in the province.
             Represents the likelyhood of an uprising.
         patrol (Optional[int]): The number of game ticks it takes to patrol the province (only if it a sea province).
-        pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the province.
     """
     province_id: int
-    name: str
     province_type: ProvinceType
-    TerrainType: Optional[TerrainType] = None
+    terrain_type: Optional[TerrainType] = None
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
     is_capital: Optional[bool] = False
@@ -115,89 +116,33 @@ class EUProvince:
     native_ferocity: Optional[int] = None
     native_hostileness: Optional[int] = None
     patrol: Optional[int] = None
-    pixel_locations: set[tuple[int, int]] = field(default_factory=set)
 
     @classmethod
     def from_dict(cls, data: dict[str, str]):
         """Builds the province from a dictionary."""
         converted_data = {}
 
+        field_types = {f.name: f.type for f in fields(cls)}
         for key, value in data.items():
-            if key in cls.__annotations__:
+            if key not in field_types:
+                continue
 
-                attr_type = cls.__annotations__[key]
-                try:
-                    if attr_type in ["str", "Optional[str]"]:
-                        converted_data[key] = value
-                    elif attr_type in ["int", "Optional[int]"]:
-                        converted_data[key] = int(float(value))
-                    elif attr_type in ["float", "Optional[float]"]:
-                        converted_data[key] = float(value)
-                    elif attr_type == "ProvinceType":
-                        converted_data[key] = ProvinceType(value)
-                    else:
-                        converted_data[key] = value
-                except (ValueError, TypeError) as e:
-                    print(f"Error converting {key} with value {value}: {e}")
+            field_type = field_types[key]
+            try:
+                if field_type in ["str", "Optional[str]"]:
+                    converted_data[key] = value
+                elif field_type in ["int", "Optional[int]"]:
+                    converted_data[key] = int(float(value))
+                elif field_type in ["float", "Optional[float]"]:
+                    converted_data[key] = float(value)
+                elif field_type == "ProvinceType":
+                    converted_data[key] = ProvinceType(value)
+                else:
+                    converted_data[key] = value
+            except (ValueError, TypeError) as e:
+                print(f"Error converting {key} with value {value}: {e}")
 
         return cls(**converted_data)
-
-    @property
-    def area_km2(self):
-        """Returns the estimated area of the province in square kilometers 
-        using the total world map size and its pixel resolution.
-        """
-        world_area_km2 = 510_100_100
-        map_width, map_height = 5632, 2304
-        scale_factor = world_area_km2 / (map_width * map_height)
-
-        return round(len(self.pixel_locations) * scale_factor, 2)
-
-    @property
-    def border_pixels(self):
-        """The border pixels of a province.
-
-        Defined as pixels that are adjacent to other provinces (not in the same set).
-        
-        Returns:
-            set: The set of `(x, y)` tuples for the border pixels.
-        """
-        border_pixels: set[tuple[int, int]] = set()
-
-        directions = [
-            (-1, 0), (1, 0), (0, -1), (0, 1),
-            (-1, -1), (-1, 1), (1, -1), (1, 1)]
-
-        for (x, y) in self.pixel_locations:
-            for dx, dy in directions:
-                neighbor = (x + dx, y + dy)
-                if neighbor not in self.pixel_locations:
-                    border_pixels.add((x, y))
-                    break
-
-        return border_pixels
-
-    @property
-    def bounding_box(self):
-        """Gets the bounding box for the province.
-        
-        The bounding box is defined as the inclusive limits of its `(x, y)` pixel locations.
-        Returns:
-            tuple[int]: The bounding box.
-        """
-        locations = self.pixel_locations
-        if not locations:
-            return None
-
-        x_values = [x for x, y in locations]
-        y_values = [y for x, y in locations]
-
-        min_x = min(x_values)
-        max_x = max(x_values)
-        min_y = min(y_values)
-        max_y = max(y_values)
-
-        return (min_x, max_x, min_y, max_y)
 
     @property
     def development(self):
@@ -212,6 +157,11 @@ class EUProvince:
 
     @property
     def autonomy_modifier(self):
+        """Computes the autonomy modifier based on local autonomy.
+
+        The autonomy modifier is calculated as:
+            `1 - (local_autonomy / 100)`
+        """
         if self.local_autonomy:
             return 1 - (self.local_autonomy / 100)
         return 1.00
@@ -227,11 +177,6 @@ class EUProvince:
         """The monthly production income of the province before applying the trade good price."""
         annual_income = self.goods_produced * self.autonomy_modifier
         return round(annual_income, 2)
-
-    @property
-    def income(self):
-        """The total monthly income of the province in ducats."""
-        return self.tax_income + self.base_production_income
 
     @property
     def goods_produced(self):

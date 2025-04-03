@@ -120,13 +120,14 @@ class EUWorldData:
             save_folder (str): The folder containing the user save file.
             save_file (str): The savefile to read.
         """
-        if self.update_status_callback:
-            self.update_status_callback("Building provinces....")
-
         savefile_lines = self.read_save_file(save_folder, savefile)
         self.current_save_date = savefile_lines[1].split("=")[1].strip()
-
         self.current_province_data = self.load_world_provinces(savefile_lines)
+
+        if self.update_status_callback:
+            self.update_status_callback("Building provinces....")
+        else:
+            print("Building provinces....")
 
         for province_id, province_data in self.current_province_data.items():
             pixel_locations = self.province_locations.get(province_id)
@@ -141,6 +142,8 @@ class EUWorldData:
 
         if self.update_status_callback:
             self.update_status_callback("Building areas....")
+        else:
+            print("Building areas....")
 
         for area_id, area_data in self.default_area_data.items():
             area_province_ids = area_data["provinces"]
@@ -158,6 +161,8 @@ class EUWorldData:
 
         if self.update_status_callback:
             self.update_status_callback("Building regions....")
+        else:
+            print("Building regions....")
 
         for region_id, region_data in self.default_region_data.items():
             region_area_ids = region_data["areas"]

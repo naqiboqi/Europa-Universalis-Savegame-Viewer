@@ -16,6 +16,7 @@ Imports:
     - **EURegion**: Represents a region, which contains multiple areas.
 """
 
+from .map_entity import EUMapEntity
 from .province import EUProvince, ProvinceType, ProvinceTypeColor
 from .country import EUCountry
 from .area import EUArea

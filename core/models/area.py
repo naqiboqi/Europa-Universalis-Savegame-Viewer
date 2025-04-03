@@ -5,52 +5,35 @@ This module defines EUArea, which represents a collection of provinces in Europa
 
 
 from dataclasses import dataclass, field
+from typing import Optional
 
-from . import EUProvince, ProvinceType
+from . import EUMapEntity, EUProvince, ProvinceType
 from ..utils import MapUtils
 
 
 
 @dataclass
-class EUArea:
+class EUArea(EUMapEntity):
     """Represents an area on the map.
+
+    Inherits attributes from `EUMapEntity`.
     
     Attributes:
         area_id (str): The area's in-game identifier.
-        name (str): The area's name.
         provinces (dict[int, EUProvince]): A mapping of province IDs to EUProvinces
             that belong to the area.
+
+        pixel_locations (set[tuple[int, int]]): The set of (x, y) coordinates occupied by the entity.
     """
     area_id: str
-    name: str
     provinces: dict[int, EUProvince]
 
-    pixel_locations: set[tuple[int, int]] = field(init=False)
-    border_pixel_locations: set[tuple[int, int]] = field(init=False)
+    pixel_locations: Optional[set[tuple[int, int]]] = field(init=False)
 
     def __post_init__(self):
+        """Aggregate pixel locations from the contained provinces."""
         self.pixel_locations = set(loc for province in self.provinces.values() for loc in province.pixel_locations)
-        self.border_pixel_locations = self._get_border_pixels()
-
-    def _get_border_pixels(self):
-        """The border pixels of an area.
-
-        Defined as pixels that are adjacent to other areas (not in the same set).
-        """
-        border_pixels: set[tuple[int, int]] = set()
-
-        directions = [
-            (-1, 0), (1, 0), (0, -1), (0, 1),
-            (-1, -1), (-1, 1), (1, -1), (1, 1)]
-
-        for (x, y) in self.pixel_locations:
-            for dx, dy in directions:
-                neighbor = (x + dx, y + dy)
-                if neighbor not in self.pixel_locations:
-                    border_pixels.add((x, y))
-                    break
-
-        return border_pixels
+        super().__post_init__()
 
     @classmethod
     def from_dict(cls, data: dict[str, str|dict]):
@@ -69,41 +52,6 @@ class EUArea:
         """
         name_split = area_id.removesuffix("area").replace("_", " ").split()
         return " ".join(name.capitalize() for name in name_split)
-
-    @property
-    def area_km2(self):
-        """Returns the estimated area of the area in square kilometers 
-            using the total world map size and its pixel resolution.
-        """
-        world_area_km2 = 510_100_100
-        map_width, map_height = 5632, 2304
-        scale_factor = world_area_km2 / (map_width * map_height)
-
-        return round(len(self.pixel_locations) * scale_factor, 2)
-
-    @property
-    def bounding_box(self):
-        """Gets the bounding box for the area.
-        
-        The bounding box is defined as the inclusive limits of its x and y values, by
-        checking its contained provinces.
-        
-        Returns:
-            tuple[int]: The bounding box.
-        """
-        locations = self.pixel_locations
-        if not locations:
-            return None
-
-        x_values = [x for x, y in locations]
-        y_values = [y for x, y in locations]
-
-        min_x = min(x_values)
-        max_x = max(x_values)
-        min_y = min(y_values)
-        max_y = max(y_values)
-
-        return min_x, max_x, min_y, max_y
 
     @property
     def development(self):
@@ -139,11 +87,6 @@ class EUArea:
         """The monthly production income of the area before applying the trade good price."""
         annual_income = sum(province.goods_produced * province.autonomy_modifier for province in self)
         return round(annual_income, 2)
-
-    @property
-    def income(self):
-        """The total monthly income of the area in ducats."""
-        return self.tax_income + self.base_production_income
 
     @property
     def goods_produced(self):

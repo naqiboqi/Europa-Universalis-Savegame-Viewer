@@ -205,7 +205,7 @@ class MapPainter:
             for area in world_areas.values()}
 
         all_area_border_pixels = {
-            area.area_id: np.array(list(area.border_pixel_locations))
+            area.area_id: np.array(list(area.border_pixels))
             for area in world_areas.values()}
 
         for area_id, area_pixels in all_area_pixels.items():
@@ -257,7 +257,7 @@ class MapPainter:
             for region in world_regions.values()}
 
         all_region_border_pixels = {
-            region.region_id: np.array(list(region.border_pixel_locations)) 
+            region.region_id: np.array(list(region.border_pixels)) 
             for region in world_regions.values()}
 
         for region_id, region_pixels in all_region_pixels.items():
