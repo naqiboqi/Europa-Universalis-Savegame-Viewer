@@ -102,7 +102,9 @@ class MapPainter:
             PIL.Image: The current map image.
         """
         draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
+        print("Drawing")
         map_pixels, map_pixels_borderless = draw_method()
+        print("Done drawings")
 
         self._world_image = Image.fromarray(map_pixels)
         self._world_image_borderless = Image.fromarray(map_pixels_borderless)
@@ -131,29 +133,44 @@ class MapPainter:
         map_pixels_bordered = np.array(self._world_image)
         map_pixels_borderless = map_pixels_bordered.copy()
 
-        ## Default colors
+        # Default colors for unowned province types.
         province_type_colors = {
             ProvinceType.NATIVE: ProvinceTypeColor.NATIVE.value,
             ProvinceType.SEA: ProvinceTypeColor.SEA.value,
             ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
         }
 
-        for province in world_provinces.values():
-            province_type = province.province_type
+        # Precompute pixel locations.
+        all_province_pixels = {
+            province.province_id: np.array(list(province.pixel_locations))
+            for province in world_provinces.values()}
 
+        all_province_border_pixels = {
+            province.province_id: np.array(list(province.border_pixels))
+            for province in world_provinces.values()}
+
+        for province in world_provinces.values():
+            province_pixels = all_province_pixels.get(province.province_id)
+            if province_pixels.size == 0:
+                continue
+
+            province_type = province.province_type
             if province_type == ProvinceType.OWNED:
                 owner_country = province.owner
                 province_color = owner_country.tag_color
             else:
                 province_color = province_type_colors.get(province_type, None)
 
-            x_coords, y_coords = zip(*province.pixel_locations)
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = province_pixels.T
 
             map_pixels_bordered[y_coords, x_coords] = province_color
             map_pixels_borderless[y_coords, x_coords] = province_color
 
-            x_border_coords, y_border_coords = zip(*province.border_pixels)
-            map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+            border_pixels = all_province_border_pixels.get(province.province_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -171,22 +188,43 @@ class MapPainter:
                 - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_areas = self.world_data.areas
-        map_pixels = np.array(self._world_image)
 
-        for area in world_areas.values():
-            area_pixels = area.pixel_locations
-            if area_pixels:
-                if area.is_land_area:
-                    area_color = MapUtils.seed_color(area.area_id)
-                elif area.is_sea_area:
-                    area_color = ProvinceTypeColor.SEA.value
-                elif area.is_wasteland_area:
-                    area_color = ProvinceTypeColor.WASTELAND.value
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
 
-                x_coords, y_coords = zip(*area_pixels)
-                map_pixels[y_coords, x_coords] = area_color
+        # Precompute pixel locations.
+        all_area_pixels = {
+            area.area_id: np.array(list(area.pixel_locations))
+            for area in world_areas.values()}
 
-        return map_pixels
+        all_area_border_pixels = {
+            area.area_id: np.array(list(area.border_pixel_locations))
+            for area in world_areas.values()}
+
+        for area_id, area_pixels in all_area_pixels.items():
+            area = world_areas[area_id]
+            if area_pixels.size == 0:
+                continue
+
+            if area.is_land_area:
+                area_color = MapUtils.seed_color(area_id)
+            elif area.is_sea_area:
+                area_color = ProvinceTypeColor.SEA.value
+            elif area.is_wasteland_area:
+                area_color = ProvinceTypeColor.WASTELAND.value
+
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = area_pixels.T
+
+            map_pixels_bordered[y_coords, x_coords] = area_color
+            map_pixels_borderless[y_coords, x_coords] = area_color
+
+            border_pixels = all_area_border_pixels.get(area_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(area_color)
+
+        return map_pixels_bordered, map_pixels_borderless
 
     def draw_map_region(self):
         """Draws the map in the **Regions** map mode.
@@ -202,36 +240,61 @@ class MapPainter:
                 - map_pixels_borderless: A NumPy array of the same map without borders.
         """
         world_regions = self.world_data.regions
-        map_pixels = np.array(self._world_image)
 
-        for region in world_regions.values():
-            region_pixels = region.pixel_locations
-            if region_pixels:
-                if region.is_land_region:
-                    region_color = MapUtils.seed_color(region.region_id)
-                elif region.is_sea_region:
-                    region_color = ProvinceTypeColor.SEA.value
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
 
-                x_coords, y_coords = zip(*region_pixels)
-                map_pixels[y_coords, x_coords] = region_color
+        # Precompute pixel locations.
+        all_region_pixels = {
+            region.region_id: np.array(list(region.pixel_locations)) 
+            for region in world_regions.values()}
 
-        ## Separate check because wastelands belong to an area, but are not part of any region.
+        all_region_border_pixels = {
+            region.region_id: np.array(list(region.border_pixel_locations)) 
+            for region in world_regions.values()}
+
+        for region_id, region_pixels in all_region_pixels.items():
+            region = world_regions[region_id]
+            if region_pixels.size == 0:
+                continue
+
+            if region.is_land_region:
+                region_color = MapUtils.seed_color(region_id)
+            elif region.is_sea_region:
+                region_color = ProvinceTypeColor.SEA.value
+
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = region_pixels.T
+
+            map_pixels_bordered[y_coords, x_coords] = region_color
+            map_pixels_borderless[y_coords, x_coords] = region_color
+
+            border_pixels = all_region_border_pixels.get(region_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(region_color)
+
         wasteland_pixels = set()
         for province in self.world_data.areas.get("wasteland_area"):
-            wasteland_pixels.update(province.pixel_locations)
+            if province.pixel_locations:
+                wasteland_pixels.update(province.pixel_locations)
 
         x_wasteland_coords, y_wasteland_coords = zip(*wasteland_pixels)
-        map_pixels[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
 
-        ## Separate check because lakes belong to an area, but are not part of any region.
+        map_pixels_bordered[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
+        map_pixels_borderless[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
+
         lake_pixels = set()
         for province in self.world_data.areas.get("lake_area"):
-            lake_pixels.update(province.pixel_locations)
+            if province.pixel_locations:
+                lake_pixels.update(province.pixel_locations)
 
         x_lake_coords, y_lake_coords = zip(*lake_pixels)
-        map_pixels[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
 
-        return map_pixels
+        map_pixels_bordered[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
+        map_pixels_borderless[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
+
+        return map_pixels_bordered, map_pixels_borderless
 
     def development_to_color(self, development: int, max_development: float=150):
         """Gets the green color for province given its development.
@@ -265,26 +328,40 @@ class MapPainter:
         map_pixels_bordered = np.array(self._world_image)
         map_pixels_borderless = map_pixels_bordered.copy()        
 
-        max_development = max(province.development for province in world_provinces.values())
-
         province_type_colors = {
             ProvinceType.SEA: ProvinceTypeColor.SEA.value,
             ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
         }
 
-        for province in world_provinces.values():
-            province_color = province_type_colors.get(province.province_type)
+        max_development = max(province.development for province in world_provinces.values())
+        # Precompute pixel locations.
+        all_province_pixels = {
+            province.province_id: np.array(list(province.pixel_locations))
+            for province in world_provinces.values()}
 
+        all_province_border_pixels = {
+            province.province_id: np.array(list(province.border_pixels))
+            for province in world_provinces.values()}
+
+        for province in world_provinces.values():
+            province_pixels = all_province_pixels.get(province.province_id)
+            if province_pixels.size == 0:
+                continue
+
+            province_color = province_type_colors.get(province.province_type)
             if province_color is None:
                 province_color = self.development_to_color(province.development, max_development)
 
-            x_coords, y_coords = zip(*province.pixel_locations)
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = province_pixels.T
 
             map_pixels_bordered[y_coords, x_coords] = province_color
             map_pixels_borderless[y_coords, x_coords] = province_color
 
-            x_border_coords, y_border_coords = zip(*province.border_pixels)
-            map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+            border_pixels = all_province_border_pixels.get(province.province_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -306,15 +383,26 @@ class MapPainter:
         map_pixels_bordered = np.array(self._world_image)
         map_pixels_borderless = map_pixels_bordered.copy()
 
-        ## Default colors
         province_type_colors = {
             ProvinceType.SEA: ProvinceTypeColor.SEA.value,
             ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
         }
 
-        for province in world_provinces.values():
-            province_type = province.province_type
+        # Precompute pixel locations.
+        all_province_pixels = {
+            province.province_id: np.array(list(province.pixel_locations))
+            for province in world_provinces.values()}
 
+        all_province_border_pixels = {
+            province.province_id: np.array(list(province.border_pixels))
+            for province in world_provinces.values()}
+
+        for province in world_provinces.values():
+            province_pixels = all_province_pixels.get(province.province_id)
+            if province_pixels.size == 0:
+                continue
+
+            province_type = province.province_type
             if province_type in province_type_colors:
                 province_color = province_type_colors.get(province_type, None)
             else:
@@ -324,12 +412,15 @@ class MapPainter:
                 else:
                     province_color = MapUtils.seed_color(name="No Religion")
 
-            x_coords, y_coords = zip(*province.pixel_locations)
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = province_pixels.T
 
             map_pixels_bordered[y_coords, x_coords] = province_color
             map_pixels_borderless[y_coords, x_coords] = province_color
 
-            x_border_coords, y_border_coords = zip(*province.border_pixels)
-            map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+            border_pixels = all_province_border_pixels.get(province.province_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
         return map_pixels_bordered, map_pixels_borderless
