@@ -93,8 +93,8 @@ class EUWorldData:
         print("Loading countries....")
         world.countries = world.load_countries(colors)
 
-        print("Loading terrain....")
-        world.terrain = world.load_province_terrain(map_folder)
+        # print("Loading terrain....")
+        # world.terrain = world.load_province_terrain(map_folder)
 
         print("Loading provinces....")
         world.default_province_data = world.load_world_provinces(world.read_province_file(map_folder))
@@ -140,44 +140,55 @@ class EUWorldData:
             #province_data["terrain"] = self.terrain[province_id]
             self.provinces[province_id] = EUProvince.from_dict({**province_data})
 
+
         if self.update_status_callback:
             self.update_status_callback("Building areas....")
         else:
             print("Building areas....")
 
-        for area_id, area_data in self.default_area_data.items():
-            area_province_ids = area_data["provinces"]
-            area_provinces = {
-                province_id: self.provinces[province_id] for province_id in self.provinces
-                if province_id in area_province_ids
-            }
+        if not self.areas:
+            for area_id, area_data in self.default_area_data.items():
+                area_province_ids = area_data["provinces"]
+                area_provinces = {
+                    province_id: self.provinces[province_id] for province_id in self.provinces
+                    if province_id in area_province_ids
+                }
 
-            area_data["provinces"] = area_provinces
-            self.areas[area_id] = EUArea.from_dict(area_data)
+                area_data["provinces"] = area_provinces
+                self.areas[area_id] = EUArea.from_dict(area_data)
 
-        for area_id, area in self.areas.items():
-            for province_id in area.provinces:
-                self.province_to_area[province_id] = area
+            for area in self.areas.values():
+                for province_id in area.provinces:
+                    self.province_to_area[province_id] = area
+        else:
+            for area in self.areas.values():
+                area.provinces = {
+                    province_id: self.provinces[province_id]
+                    for province_id in area.provinces
+                    if province_id in self.provinces
+                }
+
 
         if self.update_status_callback:
             self.update_status_callback("Building regions....")
         else:
             print("Building regions....")
 
-        for region_id, region_data in self.default_region_data.items():
-            region_area_ids = region_data["areas"]
-            region_areas = {
-                area_id: self.areas[area_id] for area_id in self.areas
-                if area_id in region_area_ids
-            }
+        if not self.regions:
+            for region_id, region_data in self.default_region_data.items():
+                region_area_ids = region_data["areas"]
+                region_areas = {
+                    area_id: self.areas[area_id] for area_id in self.areas
+                    if area_id in region_area_ids
+                }
 
-            region_data["areas"] = region_areas
-            self.regions[region_id] = EURegion.from_dict(region_data)
+                region_data["areas"] = region_areas
+                self.regions[region_id] = EURegion.from_dict(region_data)
 
-        for region_id, region in self.regions.items():
-            for area in region:
-                for province_id in area.provinces:
-                    self.province_to_region[province_id] = region
+            for region_id, region in self.regions.items():
+                for area in region:
+                    for province_id in area.provinces:
+                        self.province_to_region[province_id] = region
 
         self.trade_goods = self.load_trade_goods(savefile_lines)
 

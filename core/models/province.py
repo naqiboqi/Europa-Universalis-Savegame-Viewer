@@ -121,8 +121,8 @@ class EUProvince(EUMapEntity):
     def from_dict(cls, data: dict[str, str]):
         """Builds the province from a dictionary."""
         converted_data = {}
-
         field_types = {f.name: f.type for f in fields(cls)}
+
         for key, value in data.items():
             if key not in field_types:
                 continue
@@ -143,6 +143,28 @@ class EUProvince(EUMapEntity):
                 print(f"Error converting {key} with value {value}: {e}")
 
         return cls(**converted_data)
+
+    def update_from_dict(self, data: dict):
+        field_types = {f.name: f.type for f in fields(self)}
+
+        for key, value in data.items():
+            if key not in field_types:
+                continue
+
+            field_type = field_types[key]
+            try:
+                if field_type in ["str", "Optional[str]"]:
+                    setattr(self, key, value)
+                elif field_type in ["int", "Optional[int]"]:
+                    setattr(self, key, int(float(value)))
+                elif field_type in ["float", "Optional[float]"]:
+                    setattr(self, key, float(value))
+                elif field_type == "ProvinceType":
+                    setattr(self, key, ProvinceType(value))
+                else:
+                    setattr(self, key, value)
+            except (ValueError, TypeError) as e:
+                print(f"Error converting {key} with value {value}: {e}")
 
     @property
     def development(self):
