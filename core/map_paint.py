@@ -95,6 +95,13 @@ class MapPainter:
 
         return self._image_cache[self.map_mode].get(cache_border_key)
 
+    def clear_cache(self, mode: MapMode=None):
+        """Clears the cache for the image of a specific map mode or all modes."""
+        if mode:
+            self._image_cache.pop(mode, None)
+        else:
+            self._image_cache.clear()
+
     def draw_map(self):
         """Driver that calls the draw method for the current map mode and updates the **map image**.
         

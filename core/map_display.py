@@ -50,6 +50,7 @@ class MapDisplayer:
         offset_x (int): The horizontal offset for panning.
         offset_y (int): The vertical offset for panning.
 
+        show_map_borders (bool): If the map should display subdivision borders.
         selected_item: (EUProvince|EUArea|EURegion|None): The current selected item, to get information for
             and display in the window's information section, if any.
         search_results: (list[EUProvince|EUArea|EURegion]): The results from the user's search, if any.
@@ -78,21 +79,6 @@ class MapDisplayer:
         self.show_map_borders = True
         self.selected_item = None
         self.search_results = []
-
-    def create_layout(self):
-        """Creates the layout that will be used for the UI and sets the canvas size.
-        
-        Returns:
-            layout (list[list]): The layout for the Window.
-        """
-        screen_width, screen_height = sg.Window.get_screen_size()
-        canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
-
-        map_width, map_height = self.original_map.size
-        canvas_height = int(canvas_width_max * (map_height / map_width))
-        self.canvas_size = (canvas_width_max, canvas_height)
-
-        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
     def image_to_tkimage(self, image: Image.Image):
         """Converts a PIL Image to a TkInter Image."""
@@ -199,26 +185,8 @@ class MapDisplayer:
         
         Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
         """
-        ## TODO Also maybe add asynchronous functionality so that the UI doesnt freeze while busy
         self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         self.map_image = self.scale_image_to_fit(self.original_map)
-        self.reset_canvas_to_initial()
-
-    def update_map_mode(self, map_mode: MapMode):
-        """Updates the map mode and redraws the map for that mode.
-        
-        Args:
-            map_mode (MapMode): The new map mod selected by the user.
-        """
-        if map_mode == self.painter.map_mode:
-            return
-
-        self.display_loading_screen(message="Loading map....")
-
-        self.painter.map_mode = map_mode
-        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
-
-        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
         self.reset_canvas_to_initial()
 
     def update_province_details(self, province: EUProvince):
@@ -446,6 +414,90 @@ class MapDisplayer:
 
         return self.window.refresh()
 
+    def handle_border_toggle(self, values):
+        """Toggles displaying map borders."""
+        self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
+        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+        self.update_canvas()
+
+    def handle_map_mode_change(self, map_mode: MapMode):
+        """Updates the map mode and redraws the map for that mode.
+        
+        Args:
+            map_mode (MapMode): The new map mod selected by the user.
+        """
+        if map_mode == self.painter.map_mode:
+            return
+
+        self.display_loading_screen(message="Loading map....")
+
+        self.painter.map_mode = map_mode
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
+
+        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+        self.reset_canvas_to_initial()
+
+    def handle_map_loaded(self):
+        """Handles map reloading when a new save file is loaded."""
+        self.painter.clear_cache()
+        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
+        self.refresh_canvas_image()
+
+    def handle_load_savefile(self):
+        """Handles loading a new save file."""
+        new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
+        if new_savefile:
+            print(f"Loading new savefile: {new_savefile}....")
+            self.display_loading_screen(message="Loading map....")
+
+            def load_savefile():
+                self.world_data.update_status_callback = self.send_message_to_multiline
+                self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
+                self.window.write_event_value("-MAP_LOADED-", None)
+
+            threading.Thread(target=load_savefile, daemon=True).start()
+
+    def handle_search_for(self, values):
+        """Handles searching for entities in the world data."""
+        self.window["-CLEAR-"].update(visible=True)
+        exact_matches_only = values["-EXACT_MATCH-"]
+        search_param = values["-SEARCH-"].strip().lower()
+
+        if not search_param:
+            self.window["-RESULTS-"].update(values=[], visible=False)
+            self.window["-CLEAR-"].update(visible=False)
+            return
+
+        matches = self.world_data.search(
+            exact_matches_only=exact_matches_only, search_param=search_param)
+        self.search_results = matches
+
+        name_matches = [item.name for item in self.search_results]
+        if name_matches:
+            self.window["-RESULTS-"].update(values=name_matches, visible=True)
+            self.window["-GOTO-"].update(visible=True)
+        else:
+            self.window["-RESULTS-"].update(values=[])
+            self.window["-GOTO-"].update(visible=False)
+
+    def handle_result_select(self, values):
+        """Handles selection of a search result."""
+        selected = values["-RESULTS-"]
+        if selected:
+            item_name = selected[0]
+            selected_item = next((
+                item for item in self.search_results
+                if item.name.lower() == item_name.lower()), None)
+
+            self.selected_item = selected_item
+
+    def handle_go_to(self):
+        """Handles navigation to the selected entity location."""
+        if self.selected_item:
+            self.handler.go_to_entity_location(self.selected_item)
+            self.window = self.update_details_from_selected_item(self.selected_item)
+
     def ui_read_loop(self):
         """Main event loop for handling user interactions within the PySimpleGUI window.
 
@@ -472,70 +524,43 @@ class MapDisplayer:
                 break
 
             if event == "-SHOW_MAP_BORDERS-":
-                self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
-                self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
-                self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
-                self.update_canvas()
-
-            if event == "-MAP_LOADED-":
-                self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
-                self.refresh_canvas_image()
+                self.handle_border_toggle(values)
 
             if event in mode_names:
-                self.update_map_mode(mode_names[event])
+                self.handle_map_mode_change(mode_names[event])
+
+            if event == "-MAP_LOADED-":
+                self.handle_map_loaded()
 
             if event == "-LOAD_SAVEFILE-":
-                new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
-                if new_savefile:
-                    print(f"Loading new savefile: {new_savefile}....")
-                    self.display_loading_screen(message="Loading map....")
-
-                    def load_savefile():
-                        self.world_data.update_status_callback = self.send_message_to_multiline
-                        self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
-                        self.window.write_event_value("-MAP_LOADED-", None)
-
-                    threading.Thread(target=load_savefile, daemon=True).start()
+                self.handle_load_savefile()
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
-                window["-CLEAR-"].update(visible=True)
-                exact_matches_only = values["-EXACT_MATCH-"]
-                search_param = values["-SEARCH-"].strip().lower()
-
-                if not search_param:
-                    window["-RESULTS-"].update(values=[], visible=False)
-                    window["-CLEAR-"].update(visible=False)
-                    continue
-
-                matches = self.world_data.search(
-                    exact_matches_only=exact_matches_only, search_param=search_param)
-                self.search_results = matches
-
-                name_matches = [item.name for item in self.search_results]
-                if name_matches:
-                    window["-RESULTS-"].update(values=name_matches, visible=True)
-                    window["-GOTO-"].update(visible=True)
-                else:
-                    window["-RESULTS-"].update(values=[])
-                    window["-GOTO-"].update(visible=False)
+                self.handle_search_for(values)
 
             if event == "-RESULTS-":
-                selected = values["-RESULTS-"]
-                if selected:
-                    item_name = selected[0]
-                    selected_item = next((
-                        item for item in self.search_results
-                        if item.name.lower() == item_name.lower()), None)
-
-                    self.selected_item = selected_item
+                self.handle_result_select(values)
 
             if event == "-GOTO-":
-                if self.selected_item:
-                    self.handler.go_to_entity_location(self.selected_item)
-                    self.window = self.update_details_from_selected_item(self.selected_item)
+                self.handle_go_to()
 
             if event == "-RESET-":
                 self.reset_canvas_to_initial()
+
+    def create_layout(self):
+        """Creates the layout that will be used for the UI and sets the canvas size.
+        
+        Returns:
+            layout (list[list]): The layout for the Window.
+        """
+        screen_width, screen_height = sg.Window.get_screen_size()
+        canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
+
+        map_width, map_height = self.original_map.size
+        canvas_height = int(canvas_width_max * (map_height / map_width))
+        self.canvas_size = (canvas_width_max, canvas_height)
+
+        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
 
     def display_map(self):
         """Displays the main UI window for the Europa Universalis IV savefile viewer.
