@@ -4,7 +4,7 @@ This module defines EURegion, which represents a collection of areas in Europa U
 
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import EUArea
 from ..utils import MapUtils
@@ -24,6 +24,33 @@ class EURegion:
     region_id: str
     name: str
     areas: dict[str, EUArea]
+
+    pixel_locations: set[tuple[int, int]] = field(init=False)
+    border_pixel_locations: set[tuple[int, int]] = field(init=False)
+
+    def __post_init__(self):
+        self.pixel_locations = set(loc for area in self.areas.values() for loc in area.pixel_locations)
+        self.border_pixel_locations = self._get_border_pixels()
+
+    def _get_border_pixels(self):
+        """The border pixels of an area.
+
+        Defined as pixels that are adjacent to other areas (not in the same set).
+        """
+        border_pixels: set[tuple[int, int]] = set()
+
+        directions = [
+            (-1, 0), (1, 0), (0, -1), (0, 1),
+            (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+        for (x, y) in self.pixel_locations:
+            for dx, dy in directions:
+                neighbor = (x + dx, y + dy)
+                if neighbor not in self.pixel_locations:
+                    border_pixels.add((x, y))
+                    break
+
+        return border_pixels
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -159,11 +186,6 @@ class EURegion:
         """Checks if the region contains any sea areas. Aregion only contain one type
             of province"""
         return any(area.is_sea_area for area in self)
-
-    @property
-    def pixel_locations(self):
-        """Returns the set of x, y coordinates occupied by the region."""
-        return set(loc for area in self for loc in area.pixel_locations)
 
     def __iter__(self):
         for area in self.areas.values():

@@ -4,7 +4,7 @@ This module defines EUArea, which represents a collection of provinces in Europa
 
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import EUProvince, ProvinceType
 from ..utils import MapUtils
@@ -24,6 +24,33 @@ class EUArea:
     area_id: str
     name: str
     provinces: dict[int, EUProvince]
+
+    pixel_locations: set[tuple[int, int]] = field(init=False)
+    border_pixel_locations: set[tuple[int, int]] = field(init=False)
+
+    def __post_init__(self):
+        self.pixel_locations = set(loc for province in self.provinces.values() for loc in province.pixel_locations)
+        self.border_pixel_locations = self._get_border_pixels()
+
+    def _get_border_pixels(self):
+        """The border pixels of an area.
+
+        Defined as pixels that are adjacent to other areas (not in the same set).
+        """
+        border_pixels: set[tuple[int, int]] = set()
+
+        directions = [
+            (-1, 0), (1, 0), (0, -1), (0, 1),
+            (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+        for (x, y) in self.pixel_locations:
+            for dx, dy in directions:
+                neighbor = (x + dx, y + dy)
+                if neighbor not in self.pixel_locations:
+                    border_pixels.add((x, y))
+                    break
+
+        return border_pixels
 
     @classmethod
     def from_dict(cls, data: dict[str, str|dict]):
@@ -129,6 +156,11 @@ class EUArea:
         return round(sum(province.trade_power for province in self), 2)
 
     @property
+    def dominant_trade_good(self):
+        """The dominant trade good produced in the area determined by the total goods produced."""
+        return MapUtils.get_dominant_attribute(self, "trade_goods", "goods_produced")
+
+    @property
     def dominant_culture(self):
         """The dominant culture in the area determined by the number of provinces."""
         return MapUtils.get_dominant_attribute(self, "culture")
@@ -137,11 +169,6 @@ class EUArea:
     def dominant_religion(self):
         """The dominant religion in the area determined by the number of provinces."""
         return MapUtils.get_dominant_attribute(self, "religion")
-
-    @property
-    def dominant_trade_good(self):
-        """The dominant trade good produced in the area determined by the total goods produced."""
-        return MapUtils.get_dominant_attribute(self, "trade_goods", "goods_produced")
 
     @property
     def is_land_area(self):
@@ -162,11 +189,6 @@ class EUArea:
         """Checks if the area contains any wasteland provinces. An area can only contain one type
             of province."""
         return any(province.province_type == ProvinceType.WASTELAND for province in self)
-
-    @property
-    def pixel_locations(self):
-        """Returns the set of x, y coordinates occupied by the area."""
-        return set(loc for province in self for loc in province.pixel_locations)
 
     def __iter__(self):
         for province in self.provinces.values():
