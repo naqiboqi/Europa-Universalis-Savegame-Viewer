@@ -5,7 +5,6 @@ from core import EUColors, EUWorldData, MapDisplayer, MapPainter
 
 
 MAP_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "map"))
-OUTPUT_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "output"))
 SAVES_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "saves"))
 TAGS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "country_tags"))
 
