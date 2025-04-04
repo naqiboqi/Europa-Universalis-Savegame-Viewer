@@ -166,7 +166,7 @@ class EUProvince(EUMapEntity):
             except (ValueError, TypeError) as e:
                 print(f"Error converting {key} with value {value}: {e}")
 
-            return self
+        return self
 
     @property
     def development(self):
