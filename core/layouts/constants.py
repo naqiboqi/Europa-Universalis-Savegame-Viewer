@@ -1,0 +1,30 @@
+
+
+
+
+CANVAS_WIDTH_MAX = 1200
+"""Maximum width for the canvas."""
+LIGHT_TEXT = "#d2d2d2"
+"""Color for light text."""
+GOLD_FRAME_UPPER = "#b68950"
+"""Upper border color for gold frame."""
+GOLD_FRAME_LOWER = "#9f7240"
+"""Lower border color for gold frame."""
+RED_BANNER_BG = "#561b19"
+"""Background color for red banners."""
+TOP_BANNER_BG = "#353c25"
+"""Background color for top banners."""
+SECTION_BANNER_BG = "#172f48"
+"""Background color for section banners."""
+LIGHT_FRAME_BG = "#344048"
+"""Background color for light-colored frames."""
+MEDIUM_FRAME_BG = "#2a343b"
+"""Background color for medium-dark colored frames."""
+DARK_FRAME_BG = "#283239"
+"""Background color for dark-colored frames."""
+SUNK_FRAME_BG = "#252e34"
+"""Background color for sunken frames."""
+BUTTON_BG = "#314b68"
+"""Background color for buttons."""
+GREEN_TEXT = "#2b8334"
+"""Color for green text."""

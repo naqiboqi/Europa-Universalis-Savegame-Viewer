@@ -16,6 +16,7 @@ import tkinter as tk
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from . import MapHandler, MapPainter
 from . import Layout
+from .layouts import constants
 from .models import EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
 from .utils import IconLoader, MapUtils
@@ -575,7 +576,7 @@ class MapDisplayer:
 
         window = sg.Window("EU4 Map Viewer", 
             layout, 
-            background_color=Layout.MEDIUM_FRAME_BG,
+            background_color=constants.MEDIUM_FRAME_BG,
             finalize=True, 
             return_keyboard_events=True)
 

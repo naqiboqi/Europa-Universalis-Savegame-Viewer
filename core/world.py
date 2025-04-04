@@ -176,6 +176,10 @@ class EUWorldData:
                     for region_id, region_data in self.default_region_data.items()
                 ]
 
+            for future in as_completed(futures):
+                region = future.result()
+                self.regions[region.region_id] = region
+
             for region in self.regions.values():
                 for area in region:
                     for province_id in area.provinces:

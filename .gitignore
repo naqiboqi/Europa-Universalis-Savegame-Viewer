@@ -4,6 +4,7 @@
 /province_data/
 /core/__pycache__
 /core/models/__pycache__
+/core/layouts/__pycache__
 /core/utils/__pycache__
 /__pycache__
 data/otto.prov
