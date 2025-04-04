@@ -13,8 +13,9 @@ import os
 import re
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
-from typing import Optional, Union
+from typing import Union
 
 from .colors import EUColors
 from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion, TerrainType
@@ -129,16 +130,18 @@ class EUWorldData:
         else:
             print("Building provinces....")
 
-        for province_id, province_data in self.current_province_data.items():
-            pixel_locations = self.province_locations.get(province_id)
-            if not pixel_locations:
-                continue
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for province_id, province_data in self.current_province_data.items():
+                pixel_locations = self.province_locations.get(province_id)
+                if pixel_locations:
+                    province_data["pixel_locations"] = pixel_locations
+                    futures.append(executor.submit(self._process_province, province_data))
 
-            province_data["pixel_locations"] = pixel_locations
-
-            ## Evidently, not every land province is defined in terrain.txt.....
-            #province_data["terrain"] = self.terrain[province_id]
-            self.provinces[province_id] = EUProvince.from_dict({**province_data})
+            # Wait for all provinces to be processed
+            for future in as_completed(futures):
+                province = future.result()
+                self.provinces[province.province_id] = province
 
 
         if self.update_status_callback:
@@ -147,27 +150,19 @@ class EUWorldData:
             print("Building areas....")
 
         if not self.areas:
-            for area_id, area_data in self.default_area_data.items():
-                area_province_ids = area_data["provinces"]
-                area_provinces = {
-                    province_id: self.provinces[province_id] for province_id in self.provinces
-                    if province_id in area_province_ids
-                }
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._process_area, area_data)
+                    for area_id, area_data in self.default_area_data.items()
+                ]
 
-                area_data["provinces"] = area_provinces
-                self.areas[area_id] = EUArea.from_dict(area_data)
+            for future in as_completed(futures):
+                area = future.result()
+                self.areas[area.area_id] = area
 
             for area in self.areas.values():
                 for province_id in area.provinces:
                     self.province_to_area[province_id] = area
-        else:
-            for area in self.areas.values():
-                area.provinces = {
-                    province_id: self.provinces[province_id]
-                    for province_id in area.provinces
-                    if province_id in self.provinces
-                }
-
 
         if self.update_status_callback:
             self.update_status_callback("Building regions....")
@@ -175,22 +170,48 @@ class EUWorldData:
             print("Building regions....")
 
         if not self.regions:
-            for region_id, region_data in self.default_region_data.items():
-                region_area_ids = region_data["areas"]
-                region_areas = {
-                    area_id: self.areas[area_id] for area_id in self.areas
-                    if area_id in region_area_ids
-                }
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._process_region, region_data)
+                    for region_id, region_data in self.default_region_data.items()
+                ]
 
-                region_data["areas"] = region_areas
-                self.regions[region_id] = EURegion.from_dict(region_data)
-
-            for region_id, region in self.regions.items():
+            for region in self.regions.values():
                 for area in region:
                     for province_id in area.provinces:
                         self.province_to_region[province_id] = region
 
         self.trade_goods = self.load_trade_goods(savefile_lines)
+
+    def _process_province(self, province_data: dict):
+        """Helper method to process a single province."""
+        province_id = province_data["province_id"]
+        if province_id in self.provinces:
+            return self.provinces[province_id].update_from_dict(province_data)
+
+        return EUProvince.from_dict(province_data)
+
+    def _process_area(self, area_data: dict):
+        """Helper method to process a single area."""
+        area_provinces = {
+            province_id: self.provinces[province_id]
+            for province_id in area_data["provinces"]
+                if province_id in self.provinces
+            }
+
+        area_data["provinces"] = area_provinces
+        return EUArea.from_dict(area_data)
+
+    def _process_region(self, region_data: dict):
+        """Helper method to process a single region."""
+        region_areas = {
+            area_id: self.areas[area_id]
+            for area_id in region_data["areas"]
+                if area_id in self.areas
+        }
+
+        region_data["areas"] = region_areas
+        return EURegion.from_dict(region_data)
 
     def load_countries(self, colors: EUColors):
         """Builds the **countries** dictionary with game countries.
