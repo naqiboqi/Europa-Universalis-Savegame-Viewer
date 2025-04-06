@@ -21,6 +21,7 @@ import math
 import numpy as np
 
 from PIL import Image
+from typing import Callable, Optional
 from .colors import EUColors
 from .models import MapMode, ProvinceType, ProvinceTypeColor
 from .utils import MapUtils
@@ -58,12 +59,12 @@ class MapPainter:
         map_modes (dict[MapMode, Callable]): Mapping `MapMode` values to their respective 
             drawing methods for rendering different map visualizations.
     """
-    def __init__(self, colors: EUColors, world_data: EUWorldData):
+    def __init__(self, colors: EUColors=None, world_data: EUWorldData=None):
         self.colors = colors
         self.world_data = world_data
 
-        self._world_image = self.world_data.world_image
-        self._world_image_borderless = self._world_image
+        self._world_image = self.world_data.world_image if world_data else None
+        self._world_image_borderless = self._world_image if world_data else None
 
         self._image_cache: dict[MapMode, dict] = {}
 
@@ -75,6 +76,11 @@ class MapPainter:
             MapMode.DEVELOPMENT: self.draw_map_development,
             MapMode.RELIGION: self.draw_map_religion
         }
+
+        self.update_status_callback: Optional[Callable[[str], None]] = None
+
+    def set_base_world_image(self, image: Image.Image):
+        self._world_image = image
 
     def get_cached_map_image(self, borders: bool=True) -> Image.Image:
         """Retrieves the cached map image for the current map mode.
@@ -109,9 +115,10 @@ class MapPainter:
             PIL.Image: The current map image.
         """
         draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
-        print("Drawing")
+        if self.update_status_callback:
+            self.update_status_callback("Drawing map....")
+
         map_pixels, map_pixels_borderless = draw_method()
-        print("Done drawings")
 
         self._world_image = Image.fromarray(map_pixels)
         self._world_image_borderless = Image.fromarray(map_pixels_borderless)

@@ -42,6 +42,8 @@ class MapHandler:
         displayer (MapDisplayer): The instance of the MapDisplayer responsible for displaying the map.
         tk_canvas (tk.Canvas): The Tkinter canvas on which the map is rendered.
         world_data (WorldData): The world data associated with the map.
+        disabled (bool): If the handler is disabled, should respond to events or not.
+
         pan_animation_id (int or None): The identifier for the pan animation, if active.
         cursor_movement (float): The total distance moved by the cursor while dragging.
         dragging (bool): Flag indicating whether the user is currently dragging the map.
@@ -49,13 +51,15 @@ class MapHandler:
         prev_y (int): The previous y-coordinate of the cursor during dragging.
         start_x (int): The starting x-coordinate of the cursor during dragging.
         start_y (int): The starting y-coordinate of the cursor during dragging.
+
         scale_factor (float): The factor by which the map scales during zooming operations.
         zooming (bool): Flag indicating whether a zoom operation is currently in progress.
     """
-    def __init__(self, displayer: MapDisplayer, tk_canvas: tk.Canvas):
+    def __init__(self, displayer: MapDisplayer, tk_canvas: tk.Canvas, disabled: bool=False):
         self.displayer = displayer
-        self.tk_canvas = tk_canvas
         self.world_data = self.displayer.world_data
+        self.tk_canvas = tk_canvas
+        self.disabled = disabled
 
         self.pan_animation_id = None
         self.cursor_movement = 0
@@ -193,6 +197,9 @@ class MapHandler:
 
     def on_hover(self, event: tk.Event):
         """Handles mouse hover events and updates the UI with province/area/region information."""
+        if self.disabled:
+            return
+
         displayer = self.displayer
         canvas_x = event.x
         canvas_y = event.y
@@ -271,6 +278,9 @@ class MapHandler:
 
     def on_press(self, event: tk.Event):
         """Updates the handler attribtues and is triggered the left-mouse button is pressed."""
+        if self.disabled:
+            return
+
         self.dragging = True
         self.prev_x = event.x
         self.prev_y = event.y
@@ -285,6 +295,9 @@ class MapHandler:
         Continuously updates the canvas offsets to move the image accordingly, ensuring 
         that panning remains within the allowed bounds.
         """
+        if self.disabled:
+            return
+
         displayer = self.displayer
 
         if self.dragging:
@@ -308,6 +321,9 @@ class MapHandler:
         If the cursor did not move significantly, the release is registered as a click event, 
         triggering the `on_click` method.
         """
+        if self.disabled:
+            return
+
         self.dragging = False
 
         cursor_move_threshold = 1
@@ -327,7 +343,7 @@ class MapHandler:
             zoom_in (bool, optional): Determines whether to zoom in (True) or out (False). 
                 Defaults to True.
         """
-        if self.zooming:
+        if self.zooming or self.disabled:
             return
 
         displayer = self.displayer
@@ -374,6 +390,9 @@ class MapHandler:
         Determines the zoom direction based on the event data and calls `zoom_map` 
         with the appropriate zoom direction.
         """
+        if self.disabled:
+            return
+
         cursor_x, cursor_y = event.x, event.y
 
         if event.delta > 0 or event.num == 4:

@@ -20,37 +20,37 @@ class EUColors:
         self.tag_names: dict[str, str] = {} 
 
     @classmethod
-    def load_colors(cls, map_folder: str, tag_data_folder: str):
+    def load_colors(cls, maps_folder: str, tags_folder: str):
         """Driver class method that handles loading the tag and province colors.
         
         Args:
-            map_folder (str): The folder that contains the world definition files.
-            tag_data_folder (str): The folder containing the tag (country) definitions.
+            maps_folder (str): The folder that contains the world definition files.
+            tags_folder (str): The folder that contains the tag (country) definitions.
         """
         color = cls()
         print("Loading province definitions....")
-        color.default_province_colors = color.load_default_province_colors(map_folder)
+        color.default_province_colors = color.load_default_province_colors(maps_folder=maps_folder)
 
         print("Loading tag colors....")
-        color.tag_names = color.load_tag_names(tag_data_folder)
+        color.tag_names = color.load_tag_names(tags_folder=tags_folder)
         color.tag_colors = color.load_tag_colors()
 
         return color
 
-    def load_default_province_colors(self, map_folder: str):
+    def load_default_province_colors(self, maps_folder: str):
         """Loads default colors for each province.
         
         Reads the definitions.csv file, where each province's ID assigned to an RGB color value.
         The colors will later be used to determine which pixels each province occupies for easy coloring.
         
         Args:
-            map_folder (str): The folder that contains the world definition files.
+            maps_folder (str): The folder that contains the world definition files.
             
         Returns:
             colors (dict[tuple[int]], int): The unique color mapped to the province ID.
         """
         colors: dict[tuple[int], int] = {}
-        with open(os.path.join(map_folder, "definition.csv"), "r", encoding="latin-1") as file:
+        with open(os.path.join(maps_folder, "definition.csv"), "r", encoding="latin-1") as file:
             reader = csv.reader(file, delimiter=";")
             for row in reader:
                 try:
@@ -62,13 +62,13 @@ class EUColors:
 
         return colors
 
-    def load_tag_names(self, tag_data_folder: str):
+    def load_tag_names(self, tags_folder: str):
         """Loads the default tag names for each country.
         
         Reads each country file in the folder to obtain each country tag and its definition file.
         
         Args:
-            tag_data_folder (str): The tag_data_folder (str): The folder containing the tag (country) definitions.
+            tags_folder (str): The folder that contains the tag (country) definitions.
         
         Returns:
             tag_names (dict[str, str]): The definition file for each country.
@@ -76,9 +76,9 @@ class EUColors:
         tag_names: dict[str, str] = {}
         tag_pattern = r"(\w{3})\s*=\s*\"([^\"]+)\""
 
-        tag_files = os.listdir(tag_data_folder)
+        tag_files = os.listdir(tags_folder)
         for tag_file in tag_files:
-            with open(os.path.join(tag_data_folder, tag_file), "r", encoding="latin-1") as file:
+            with open(os.path.join(tags_folder, tag_file), "r", encoding="latin-1") as file:
                 for line in file:
                     if not line:
                         continue

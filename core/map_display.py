@@ -10,14 +10,15 @@ and managing UI elements using PySimpleGUI and Tkinter.
 from __future__ import annotations
 
 import FreeSimpleGUI as sg
+import os
 import threading
 import tkinter as tk
 
 from PIL import Image, ImageDraw, ImageFont, ImageTk
-from . import MapHandler, MapPainter
+from . import MapHandler, MapPainter, EUColors, EUWorldData
 from . import Layout
 from .layouts import constants
-from .models import EUProvince, ProvinceType, EUArea, EURegion
+from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion
 from .models import MapMode
 from .utils import IconLoader, MapUtils
 
@@ -54,12 +55,12 @@ class MapDisplayer:
         show_map_borders (bool): If the map should display subdivision borders.
         selected_item: (EUProvince|EUArea|EURegion|None): The current selected item, to get information for
             and display in the window's information section, if any.
-        search_results: (list[EUProvince|EUArea|EURegion]): The results from the user's search, if any.
+        search_results: (list[EUMapEntity]): The results from the user's search, if any.
     """
-    def __init__(self, painter: MapPainter=None, saves_folder: str=None):
+    def __init__(self, painter: MapPainter, saves_folder: str):
         self.painter = painter
-        self.save_folder = saves_folder
-        self.world_data = painter.world_data
+        self.saves_folder = saves_folder
+        self.world_data = None
 
         self.canvas_size = ()
         self.handler: MapHandler = None
@@ -81,18 +82,31 @@ class MapDisplayer:
         self.selected_item = None
         self.search_results = []
 
-    def image_to_tkimage(self, image: Image.Image):
-        """Converts a PIL Image to a TkInter Image."""
-        return ImageTk.PhotoImage(image)
+    def send_message_callback(self, message: str):
+        """Thread-safe callback to request a message be displayed in the GUI.
 
-    def send_message_to_multiline(self, message: str):
-        """Sends a message to display to the multiline element at the top of the layout.
+        Posts a custom event to the PySimpleGUI window so the message can be handled
+        and displayed in the main thread.
 
         Args:
-            message (str): The message to display in the multiline element.
+            message (str): The message to send.
+        """
+        self.window.write_event_value("-SEND_MESSAGE-", message)
+
+    def send_message_to_multiline(self, message: str):
+        """Displays a message in the multiline element of the GUI.
+
+        Should only be called from the main thread.
+
+        Args:
+            message (str): The message to display.
         """
         self.window["-MULTILINE-"].update(value=message)
         self.window.refresh()
+
+    def image_to_tkimage(self, image: Image.Image):
+        """Converts a PIL Image to a TkInter Image."""
+        return ImageTk.PhotoImage(image)
 
     def scale_image_to_fit(self, image: Image.Image):
         """Scales the image to fit within the canvas.
@@ -189,6 +203,28 @@ class MapDisplayer:
         self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         self.map_image = self.scale_image_to_fit(self.original_map)
         self.reset_canvas_to_initial()
+
+    def update_details_from_selected_item(self, selected_item: EUMapEntity):
+        """Updates the information section in the window based on the user's seclected item.
+        
+        This can either be from the user searching for or clicking on a province, area, region, or country.
+        
+        Args:
+            selected_item (EUMapEntity): The selected item to display details for.
+        
+        Returns:
+            window (Window): The updated PySimpleGUI window.
+        """
+        if isinstance(selected_item, EUProvince):
+            self.update_province_details(selected_item)
+
+        elif isinstance(selected_item, EUArea):
+            self.update_area_details(selected_item)
+
+        elif isinstance(selected_item, EURegion):
+            self.update_region_details(selected_item)
+
+        return self.window.refresh()
 
     def update_province_details(self, province: EUProvince):
         """Updates the information displayed for a specific province in the UI.
@@ -342,7 +378,14 @@ class MapDisplayer:
             total_income_element.update(value=round(area.tax_income + total_production_income, 2))
 
     def update_region_details(self, region: EURegion):
-        """Updates the information displayed for a specific region in the UI."""
+        """Updates the information displayed for a specific region in the UI.
+        
+        This method retrieves the relevant data for an region, such as its name, total development, and income. 
+        It also updates the region areas table with information for each area within the region.
+
+        Args:
+            region (EURegion): The region to be displayed.
+        """
         window = self.window
 
         if region.is_land_region:
@@ -393,28 +436,6 @@ class MapDisplayer:
             total_income_element = window["-INFO_REGION_INCOME-"]
             total_income_element.update(value=round(region.tax_income + total_production_income, 2))
 
-    def update_details_from_selected_item(self, selected_item: EUProvince|EUArea|EURegion):
-        """Updates the information section in the window based on the user's seclected item.
-        
-        This can either be from the user searching for or clicking on a province, area, region, or country.
-        
-        Args:
-            selected_item (EUProvince|EUArea|EURegion): The selected item to display details for.
-        
-        Returns:
-            window (Window): The updated PySimpleGUI window.
-        """
-        if isinstance(selected_item, EUProvince):
-            self.update_province_details(selected_item)
-
-        elif isinstance(selected_item, EUArea):
-            self.update_area_details(selected_item)
-
-        elif isinstance(selected_item, EURegion):
-            self.update_region_details(selected_item)
-
-        return self.window.refresh()
-
     def handle_border_toggle(self, values):
         """Toggles displaying map borders."""
         self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
@@ -442,19 +463,23 @@ class MapDisplayer:
     def handle_map_loaded(self):
         """Handles map reloading when a new save file is loaded."""
         self.painter.clear_cache()
-        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
         self.refresh_canvas_image()
+
+        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
+        self.send_message_callback("....")
+
+        self.handler.disabled = False
 
     def handle_load_savefile(self):
         """Handles loading a new save file."""
         new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
         if new_savefile:
-            print(f"Loading new savefile: {new_savefile}....")
+            self.handler.disabled = True
+            self.send_message_callback(rf"Loading new savefile: {new_savefile}....")
             self.display_loading_screen(message="Loading map....")
 
             def load_savefile():
-                self.world_data.update_status_callback = self.send_message_to_multiline
-                self.world_data.build_world(save_folder=self.save_folder, savefile=new_savefile)
+                self.world_data.build_world(save_folder=self.saves_folder, savefile=new_savefile)
                 self.window.write_event_value("-MAP_LOADED-", None)
 
             threading.Thread(target=load_savefile, daemon=True).start()
@@ -524,17 +549,24 @@ class MapDisplayer:
             if event in {sg.WIN_CLOSED, "Exit", "-EXIT-"}:
                 break
 
-            if event == "-SHOW_MAP_BORDERS-":
-                self.handle_border_toggle(values)
-
-            if event in mode_names:
-                self.handle_map_mode_change(mode_names[event])
+            if event == "-SEND_MESSAGE-":
+                message = values[event]
+                self.send_message_to_multiline(message=message)
 
             if event == "-MAP_LOADED-":
                 self.handle_map_loaded()
 
             if event == "-LOAD_SAVEFILE-":
                 self.handle_load_savefile()
+
+            if not self.handler or getattr(self.handler, "disabled", False):
+                continue
+
+            if event == "-SHOW_MAP_BORDERS-":
+                self.handle_border_toggle(values)
+
+            if event in mode_names:
+                self.handle_map_mode_change(mode_names[event])
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 self.handle_search_for(values)
@@ -548,32 +580,87 @@ class MapDisplayer:
             if event == "-RESET-":
                 self.reset_canvas_to_initial()
 
+    def load_game_data_async(self, maps_folder: str, tags_folder: str):
+        """Loads game data and initializes the world for display asynchronously.
+
+        Args:
+            maps_folder (str): The folder that contains the world definition files.
+            tags_folder (str): The folder that contains the tag (country) definitions.
+
+        This function:
+        - Loads color and tag data needed to parse the world map.
+        - Loads and parses the EU4 world data from map files.
+        - If a default savefile is present, builds the world state from it.
+        - Caches and scales the world map image for display.
+        - Updates relevant UI elements, including the map canvas and savefile date.
+        - Binds map interaction events via MapHandler.
+
+        Should be called from a background thread to avoid blocking the UI.
+        """
+        default_savefile_path = os.path.join(self.saves_folder, "default_1444.eu4")
+        if not os.path.exists(default_savefile_path):
+            self.send_message_callback("")
+            return
+
+        self.send_message_callback("Loading game data....")
+        colors = EUColors.load_colors(maps_folder=maps_folder, tags_folder=tags_folder)
+        world = EUWorldData.load_world_data(maps_folder=maps_folder, colors=colors)
+
+        world.update_status_callback = self.send_message_callback
+        world.build_world(self.saves_folder, default_savefile_path)
+        self.world_data = world
+
+        self.painter.world_data = self.world_data
+        self.painter.update_status_callback = self.send_message_callback
+        self.painter.set_base_world_image(self.world_data.world_image)
+
+        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
+        self.refresh_canvas_image()
+
+        self.handler = MapHandler(displayer=self, tk_canvas=self.tk_canvas)
+        self.handler.bind_events()
+
     def create_layout(self):
         """Creates the layout that will be used for the UI and sets the canvas size.
         
         Returns:
             layout (list[list]): The layout for the Window.
         """
+        self.set_canvas_size()
+        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
+
+    def set_canvas_size(self):
         screen_width, screen_height = sg.Window.get_screen_size()
         canvas_width_max = min(Layout.CANVAS_WIDTH_MAX, int(screen_width * 0.9))
 
-        map_width, map_height = self.original_map.size
+        if self.original_map:
+            map_width, map_height = self.original_map.size
+        else:
+            map_width, map_height = constants.DEFAULT_MAP_SIZE
+
         canvas_height = int(canvas_width_max * (map_height / map_width))
         self.canvas_size = (canvas_width_max, canvas_height)
 
-        return Layout.build_layout(self.canvas_size, self.painter.map_modes)
+    def launch(self, maps_folder: str, tags_folder: str):
+        """Initializes and displays the main EU4 Map Viewer UI window.
 
-    def display_map(self):
-        """Displays the main UI window for the Europa Universalis IV savefile viewer.
+        Args:
+            maps_folder (str): The folder that contains the world definition files.
+            tags_folder (str): The folder that contains the tag (country) definitions.
 
-        Initializes the GUI using the `PySimpleGUI` library.
+        This method performs the following steps:
+        - Sets up the PySimpleGUI theme and window layout.
+        - Initializes and displays a loading screen.
+        - Loads and displays the base map image in a canvas.
+        - Starts a background thread to asynchronously load game data.
+        - Enters the main UI event loop to handle user interactions.
+        - Closes the window upon exiting the event loop.
+
+        This is the main entry point for launching the application's interface.
         """
         sg.theme("DarkBlue")
 
-        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         layout = self.create_layout()
-        self.map_image = self.scale_image_to_fit(self.original_map)
-
         window = sg.Window("EU4 Map Viewer", 
             layout, 
             background_color=constants.MEDIUM_FRAME_BG,
@@ -582,15 +669,17 @@ class MapDisplayer:
 
         self.window = window
         self.window.move_to_center()
+        self.window["-SAVEFILE_DATE-"].update(value=f"")
 
-        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
         self.tk_canvas = window["-CANVAS-"].TKCanvas
+        self.display_loading_screen(message="Loading game data....")
 
         self.tk_image = self.image_to_tkimage(self.map_image)
         self.image_id = self.tk_canvas.create_image(0, 0, anchor=tk.NW, image=self.tk_image)
 
-        self.handler = MapHandler(self, self.tk_canvas)
-        self.handler.bind_events()
+        self.display_loading_screen(message="Loading game data....")
+
+        threading.Thread(target=self.load_game_data_async, args=(maps_folder, tags_folder), daemon=True).start()
 
         self.ui_read_loop()
 

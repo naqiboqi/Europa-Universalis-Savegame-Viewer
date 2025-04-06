@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
-from typing import Union
+from typing import Callable, Optional, Union
 
 from .colors import EUColors
 from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion, TerrainType
@@ -78,34 +78,29 @@ class EUWorldData:
         self.current_save_date: str = None
         self.trade_goods: dict[str, float] = {}
 
-        self.update_status_callback = None
+        self.update_status_callback: Optional[Callable[[str], None]] = None
 
     @classmethod
-    def load_world_data(cls, map_folder: str, colors: EUColors):
+    def load_world_data(cls, maps_folder: str, colors: EUColors):
         """Driver class method that handles loading the default world data.
         
         Args:
-            map_folder (str): The folder that contains the world definition files.
+            maps_folder (str): The folder that contains the world definition files.
             colors (EUColors): Stores default province and country (tag) colors.
         """
-        print("Loading EU4 world data....")
         world = cls()
 
-        print("Loading countries....")
         world.countries = world.load_countries(colors)
 
-        print("Loading provinces....")
-        default_province_data_lines = FileUtils.run_external_reader(folder=map_folder, filename="province.txt")
+        default_province_data_lines = FileUtils.run_external_reader(folder=maps_folder, filename="province.txt")
         world.default_province_data = world.load_world_provinces(province_data=default_province_data_lines)
 
-        world.world_image = world.load_world_image(map_folder)
+        world.world_image = world.load_world_image(maps_folder)
         world.province_locations = world.get_province_pixel_locations(colors.default_province_colors)
 
-        print("Loading areas....")
-        world.default_area_data = world.load_world_areas(map_folder)
+        world.default_area_data = world.load_world_areas(maps_folder)
 
-        print("Loading regions....")
-        world.default_region_data = world.load_world_regions(map_folder)
+        world.default_region_data = world.load_world_regions(maps_folder)
 
         return world
 

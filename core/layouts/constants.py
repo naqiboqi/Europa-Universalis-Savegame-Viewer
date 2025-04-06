@@ -1,7 +1,9 @@
+"""Constants for the UI."""
 
 
 
-
+DEFAULT_MAP_SIZE = (5632, 2304)
+"""Default map size."""
 CANVAS_WIDTH_MAX = 1200
 """Maximum width for the canvas."""
 LIGHT_TEXT = "#d2d2d2"

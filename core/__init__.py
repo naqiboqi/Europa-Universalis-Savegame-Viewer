@@ -17,11 +17,11 @@ Imports:
 
 
 from .colors import EUColors
+from .world import EUWorldData
 from .layout import Layout
 from .map_handler import MapHandler
 from .map_paint import MapPainter
 from .map_display import MapDisplayer
-from .world import EUWorldData
 
 __all__ = [
     "EUColors",

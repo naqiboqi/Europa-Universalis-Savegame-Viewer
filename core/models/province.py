@@ -59,7 +59,7 @@ class EUProvince(EUMapEntity):
         province_id (int): The unique ID of the province.
         name (str): The province's name.
         province_type (ProvinceType): The type of province (Owned, Native, Wasteland, or Sea).
-        terrain_type (TerrainType)
+        terrain_type (TerrainType): The type of terrain the province has (e.g. grasslands, steppe, glacial, etc.).
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
         is_capital (Optional[bool]): If the province is the capital of its owning country.
