@@ -9,7 +9,7 @@ Key Features:
     - **Panning**: Allows users to drag the map to view different areas.
     - **Zooming**: Enables users to zoom in and out of the map using mouse scroll or buttons.
     - **Hover Information**: Displays contextual information about provinces, areas, and regions 
-      when hovering over the map.
+        when hovering over the map.
 
 The **MapHandler** class works in conjunction with the `MapDisplayer` and canvas to manage 
 user interactions and ensure smooth map navigation.
@@ -74,14 +74,14 @@ class MapHandler:
 
     def bind_events(self):
         """Binds events to `self.tk_canvas` for event handling."""
-        self.tk_canvas.bind("<Motion>", self.on_hover)
-        self.tk_canvas.bind("<ButtonPress-1>", self.on_press)
-        self.tk_canvas.bind("<B1-Motion>", self.on_drag)
-        self.tk_canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.tk_canvas.bind("<Motion>", self._on_hover)
+        self.tk_canvas.bind("<ButtonPress-1>", self._on_press)
+        self.tk_canvas.bind("<B1-Motion>", self._on_drag)
+        self.tk_canvas.bind("<ButtonRelease-1>", self._on_release)
 
-        self.tk_canvas.bind("<MouseWheel>", self.on_zoom)
-        self.tk_canvas.bind("<Button-4>", self.on_zoom)
-        self.tk_canvas.bind("<Button-5>", self.on_zoom)
+        self.tk_canvas.bind("<MouseWheel>", self._on_zoom)
+        self.tk_canvas.bind("<Button-4>", self._on_zoom)
+        self.tk_canvas.bind("<Button-5>", self._on_zoom)
 
     def clamp_offsets(self, target_offset_x: int=None, target_offset_y: int=None):
         """Restricts the map's position within valid bounds to prevent it from moving out of view.
@@ -195,7 +195,7 @@ class MapHandler:
 
         animate_pan()
 
-    def on_hover(self, event: tk.Event):
+    def _on_hover(self, event: tk.Event):
         """Handles mouse hover events and updates the UI with province/area/region information."""
         if self.disabled:
             return
@@ -223,60 +223,54 @@ class MapHandler:
         elif area.area_id == "lake_area":
             info = f"The waters of {province.name}"
         else:
-            if map_mode == MapMode.POLITICAL:
-                if province.province_type == ProvinceType.SEA:
-                    info = f"The waters of {province.name}"
-                else:
-                    if province.province_type == ProvinceType.NATIVE:
-                        info = f"The native lands of {province.name}"
+            match(map_mode):
+                case MapMode.POLITICAL:
+                    if province.province_type == ProvinceType.SEA:
+                        info = f"The waters of {province.name}"
                     else:
-                        province_owner = province.owner.name or province.owner.tag
-                        info = f"The province of {province.name} ({province_owner})"
+                        if province.province_type == ProvinceType.NATIVE:
+                            info = f"The native lands of {province.name}"
+                        else:
+                            province_owner = province.owner_name
+                            info = f"The province of {province.name} ({province_owner})"
 
-            elif map_mode == MapMode.AREA:
-                if area.is_sea_area:
-                    info = f"The waters of {area.name}"
-                else:
-                    info = f"The province of {province.name} ({area.name})"
+                case MapMode.AREA:
+                    if area.is_sea_area:
+                        info = f"The waters of {area.name}"
+                    else:
+                        info = f"The province of {province.name} ({area.name})"
 
-            elif map_mode == MapMode.REGION:
-                region = displayer.world_data.province_to_region.get(province.province_id)
-                if not region:
-                    return
+                case MapMode.REGION:
+                    region = displayer.world_data.province_to_region.get(province.province_id)
+                    if not region:
+                        return
 
-                if region.is_sea_region:
-                    info = f"The waters of {region.name}"
-                else:
-                    info = f"The province of {province.name} ({region.name})"
+                    if region.is_sea_region:
+                        info = f"The waters of {region.name}"
+                    else:
+                        info = f"The province of {province.name} ({region.name})"
 
-            elif map_mode == MapMode.DEVELOPMENT:
-                if province.province_type == ProvinceType.SEA:
-                    info = f"The waters of {province.name}"
-                else:
-                    info = f"The province of {province.name} (Total Development: {province.development})"
+                case MapMode.DEVELOPMENT:
+                    if province.province_type == ProvinceType.SEA:
+                        info = f"The waters of {province.name}"
+                    else:
+                        info = f"The province of {province.name} (Total Development: {province.development})"
 
-            elif map_mode == MapMode.RELIGION:
-                if province.province_type == ProvinceType.SEA:
-                    info = f"The waters of {province.name}"
-                else:
-                    province_religion = province.religion
-                    info = (
-                        f"The province of {province.name} " 
-                        f"(Religion: {MapUtils.format_name(province_religion) if province_religion else 'No Religion'})")
+                case MapMode.RELIGION:
+                    if province.province_type == ProvinceType.SEA:
+                        info = f"The waters of {province.name}"
+                    else:
+                        province_religion = province.religion
+                        info = (
+                            f"The province of {province.name} " 
+                            f"(Religion: {MapUtils.format_name(province_religion) if province_religion else 'No Religion'})")
 
         if not info:
             return
 
         displayer.window["-MULTILINE-"].update(info)
 
-    def on_click(self, event: tk.Event):
-        """Handles click events on the map canvas.
-        
-        - Determines the clicked location on the canvas and converts it to map coordinates.
-        - Identifies the province at the clicked location."""
-        ...
-
-    def on_press(self, event: tk.Event):
+    def _on_press(self, event: tk.Event):
         """Updates the handler attribtues and is triggered the left-mouse button is pressed."""
         if self.disabled:
             return
@@ -288,7 +282,7 @@ class MapHandler:
         self.start_y = event.y
         self.cursor_movement = 0
 
-    def on_drag(self, event: tk.Event):
+    def _on_drag(self, event: tk.Event):
         """Pans the image while the left mouse button is held down.
         
         Triggered whenever the cursor moves while the left mouse button is pressed.
@@ -314,7 +308,7 @@ class MapHandler:
             self.prev_x = event.x
             self.prev_y = event.y
 
-    def on_release(self, event: tk.Event):
+    def _on_release(self, event: tk.Event):
         """Handles mouse release events.
 
         Updates handler attributes when the left mouse button is released.
@@ -328,9 +322,73 @@ class MapHandler:
 
         cursor_move_threshold = 1
         if self.cursor_movement < cursor_move_threshold:
-            self.on_click(event)
+            self._on_click(event)
 
-    def zoom_map(self, cursor_x: float, cursor_y: float, zoom_in: bool=True):
+    def _on_click(self, event: tk.Event):
+        """Handles click events on the map canvas.
+        
+        - Determines the clicked location on the canvas and converts it to map coordinates.
+        - Identifies the province at the clicked location."""
+        if self.disabled:
+            return
+
+        displayer = self.displayer
+        canvas_x = event.x
+        canvas_y = event.y
+
+        image_x, image_y = self.canvas_to_image_coords(canvas_x, canvas_y)
+        if not (0 <= image_x < displayer.original_map.width or
+                0 <= image_y < displayer.original_map.height):
+            return
+
+        province = self.get_province_at(image_x, image_y)
+        if not province:
+            return
+
+        if (province.province_type == ProvinceType.WASTELAND or
+            province.province_type == ProvinceType.SEA):
+            return
+
+        map_mode = self.displayer.painter.map_mode
+        match(map_mode):
+            case MapMode.POLITICAL:
+                selected_item = province
+
+            case MapMode.AREA:
+                selected_item = self.world_data.province_to_area.get(province.province_id)
+                if not selected_item:
+                    return
+
+            case MapMode.REGION:
+                selected_item = self.world_data.province_to_region.get(province.province_id)
+                if not selected_item:
+                    return
+
+            case MapMode.DEVELOPMENT:
+                selected_item = province
+
+            case MapMode.RELIGION:
+                selected_item = province
+
+        self.displayer.window = self.displayer.update_details_from_selected_item(selected_item)
+
+    def _on_zoom(self, event: tk.Event):
+        """Handles zoom events triggered by the mouse scroll or trackpad gestures.
+
+        Determines the zoom direction based on the event data and calls `zoom_map` 
+        with the appropriate zoom direction.
+        """
+        if self.disabled:
+            return
+
+        cursor_x, cursor_y = event.x, event.y
+
+        if event.delta > 0 or event.num == 4:
+            self._zoom_map(cursor_x, cursor_y, zoom_in=True)
+        elif event.delta < 0 or event.num == 5:
+            self._zoom_map(cursor_x, cursor_y, zoom_in=False)
+
+    def _zoom_map(self, cursor_x: float, cursor_y: float, zoom_in: bool=True):
         """Zooms in or out on the map while keeping the cursor position as the focal point.
 
         This function scales the map image based on the zoom factor, updates offsets 
@@ -384,18 +442,3 @@ class MapHandler:
 
         self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
 
-    def on_zoom(self, event: tk.Event):
-        """Handles zoom events triggered by the mouse scroll or trackpad gestures.
-
-        Determines the zoom direction based on the event data and calls `zoom_map` 
-        with the appropriate zoom direction.
-        """
-        if self.disabled:
-            return
-
-        cursor_x, cursor_y = event.x, event.y
-
-        if event.delta > 0 or event.num == 4:
-            self.zoom_map(cursor_x, cursor_y, zoom_in=True)
-        elif event.delta < 0 or event.num == 5:
-            self.zoom_map(cursor_x, cursor_y, zoom_in=False)

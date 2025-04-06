@@ -70,11 +70,11 @@ class MapPainter:
 
         self.map_mode = MapMode.POLITICAL
         self.map_modes = {
-            MapMode.POLITICAL: self.draw_map_political,
-            MapMode.AREA: self.draw_map_area,
-            MapMode.REGION: self.draw_map_region,
-            MapMode.DEVELOPMENT: self.draw_map_development,
-            MapMode.RELIGION: self.draw_map_religion
+            MapMode.POLITICAL: self._draw_map_political,
+            MapMode.AREA: self._draw_map_area,
+            MapMode.REGION: self._draw_map_region,
+            MapMode.DEVELOPMENT: self._draw_map_development,
+            MapMode.RELIGION: self._draw_map_religion
         }
 
         self.update_status_callback: Optional[Callable[[str], None]] = None
@@ -114,7 +114,7 @@ class MapPainter:
         Returns:
             PIL.Image: The current map image.
         """
-        draw_method = self.map_modes.get(self.map_mode, self.draw_map_political)
+        draw_method = self.map_modes.get(self.map_mode, self._draw_map_political)
         if self.update_status_callback:
             self.update_status_callback("Drawing map....")
 
@@ -130,7 +130,7 @@ class MapPainter:
 
         return self._world_image
 
-    def draw_map_political(self):
+    def _draw_map_political(self):
         """Draws the map in the **Political** map mode.
         
         In this mode, each province is colored based on its owning country.  
@@ -188,7 +188,7 @@ class MapPainter:
 
         return map_pixels_bordered, map_pixels_borderless
 
-    def draw_map_area(self):
+    def _draw_map_area(self):
         """Draws the map in the **Areas** map mode.
         
         In this mode, each province is colored based on its owning area.  
@@ -240,7 +240,7 @@ class MapPainter:
 
         return map_pixels_bordered, map_pixels_borderless
 
-    def draw_map_region(self):
+    def _draw_map_region(self):
         """Draws the map in the **Regions** map mode.
         
         In this mode, each province/area is colored based on its owning region.  
@@ -310,7 +310,7 @@ class MapPainter:
 
         return map_pixels_bordered, map_pixels_borderless
 
-    def development_to_color(self, development: int, max_development: float=150):
+    def _development_to_color(self, development: int, max_development: float=150):
         """Gets the green color for province given its development.
         
         Args:
@@ -324,7 +324,7 @@ class MapPainter:
         intensity = int(255 * normalized)
         return (0, intensity, 0)
 
-    def draw_map_development(self):
+    def _draw_map_development(self):
         """Draws the map in the **Development** map mode.
         
         In this mode, each province is colored based on its total development.  
@@ -364,7 +364,7 @@ class MapPainter:
 
             province_color = province_type_colors.get(province.province_type)
             if province_color is None:
-                province_color = self.development_to_color(province.development, max_development)
+                province_color = self._development_to_color(province.development, max_development)
 
             # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
             x_coords, y_coords = province_pixels.T
@@ -379,7 +379,13 @@ class MapPainter:
 
         return map_pixels_bordered, map_pixels_borderless
 
-    def draw_map_religion(self):
+    def _draw_map_trade(self):
+        ...
+
+    def _draw_map_culture(self):
+        ...
+
+    def _draw_map_religion(self):
         """Draws the map in the **Religion** map mode.
         
         In this mode, each province is colored based on its dominant religion.  

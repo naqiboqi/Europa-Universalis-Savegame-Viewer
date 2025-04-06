@@ -172,7 +172,7 @@ class MapDisplayer:
     def update_canvas(self, offset_x: int=None, offset_y: int=None):
         """Updates the canvas by applying all pan and/or zoom adjustments to the image.
         
-        This is done after every zoom and pan event, and after changing the map mode or selected savefile.
+        This is done after every zoom and pan event, or after changing the map mode or selected savefile.
         """
         if offset_x == None:
             offset_x = self.offset_x
@@ -193,9 +193,10 @@ class MapDisplayer:
         self.offset_x = 0
         self.offset_y = 0
         self.map_image = self.scale_image_to_fit(self.original_map)
+
         self.update_canvas()
 
-    def refresh_canvas_image(self):
+    def refresh_canvas(self):
         """Refreshes the canvas after loading a new savefile.
         
         Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
@@ -240,7 +241,7 @@ class MapDisplayer:
         if province.province_type == ProvinceType.OWNED:
             data = {
                 "-INFO_PROVINCE_NAME-": province.name,
-                "-INFO_PROVINCE_OWNER-": province.owner.name or province.owner.tag,
+                "-INFO_PROVINCE_OWNER-": province.owner_name,
                 "-INFO_PROVINCE_CAPITAL-": province.capital,
                 "-INFO_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
                 "-INFO_PROVINCE_TOTAL_DEV-": province.development,
@@ -357,7 +358,7 @@ class MapDisplayer:
             for province in area:
                 row = [
                     province.name,
-                    province.owner.name,
+                    province.owner_name,
                     province.development,
                     province.trade_power,
                     MapUtils.format_name(province.religion),
@@ -463,7 +464,7 @@ class MapDisplayer:
     def handle_map_loaded(self):
         """Handles map reloading when a new save file is loaded."""
         self.painter.clear_cache()
-        self.refresh_canvas_image()
+        self.refresh_canvas()
 
         self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
         self.send_message_callback("....")
@@ -612,10 +613,10 @@ class MapDisplayer:
 
         self.painter.world_data = self.world_data
         self.painter.update_status_callback = self.send_message_callback
-        self.painter.set_base_world_image(self.world_data.world_image)
+        self.painter.set_base_world_image(image=self.world_data.world_image)
 
         self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
-        self.refresh_canvas_image()
+        self.refresh_canvas()
 
         self.handler = MapHandler(displayer=self, tk_canvas=self.tk_canvas)
         self.handler.bind_events()
