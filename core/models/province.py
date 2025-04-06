@@ -169,6 +169,17 @@ class EUProvince(EUMapEntity):
         return self
 
     @property
+    def owner_name(self):
+        match(self.province_type):
+            case ProvinceType.OWNED:
+                owner = self.owner
+                return owner.name or owner.tag
+            case ProvinceType.NATIVE:
+                return "Native Lands"
+
+        return "-"
+
+    @property
     def development(self):
         """Returns the total development of the province.
         
