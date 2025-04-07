@@ -116,7 +116,7 @@ class MapPainter:
         """
         draw_method = self.map_modes.get(self.map_mode, self._draw_map_political)
         if self.update_status_callback:
-            self.update_status_callback("Drawing map....")
+            self.update_status_callback(f"Loading map....")
 
         map_pixels, map_pixels_borderless = draw_method()
 
@@ -127,6 +127,9 @@ class MapPainter:
             "border": Image.fromarray(map_pixels),
             "no_border": Image.fromarray(map_pixels_borderless)
         }
+
+        if self.update_status_callback:
+            self.update_status_callback(f"Displaying map mode {self.map_mode.value}")
 
         return self._world_image
 
