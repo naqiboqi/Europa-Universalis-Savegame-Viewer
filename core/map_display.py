@@ -467,7 +467,7 @@ class MapDisplayer:
         self.refresh_canvas()
 
         self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
-        self.send_message_callback("....")
+        self.send_message_callback("Save loaded!")
 
         self.handler.disabled = False
 
