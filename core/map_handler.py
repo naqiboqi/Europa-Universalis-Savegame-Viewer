@@ -95,7 +95,7 @@ class MapHandler:
             target_offset_y (int, optional): The target y-offset for the map. If None, modifies `displayer.offset_y`.
 
         Returns:
-            offsets|None (tuple[int, int]): If target offsets are provided, returns the clamped (x, y) offsets. 
+            offsets|None (tuple[int, int]|None): If target offsets are provided, returns the clamped (x, y) offsets. 
                 Otherwise, updates `displayer.offset_x` and `displayer.offset_y` directly.
         """
         displayer = self.displayer
@@ -133,7 +133,7 @@ class MapHandler:
         return (image_x, image_y)
 
     def get_province_at(self, image_x: int, image_y: int):
-        """Gets the province at the given `x, y` location on the map.
+        """Gets the province at the given `(x, y)` location on the map.
         
         Args:
             image_x (int): x location on the map image.
@@ -183,8 +183,8 @@ class MapHandler:
                 displayer.offset_x = target_offset_x
                 displayer.offset_y = target_offset_y
                 self.clamp_offsets()
-                self.tk_canvas.coords(displayer.image_id, target_offset_x, target_offset_y)
-                return
+
+                return self.tk_canvas.coords(displayer.image_id, target_offset_x, target_offset_y)
 
             displayer.offset_x += dx * 0.1
             displayer.offset_y += dy * 0.1
@@ -441,4 +441,3 @@ class MapHandler:
         self.displayer.update_canvas()
 
         self.tk_canvas.after(50, lambda: setattr(self, 'zooming', False))
-

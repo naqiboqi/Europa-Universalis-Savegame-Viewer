@@ -481,7 +481,7 @@ class MapDisplayer:
 
             def load_savefile():
                 self.world_data.build_world(save_folder=self.saves_folder, savefile=new_savefile)
-                self.window.write_event_value("-MAP_LOADED-", None)
+                self.window.write_event_value("-SAVE_LOADED-", None)
 
             threading.Thread(target=load_savefile, daemon=True).start()
 
@@ -525,6 +525,12 @@ class MapDisplayer:
             self.handler.go_to_entity_location(self.selected_item)
             self.window = self.update_details_from_selected_item(self.selected_item)
 
+    def handle_table(self, event: tuple, table_key: str):
+        """Handles selection of a table column or row."""
+        row, col = event[2]
+        if row == -1:
+            self.window[table_key].sort_by_column(col)
+
     def ui_read_loop(self):
         """Main event loop for handling user interactions within the PySimpleGUI window.
 
@@ -554,7 +560,7 @@ class MapDisplayer:
                 message = values[event]
                 self.send_message_to_multiline(message=message)
 
-            if event == "-MAP_LOADED-":
+            if event == "-SAVE_LOADED-":
                 self.handle_map_loaded()
 
             if event == "-LOAD_SAVEFILE-":
@@ -577,6 +583,9 @@ class MapDisplayer:
 
             if event == "-GOTO-":
                 self.handle_go_to()
+
+            if isinstance(event, tuple) and "TABLE" in event[0] and event[1] == "+CLICKED+":
+                self.handle_table(event=event, table_key=event[0])
 
             if event == "-RESET-":
                 self.reset_canvas_to_initial()

@@ -14,6 +14,7 @@ import FreeSimpleGUI as sg
 
 from . import constants
 from . import LayoutHelper
+from .elements import SortableTable
 from ..utils import IconLoader
 
 
@@ -197,19 +198,21 @@ class AreaLayout:
         """
         table_header = AreaLayout.create_provinces_table_header()
 
-        table = sg.Table(
+        table = SortableTable(
             values=[],
             key="-INFO_AREA_PROVINCES_TABLE-",
             alternating_row_color=constants.DARK_FRAME_BG,
             background_color=constants.MEDIUM_FRAME_BG,
             auto_size_columns=False,
             col_widths=[20, 20, 4, 10, 15, 18],
-            headings=["Name", "Owner", "Dev.", "Trade Power", "Religion", "Culture"],
-            header_background_color=constants.SECTION_BANNER_BG,
-            header_relief=sg.RELIEF_SOLID,
+            enable_events=True,
+            enable_click_events=True,
             font=("Georgia", 12),
             text_color=constants.LIGHT_TEXT,
+            headings=["Name", "Owner", "Dev.", "Trade Power", "Religion", "Culture"],
+            header_background_color=constants.SECTION_BANNER_BG,
             hide_vertical_scroll=False,
+            header_relief=sg.RELIEF_SOLID,
             justification="left",
             num_rows=5,
             pad=(0, 0),
