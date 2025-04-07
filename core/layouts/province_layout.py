@@ -461,7 +461,7 @@ class ProvinceLayout:
             image_key="-INFO_PROVINCE_FORT_LEVEL-",
             borders=[(constants.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
             border_pad=(10, 10),
-            image_size=(48, 48))
+            image_size=(42, 42))
 
         return sg.Column([
             [military_header_frame],
