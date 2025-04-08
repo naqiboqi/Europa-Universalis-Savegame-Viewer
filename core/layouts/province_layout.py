@@ -147,7 +147,9 @@ class ProvinceLayout:
                 font=("Georgia", 12), 
                 text_color=constants.LIGHT_TEXT)],
             [religion_info]
-        ], background_color=constants.DARK_FRAME_BG, 
+        ], background_color=constants.DARK_FRAME_BG,
+        border_width=3,
+        expand_x=True,
         expand_y=True,
         pad=(0, 0), 
         relief=sg.RELIEF_SUNKEN,
@@ -167,16 +169,17 @@ class ProvinceLayout:
             [demographics_header_label, demographics_icon, sg.Push(background_color=constants.SECTION_BANNER_BG)]
         ], background_color=constants.SECTION_BANNER_BG, 
         expand_x=True, 
-        pad=((0, 0), (0, 15)),
+        pad=((0, 0), (10, 15)),
         relief=sg.RELIEF_SOLID, 
         vertical_alignment="top")
 
         return sg.Column([
             [demographics_header_frame],
             [demographics_frame]
-        ], background_color=constants.LIGHT_FRAME_BG, 
+        ], background_color=constants.LIGHT_FRAME_BG,
+        expand_x=True,
         expand_y=True, 
-        pad=(0, 10), 
+        pad=((15, 0), (0, 0)), 
         vertical_alignment="top")
 
     @staticmethod
@@ -235,7 +238,7 @@ class ProvinceLayout:
         ], background_color=constants.DARK_FRAME_BG,
         border_width=3,
         expand_x=True,  
-        pad=(10, 5), 
+        pad=((10, 0), (0, 0)), 
         relief=sg.RELIEF_SUNKEN,
         vertical_alignment="top")
 
@@ -255,9 +258,11 @@ class ProvinceLayout:
             image_size=(28, 28))
         trade_header_frame = sg.Frame("", [
             [trade_header_label, trade_icon, sg.Push(background_color=constants.SECTION_BANNER_BG)]
-        ], background_color=constants.SECTION_BANNER_BG, 
+        ], background_color=constants.SECTION_BANNER_BG,
         expand_x=True,
-        relief=sg.RELIEF_SOLID)
+        pad=((15, 15), (10, 10)),
+        relief=sg.RELIEF_SOLID,
+        vertical_alignment="top")
 
         home_trade_node = LayoutHelper.create_text_with_frame(
             "",
@@ -317,25 +322,26 @@ class ProvinceLayout:
             [home_trade_icon, home_trade_node],
             [goods_and_trade_modifiers]
         ], background_color=constants.DARK_FRAME_BG,
-        pad=(5, 5),
+        border_width=3,
+        pad=(0, 5),
         relief=sg.RELIEF_SUNKEN)
 
         trade_influences_column = sg.Column([
             [trade_influences_frame]
-        ], background_color=constants.LIGHT_FRAME_BG, pad=(5, 5), vertical_alignment="center")
+        ], background_color=constants.LIGHT_FRAME_BG, pad=(10, 0), vertical_alignment="center")
 
         trade_good_icon = LayoutHelper.create_icon_with_border(
             icon_name="",
             image_key="-INFO_PROVINCE_TRADE_GOOD-",
             borders=[
-                (constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE),
-                (constants.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
+                (constants.GOLD_FRAME_LOWER, 2, sg.RELIEF_RIDGE),
+                (constants.GOLD_FRAME_UPPER, 2, sg.RELIEF_RIDGE)],
             border_pad=(0, 5),
             image_size=(64, 64))
         trade_good_value = sg.Text(
             "",
             key="-INFO_PROVINCE_TRADE_GOOD_PRICE-",
-            background_color=constants.DARK_FRAME_BG,
+            background_color=constants.LIGHT_FRAME_BG,
             font=("Georgia", 12, "bold"),
             justification="center",
             pad=(0, 0),
@@ -350,14 +356,14 @@ class ProvinceLayout:
 
         value_frame = sg.Frame("", [
             [trade_good_value, ducat_income_icon]
-        ], background_color=constants.DARK_FRAME_BG, 
+        ], background_color=constants.LIGHT_FRAME_BG, 
         relief=sg.RELIEF_FLAT,
         vertical_alignment="center")
 
         trade_good_frame = sg.Frame("", [
-            [sg.Push(constants.DARK_FRAME_BG), trade_good_icon, sg.Push(constants.DARK_FRAME_BG)],
-            [sg.Push(constants.DARK_FRAME_BG), value_frame, sg.Push(constants.DARK_FRAME_BG)]
-        ], background_color=constants.DARK_FRAME_BG,
+            [sg.Push(constants.LIGHT_FRAME_BG), trade_good_icon, sg.Push(constants.LIGHT_FRAME_BG)],
+            [sg.Push(constants.LIGHT_FRAME_BG), value_frame, sg.Push(constants.LIGHT_FRAME_BG)]
+        ], background_color=constants.LIGHT_FRAME_BG,
         pad=(5, 5),
         relief=sg.RELIEF_FLAT)
 
@@ -367,12 +373,18 @@ class ProvinceLayout:
 
         return sg.Column([
             [trade_header_frame],
-            [trade_info_column, trade_influences_column, trade_good_column],
+            [
+                trade_info_column, 
+                trade_influences_column, 
+                sg.Push(constants.LIGHT_FRAME_BG), 
+                trade_good_column, 
+                sg.Push(constants.LIGHT_FRAME_BG)
+            ],
         ], background_color=constants.LIGHT_FRAME_BG, 
         expand_x=True, 
         expand_y=True, 
         pad=(0, 0),
-        vertical_alignment="center")
+        vertical_alignment="center")    
 
     @staticmethod
     def create_military_info_column():
@@ -436,6 +448,7 @@ class ProvinceLayout:
         ], background_color=constants.MEDIUM_FRAME_BG,
         element_justification="center",
         expand_x=True,
+        pad=((15, 0), (0, 0)),
         relief=sg.RELIEF_SUNKEN)
 
         military_label = sg.Text(
@@ -452,10 +465,9 @@ class ProvinceLayout:
             [military_label, military_icon, sg.Push(background_color=constants.SECTION_BANNER_BG)]
         ], background_color=constants.SECTION_BANNER_BG, 
         expand_x=True, 
-        pad=((10, 10), (0, 10)),
+        pad=((15, 15), (0, 10)),
         relief=sg.RELIEF_SOLID)
 
-        fort_level = sg.Image("", key="-INFO_PROVINCE_FORT_LEVEL-", )
         fort_level = LayoutHelper.create_icon_with_border(
             "",
             image_key="-INFO_PROVINCE_FORT_LEVEL-",
@@ -486,7 +498,7 @@ class ProvinceLayout:
         trade_and_mil_column = sg.Column([
             [ProvinceLayout.create_trade_info_column()],
             [ProvinceLayout.create_military_info_column()]
-        ], background_color=constants.LIGHT_FRAME_BG, expand_x=True, pad=(5, 5))
+        ], background_color=constants.LIGHT_FRAME_BG, expand_x=True, expand_y=True, pad=(0, 0))
 
         development_label = LayoutHelper.create_text_with_frame(
             content="Development",
@@ -515,21 +527,27 @@ class ProvinceLayout:
             relief=sg.RELIEF_SUNKEN,
             size=(15, 1))
 
+        bottom_column = sg.Column([
+            [demographic_info_column, trade_and_mil_column]
+        ], background_color=constants.LIGHT_FRAME_BG,
+        expand_x=True,
+        expand_y=True,
+        pad=((0, 0), (0, 15)),
+        vertical_alignment="top")
+
         geographic_info_frame = ProvinceLayout.create_geographic_province_info_frame()
         province_info_frame = sg.Frame("", [
             [geographic_info_frame],
             [development_label, development_info_frame,
                 sg.Push(background_color=constants.LIGHT_FRAME_BG),
             area_km2_label, area_km2_value],
-            [demographic_info_column, trade_and_mil_column]
+            [bottom_column]
         ], background_color=constants.LIGHT_FRAME_BG, 
         border_width=5,
-        expand_x=True,
-        expand_y=True,
         key="-PROVINCE_INFO_FRAME-",
         pad=(10, 10),
-        size=(985, 510),
-        relief=sg.RELIEF_GROOVE)
+        relief=sg.RELIEF_GROOVE,
+        size=(1010, 575))
 
         return sg.Column([
             [province_info_frame]
@@ -538,4 +556,12 @@ class ProvinceLayout:
         expand_y=True,
         key="-PROVINCE_INFO_COLUMN-",
         pad=((5, 10), (10, 10)),
-        vertical_alignment="top")
+        scrollable=True,
+        sbar_arrow_color=constants.GOLD_FRAME_UPPER,
+        sbar_background_color=constants.RED_BANNER_BG,
+        sbar_trough_color=constants.GOLD_FRAME_LOWER,
+        sbar_relief=sg.RELIEF_GROOVE,
+        sbar_width=5,
+        vertical_scroll_only=True,
+        vertical_alignment="top",
+        visible=True)

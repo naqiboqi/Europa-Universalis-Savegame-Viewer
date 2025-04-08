@@ -292,7 +292,7 @@ class AreaLayout:
         key="-AREA_INFO_FRAME-",
         pad=(10, 10),
         relief=sg.RELIEF_GROOVE,
-        size=(985, 510))
+        size=(1010, 575))
 
         return sg.Column([
             [area_info_frame]
@@ -301,5 +301,12 @@ class AreaLayout:
         expand_y=True,
         key="-AREA_INFO_COLUMN-",
         pad=((5, 10), 10, 10),
+        scrollable=True,
+        sbar_arrow_color=constants.GOLD_FRAME_UPPER,
+        sbar_background_color=constants.RED_BANNER_BG,
+        sbar_trough_color=constants.GOLD_FRAME_LOWER,
+        sbar_relief=sg.RELIEF_GROOVE,
+        sbar_width=5,
+        vertical_scroll_only=True,
         vertical_alignment="top",
         visible=False)

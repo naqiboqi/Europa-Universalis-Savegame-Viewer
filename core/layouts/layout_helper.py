@@ -197,7 +197,7 @@ class LayoutHelper:
 
     @staticmethod
     def create_development_info_frame(name: str):
-        """Creates the development frame section for a province.
+        """Creates the development frame section for a given entity.
 
         Returns:
             frame (Frame): The frame containing the development info.
@@ -361,7 +361,6 @@ class LayoutHelper:
         pad=((10, 10), (0, 10)),
         vertical_alignment="top")
 
-    
     @staticmethod
     def create_income_column(name: str):
         total_income_icon = LayoutHelper.create_icon_with_border(

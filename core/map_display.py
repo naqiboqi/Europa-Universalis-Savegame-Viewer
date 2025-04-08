@@ -228,6 +228,13 @@ class MapDisplayer:
         return self.window.refresh()
 
     def update_province_details(self, province: EUProvince):
+        """Checks the type of the province and calls the appropriate `update....province_details()` method."""
+        if province.province_type == ProvinceType.OWNED:
+            self.update_owned_province_details(province)
+        elif province.province_type == ProvinceType.NATIVE:
+            self.update_native_province_details(province)
+
+    def update_owned_province_details(self, province: EUProvince):
         """Updates the information displayed for a specific province in the UI.
 
         This method retrieves the relevant data for a province, such as its name, owner, capital,
@@ -237,82 +244,90 @@ class MapDisplayer:
             province (EUProvince): The province to be displayed.
         """
         window = self.window
+        data = {
+            "-INFO_PROVINCE_NAME-": province.name,
+            "-INFO_PROVINCE_OWNER-": province.owner_name,
+            "-INFO_PROVINCE_CAPITAL-": province.capital,
+            "-INFO_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
+            "-INFO_PROVINCE_TOTAL_DEV-": province.development,
+            "-INFO_PROVINCE_REGION_NAME-": self.world_data.province_to_region.get(province.province_id, None).name,
+            "-INFO_PROVINCE_BASE_TAX-": province.base_tax,
+            "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
+            "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
+            "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
+            "-INFO_PROVINCE_GOODS_PRODUCED-": province.goods_produced,
+            "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
+            "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
+            "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
+            "-INFO_PROVINCE_SIZE_KM-": province.area_km2,
+            "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
+            "-INFO_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
+            "-INFO_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
+        }
 
-        if province.province_type == ProvinceType.OWNED:
-            data = {
-                "-INFO_PROVINCE_NAME-": province.name,
-                "-INFO_PROVINCE_OWNER-": province.owner_name,
-                "-INFO_PROVINCE_CAPITAL-": province.capital,
-                "-INFO_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
-                "-INFO_PROVINCE_TOTAL_DEV-": province.development,
-                "-INFO_PROVINCE_REGION_NAME-": self.world_data.province_to_region.get(province.province_id, None).name,
-                "-INFO_PROVINCE_BASE_TAX-": province.base_tax,
-                "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
-                "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
-                "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
-                "-INFO_PROVINCE_GOODS_PRODUCED-": province.goods_produced,
-                "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
-                "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
-                "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
-                "-INFO_PROVINCE_SIZE_KM-": province.area_km2,
-                "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
-                "-INFO_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
-                "-INFO_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
-            }
+        window["-REGION_INFO_COLUMN-"].update(visible=False)
+        window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
 
-            window["-REGION_INFO_COLUMN-"].update(visible=False)
-            window["-AREA_INFO_COLUMN-"].update(visible=False)
-            window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
+        for element, attr_value in data.items():
+            if attr_value is not None:
+                window_element = window[element]
+                window_element.update(value=attr_value, visible=True)
+            else:
+                window[element].update(value=0)
 
-            for element, attr_value in data.items():
-                if attr_value is not None:
-                    window_element = window[element]
-                    window_element.update(value=attr_value, visible=True)
-                else:
-                    window[element].update(value=0)
+        trade_good_element = window["-INFO_PROVINCE_TRADE_GOOD-"]
+        trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
 
-            trade_good_element = window["-INFO_PROVINCE_TRADE_GOOD-"]
-            trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
+        trade_good_price_element = window["-INFO_PROVINCE_TRADE_GOOD_PRICE-"]
+        trade_value = self.world_data.trade_goods.get(province.trade_goods) or 0.00
+        trade_good_price_element.update(value=f"{trade_value:.2f}")
 
-            trade_good_price_element = window["-INFO_PROVINCE_TRADE_GOOD_PRICE-"]
-            trade_value = self.world_data.trade_goods.get(province.trade_goods) or 0.00
-            trade_good_price_element.update(value=f"{trade_value:.2f}")
+        trade_income_element = window["-INFO_PROVINCE_TRADE_VALUE-"]
+        trade_income_element.update(value=trade_value * province.base_production / 10)
 
-            trade_income_element = window["-INFO_PROVINCE_TRADE_VALUE-"]
-            trade_income_element.update(value=trade_value * province.base_production / 10)
+        fort_level_element = window["-INFO_PROVINCE_FORT_LEVEL-"]
+        forts = {
+            0: "no_fort",
+            1: "fort_15th",
+            2: "fort_16th",
+            3: "fort_17th",
+            4: "fort_18th"
+        }
 
-            fort_level_element = window["-INFO_PROVINCE_FORT_LEVEL-"]
-            forts = {
-                0: "no_fort",
-                1: "fort_15th",
-                2: "fort_16th",
-                3: "fort_17th",
-                4: "fort_18th"
-            }
+        if province.fort_level in forts:
+            fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
 
-            if province.fort_level in forts:
-                fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
+        inland_trade_element = window["-INFO_PROVINCE_INLAND_TRADE_CENTER-"]
+        inland_centers_of_trade = {
+            1: "cot_1",
+            2: "cot_2",
+            3: "cot_3"
+        }
 
-            inland_trade_element = window["-INFO_PROVINCE_INLAND_TRADE_CENTER-"]
-            inland_centers_of_trade = {
-                1: "cot_1",
-                2: "cot_2",
-                3: "cot_3"
-            }
+        center_of_trade_element = window["-INFO_PROVINCE_CENTER_OF_TRADE-"]
+        centers_of_trade = {
+            1: "cot_emporium",
+            2: "cot_market_town",
+            3: "cot_world_trade_center"
+        }
 
-            center_of_trade_element = window["-INFO_PROVINCE_CENTER_OF_TRADE-"]
-            centers_of_trade = {
-                1: "cot_emporium",
-                2: "cot_market_town",
-                3: "cot_world_trade_center"
-            }
+        if province.center_of_trade in centers_of_trade:
+            inland_cot = icon_loader.get_icon(inland_centers_of_trade[province.center_of_trade])
+            inland_trade_element.update(filename=inland_cot)
 
-            if province.center_of_trade in centers_of_trade:
-                inland_cot = icon_loader.get_icon(inland_centers_of_trade[province.center_of_trade])
-                inland_trade_element.update(filename=inland_cot)
+            cot = icon_loader.get_icon(centers_of_trade[province.center_of_trade])
+            center_of_trade_element.update(filename=cot)
 
-                cot = icon_loader.get_icon(centers_of_trade[province.center_of_trade])
-                center_of_trade_element.update(filename=cot)
+    def update_native_province_details(self, province: EUProvince):
+        window = self.window
+        data = {}
+
+        window["-REGION_INFO_COLUMN-"].update(visible=False)
+        window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=True)
 
     def update_area_details(self, area: EUArea):
         """Updates the information displayed for a specific area in the UI.
@@ -344,6 +359,7 @@ class MapDisplayer:
             }
 
             window["-REGION_INFO_COLUMN-"].update(visible=False)
+            window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=True)
 
@@ -404,6 +420,7 @@ class MapDisplayer:
             }
 
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+            window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=False)
             window["-REGION_INFO_COLUMN-"].update(visible=True)
 
@@ -437,31 +454,17 @@ class MapDisplayer:
             total_income_element = window["-INFO_REGION_INCOME-"]
             total_income_element.update(value=round(region.tax_income + total_production_income, 2))
 
-    def handle_border_toggle(self, values):
-        """Toggles displaying map borders."""
-        self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
-        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
-        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
-        self.update_canvas()
+    def handle_setup_complete(self):
+        """Handles display adjustments after game and save data is loaded for the first time."""
+        self.painter.set_base_world_image(image=self.world_data.world_image)
 
-    def handle_map_mode_change(self, map_mode: MapMode):
-        """Updates the map mode and redraws the map for that mode.
-        
-        Args:
-            map_mode (MapMode): The new map mod selected by the user.
-        """
-        if map_mode == self.painter.map_mode:
-            return
+        self.refresh_canvas()
+        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
 
-        self.display_loading_screen(message="Loading map....")
+        self.handler = MapHandler(displayer=self, tk_canvas=self.tk_canvas)
+        self.handler.bind_events()
 
-        self.painter.map_mode = map_mode
-        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
-
-        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
-        self.reset_canvas_to_initial()
-
-    def handle_map_loaded(self):
+    def handle_save_loaded(self):
         """Handles map reloading when a new save file is loaded."""
         self.painter.clear_cache()
         self.refresh_canvas()
@@ -484,6 +487,31 @@ class MapDisplayer:
                 self.window.write_event_value("-SAVE_LOADED-", None)
 
             threading.Thread(target=load_savefile, daemon=True).start()
+
+    def handle_border_toggle(self, values):
+        """Toggles displaying map borders."""
+        self.show_map_borders = values["-SHOW_MAP_BORDERS-"]
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
+        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+        self.update_canvas()
+
+    def handle_map_mode_change(self, map_mode: MapMode):
+        """Updates the map mode and redraws the map for that mode.
+        
+        Args:
+            map_mode (MapMode): The new map mod selected by the user.
+        """
+        if map_mode == self.painter.map_mode:
+            return
+
+        self.send_message_callback("Loading map....")
+        self.display_loading_screen(message="Loading map....")
+
+        self.painter.map_mode = map_mode
+        self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
+
+        self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+        self.reset_canvas_to_initial()
 
     def handle_search_for(self, values):
         """Handles searching for entities in the world data."""
@@ -560,8 +588,11 @@ class MapDisplayer:
                 message = values[event]
                 self.send_message_to_multiline(message=message)
 
+            if event == "-SETUP_COMPLETE-":
+                self.handle_setup_complete()
+
             if event == "-SAVE_LOADED-":
-                self.handle_map_loaded()
+                self.handle_save_loaded()
 
             if event == "-LOAD_SAVEFILE-":
                 self.handle_load_savefile()
@@ -590,7 +621,7 @@ class MapDisplayer:
             if event == "-RESET-":
                 self.reset_canvas_to_initial()
 
-    def load_game_data_async(self, maps_folder: str, tags_folder: str):
+    def _load_game_data_async(self, maps_folder: str, tags_folder: str):
         """Loads game data and initializes the world for display asynchronously.
 
         Args:
@@ -609,7 +640,8 @@ class MapDisplayer:
         """
         default_savefile_path = os.path.join(self.saves_folder, "default_1444.eu4")
         if not os.path.exists(default_savefile_path):
-            self.send_message_callback("")
+            self.send_message_callback("Can't find default game data.... closing program.")
+            SystemExit
             return
 
         self.send_message_callback("Loading game data....")
@@ -622,13 +654,8 @@ class MapDisplayer:
 
         self.painter.world_data = self.world_data
         self.painter.update_status_callback = self.send_message_callback
-        self.painter.set_base_world_image(image=self.world_data.world_image)
 
-        self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
-        self.refresh_canvas()
-
-        self.handler = MapHandler(displayer=self, tk_canvas=self.tk_canvas)
-        self.handler.bind_events()
+        self.window.write_event_value("-SETUP_COMPLETE-", None)
 
     def create_layout(self):
         """Creates the layout that will be used for the UI and sets the canvas size.
@@ -671,8 +698,9 @@ class MapDisplayer:
         sg.theme("DarkBlue")
 
         layout = self.create_layout()
-        window = sg.Window("EU4 Map Viewer", 
-            layout, 
+        window = sg.Window(
+            title="EU4 Map Viewer", 
+            layout=layout,
             background_color=constants.MEDIUM_FRAME_BG,
             finalize=True, 
             return_keyboard_events=True)
@@ -689,7 +717,7 @@ class MapDisplayer:
 
         self.display_loading_screen(message="Loading game data....")
 
-        threading.Thread(target=self.load_game_data_async, args=(maps_folder, tags_folder), daemon=True).start()
+        threading.Thread(target=self._load_game_data_async, args=(maps_folder, tags_folder), daemon=True).start()
 
         self.ui_read_loop()
 

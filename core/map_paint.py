@@ -115,9 +115,6 @@ class MapPainter:
             PIL.Image: The current map image.
         """
         draw_method = self.map_modes.get(self.map_mode, self._draw_map_political)
-        if self.update_status_callback:
-            self.update_status_callback(f"Loading map....")
-
         map_pixels, map_pixels_borderless = draw_method()
 
         self._world_image = Image.fromarray(map_pixels)

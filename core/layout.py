@@ -12,7 +12,7 @@ import os
 
 from .layouts import constants
 from .layouts import LayoutHelper
-from .layouts import ProvinceLayout, AreaLayout, RegionLayout
+from .layouts import ProvinceLayout, NativeLayout, AreaLayout, RegionLayout
 from .utils import IconLoader
 
 
@@ -123,7 +123,7 @@ class Layout:
             borders=[
                 (constants.GOLD_FRAME_LOWER, 3, sg.RELIEF_RIDGE),
                 (constants.GOLD_FRAME_UPPER, 3, sg.RELIEF_RIDGE)],
-            pad=(2, 2),
+            pad=(5, 5),
             expand_x=True)  
 
     @staticmethod
@@ -138,17 +138,18 @@ class Layout:
         search_label = LayoutHelper.create_text_with_frame(
             "Search", 
             content_color=constants.LIGHT_TEXT, 
-            expand_x=True,
             frame_background_color=constants.RED_BANNER_BG,
             justification="center",
-            relief=sg.RELIEF_RIDGE)
+            pad=(10, 10),
+            relief=sg.RELIEF_RIDGE,
+            size=(10, 1))
 
         search_input = sg.Input(
             key="-SEARCH-", 
             background_color=constants.MEDIUM_FRAME_BG,
             enable_events=True, 
             font=("Georgia", 12),
-            pad=(10, 10), 
+            pad=((10, 10), (0, 10)), 
             size=(26, 1), 
             text_color=constants.LIGHT_TEXT)
 
@@ -167,7 +168,7 @@ class Layout:
         ], background_color=constants.LIGHT_FRAME_BG,
         border_width=0,
         element_justification="center",
-        pad=(10, 10))
+        pad=(10, 0))
 
         matches_output = sg.Listbox(
             values=[], 
@@ -175,8 +176,8 @@ class Layout:
             background_color=constants.DARK_FRAME_BG,
             enable_events=True, 
             font=("Georgia", 12), 
-            pad=(0, 10),
-            size=(26, 5),
+            pad=(0, 0),
+            size=(26, 4),
             sbar_arrow_color=constants.GOLD_FRAME_UPPER,
             sbar_background_color=constants.RED_BANNER_BG,
             sbar_trough_color=constants.GOLD_FRAME_LOWER,
@@ -203,8 +204,7 @@ class Layout:
 
         output_frame = sg.Frame("", [
             [matches_output],
-            [goto_button],
-            [clear_button]
+            [sg.Push(constants.LIGHT_FRAME_BG), goto_button, clear_button, sg.Push(constants.LIGHT_FRAME_BG)],
         ], background_color=constants.LIGHT_FRAME_BG, 
         border_width=0,
         element_justification="center",
@@ -216,7 +216,7 @@ class Layout:
         ], background_color=constants.LIGHT_FRAME_BG,
         border_width=5,
         expand_x=True,
-        expand_y=True, 
+        expand_y=True,
         pad=(10, 10), 
         relief=sg.RELIEF_GROOVE,  
         title_color=constants.LIGHT_TEXT)
@@ -225,7 +225,7 @@ class Layout:
             [search_frame]
         ], background_color=constants.LIGHT_FRAME_BG,
         expand_x=True,
-        expand_y=True, 
+        expand_y=True,
         element_justification="left",
         justification="left",
         pad=((10, 5), (10, 10)), 
@@ -333,12 +333,13 @@ class Layout:
         selected_info_frame = sg.Frame("", [
             [
                 Layout.create_search_column(), 
-                ProvinceLayout.create_province_info_column(), 
+                ProvinceLayout.create_province_info_column(),
+                NativeLayout.create_native_info_column(),
                 AreaLayout.create_area_info_column(),
                 RegionLayout.create_region_info_column()
             ]
         ], key="-WORLD_INFO-",
-        background_color=constants.MEDIUM_FRAME_BG, 
+        background_color=constants.DARK_FRAME_BG, 
         border_width=5,
         expand_x=True,  
         expand_y=True,
@@ -350,7 +351,7 @@ class Layout:
             borders=[
                 (constants.GOLD_FRAME_LOWER, 3, sg.RELIEF_RIDGE),
                 (constants.GOLD_FRAME_UPPER, 3, sg.RELIEF_RIDGE)],
-            pad=(15, 10),
+            pad=(15, 15),
             expand_x=True,
             expand_y=True)
 
@@ -359,8 +360,9 @@ class Layout:
 
         display_frame = sg.Frame("", [
             [canvas_frame, map_mode_frame]
-        ], background_color=constants.LIGHT_FRAME_BG,
+        ], background_color=constants.MEDIUM_FRAME_BG,
         border_width=0,
+        pad=(0, 0),
         vertical_alignment="center")
 
         display_column = sg.Column([
