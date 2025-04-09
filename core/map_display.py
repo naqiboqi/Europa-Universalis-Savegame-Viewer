@@ -258,7 +258,7 @@ class MapDisplayer:
             "-INFO_PROVINCE_GOODS_PRODUCED-": province.goods_produced,
             "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
             "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
-            "-INFO_PROVINCE_HOME_NODE-": province.trade_node,
+            "-INFO_PROVINCE_HOME_NODE-": province.trade,
             "-INFO_PROVINCE_SIZE_KM-": province.area_km2,
             "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
             "-INFO_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
@@ -297,7 +297,8 @@ class MapDisplayer:
         }
 
         if province.fort_level in forts:
-            fort_level_element.update(filename=icon_loader.get_icon(forts[province.fort_level]))
+            fort_level_icon = icon_loader.get_icon(forts[province.fort_level])
+            fort_level_element.update(filename=fort_level_icon)
 
         inland_trade_element = window["-INFO_PROVINCE_INLAND_TRADE_CENTER-"]
         inland_centers_of_trade = {
@@ -313,21 +314,51 @@ class MapDisplayer:
             3: "cot_world_trade_center"
         }
 
+        trade_info_element = self.window["-INFO_PROVINCE_TRADE_INFO_FRAME-"]
         if province.center_of_trade in centers_of_trade:
             inland_cot = icon_loader.get_icon(inland_centers_of_trade[province.center_of_trade])
             inland_trade_element.update(filename=inland_cot)
 
             cot = icon_loader.get_icon(centers_of_trade[province.center_of_trade])
             center_of_trade_element.update(filename=cot)
+            trade_info_element.update(visible=True)
+        else:
+            trade_info_element.update(visible=False)
+
+        hre_icon = icon_loader.get_icon("hre_province" if province.is_hre else "not_hre_province")
+        hre_frame_element = self.window["-INFO_PROVINCE_IS_HRE_FRAME-"]
+        hre_icon_element = self.window["-INFO_PROVINCE_IS_HRE-"]
+        hre_frame_element.update(visible=True)
+        hre_icon_element.update(filename=hre_icon)
 
     def update_native_province_details(self, province: EUProvince):
         window = self.window
-        data = {}
+        data = {
+            "-INFO_NATIVE_PROVINCE_NAME-": province.name,
+            "-INFO_NATIVE_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
+            "-INFO_NATIVE_PROVINCE_TOTAL_DEV-": province.development,
+            "-INFO_NATIVE_PROVINCE_BASE_TAX-": province.base_tax,
+            "-INFO_NATIVE_PROVINCE_BASE_PRODUCTION-": province.base_production,
+            "-INFO_NATIVE_PROVINCE_BASE_MANPOWER-": province.base_manpower,
+            "-INFO_NATIVE_PROVINCE_COLONIAL_REGION-": self.world_data.province_to_region.get(province.province_id, None).name,
+            "-INFO_NATIVE_PROVINCE_SIZE_KM-": province.area_km2,
+            "-INFO_NATIVE_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
+            "-INFO_NATIVE_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
+            "-INFO_NATIVE_PROVINCE_NATIVE_SIZE-": province.native_size,
+            "-INFO_NATIVE_PROVINCE_NATIVE_HOSTILENESS-": province.native_hostileness,
+        }
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
         window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=True)
+
+        for element, attr_value in data.items():
+            if attr_value is not None:
+                window_element = window[element]
+                window_element.update(value=attr_value, visible=True)
+            else:
+                window[element].update(value=0)
 
     def update_area_details(self, area: EUArea):
         """Updates the information displayed for a specific area in the UI.

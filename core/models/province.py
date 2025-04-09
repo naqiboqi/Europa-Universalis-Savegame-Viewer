@@ -74,7 +74,7 @@ class EUProvince(EUMapEntity):
             Higher levels indicate stronger influence on that province's trade node.
         center_of_trade (Optional[int]): The province's center of trade level.
             Higher levels indicate stronger trade power and development.
-        trade_node (Optional[str]): The trade node that the province belongs to.
+        trade (Optional[str]): The trade node that the province belongs to.
         local_autonomy (Optional[float]): The province's autonomy and degree of separation.
             Higher levels indicate less production and power contribution to the owning country.
         devastation (Optional[int]): The amount of devastation in the province.
@@ -106,7 +106,7 @@ class EUProvince(EUMapEntity):
     trade_goods: Optional[str] = None
     trade_power: Optional[float] = None
     center_of_trade: Optional[int] = None
-    trade_node: Optional[str] = None
+    trade: Optional[str] = None
     local_autonomy: Optional[float] = None
     devastation: Optional[int] = None
     unrest: Optional[int] = None

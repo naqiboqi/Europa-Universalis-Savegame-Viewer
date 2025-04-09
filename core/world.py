@@ -198,6 +198,7 @@ class EUWorldData:
             "name": r'name="([^"]+)"',
             "owner": r'owner="([^"]+)"',
             "capital": r'capital="([^"]+)"',
+            "is_hre": r'hre=(yes)',
             "culture": r'culture=([\w]+)',
             "religion": r'religion=([\w]+)',
             "base_tax": r'base_tax=([\d.]+)',
@@ -206,7 +207,7 @@ class EUWorldData:
             "trade_goods": r'trade_goods=([\w]+)',
             "trade_power": r'trade_power=([\d.]+)',
             "center_of_trade": r'center_of_trade=([\d]+)',
-            "trade_node": r'^trade="([\w]+)"',
+            "trade": r'^trade="([\w]+)"',
             "garrison": r'garrison=([\d.]+)',
             "fort_level": r'fort_15th=yes',
             "local_autonomy": r'local_autonomy=([\d.]+)',
@@ -226,9 +227,13 @@ class EUWorldData:
             "fort_19th": 5
         }
 
-        line_iter = iter(province_data)
-        current_province: dict[str, str] = None
+        compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
+        important_province_keys = tuple(patterns.keys()) + tuple(fort_buildings.keys())
 
+        current_province: dict[str, str] = None
+        current_province_keys = set()
+
+        line_iter = iter(province_data)
         try:
             while True:
                 line = next(line_iter).strip()
@@ -245,18 +250,23 @@ class EUWorldData:
                         provinces[current_province["province_id"]] = current_province
 
                     current_province = {"province_id": prov_id, "fort_level": 0}
+                    current_province_keys = set()
                     continue
 
-                if current_province is None:
+                if not current_province:
                     continue
 
-                for fort, level in fort_buildings.items():
-                    if fort in line:
+                if current_province_keys and not any(line.startswith(key) for key in important_province_keys):
+                    continue
+
+                if "fort=" in line:
+                    for fort, level in fort_buildings.items():
                         current_province["fort_level"] = max(current_province["fort_level"], level)
 
-                for key, pattern in patterns.items():
-                    match = re.search(pattern, line)
-                    if match and not key in current_province:
+                for key, pattern in compiled_patterns.items():
+                    match = pattern.search(line)
+                    if match and not key in current_province_keys:
+                        current_province_keys.add(key)
                         if key == "owner":
                             country_tag = match.group(1)
                             ## Check if that tag exists, if not we build a country.
@@ -268,6 +278,10 @@ class EUWorldData:
                                 country = self.countries[country_tag]
 
                             current_province[key] = self.countries[country_tag]
+                        elif key == "is_hre":
+                            current_province[key] = True
+                        elif key == "fort_level":
+                            continue
                         else:
                             current_province[key] = match.group(1)
 
