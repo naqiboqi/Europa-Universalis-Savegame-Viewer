@@ -15,6 +15,7 @@ import FreeSimpleGUI as sg
 
 from . import constants
 from . import LayoutHelper
+from .elements import SortableTable
 from ..utils import IconLoader
 
 
@@ -175,13 +176,15 @@ class RegionLayout:
         """
         table_header = RegionLayout.create_areas_table_header()
 
-        table = sg.Table(
+        table = SortableTable(
             values=[],
             key="-INFO_REGION_AREAS_TABLE-",
             alternating_row_color=constants.DARK_FRAME_BG,
             background_color=constants.MEDIUM_FRAME_BG,
             auto_size_columns=False,
             col_widths=[20, 4, 10, 18, 18],
+            enable_events=True,
+            enable_click_events=True,
             headings=["Name", "Dev.", "Trade Power", "Dominant Religion", "Dominant Culture"],
             header_background_color=constants.SECTION_BANNER_BG,
             header_relief=sg.RELIEF_SOLID,
