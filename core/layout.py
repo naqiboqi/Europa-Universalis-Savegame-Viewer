@@ -204,7 +204,7 @@ class Layout:
 
         output_frame = sg.Frame("", [
             [matches_output],
-            [sg.Push(constants.LIGHT_FRAME_BG), goto_button, clear_button, sg.Push(constants.LIGHT_FRAME_BG)],
+            [goto_button, clear_button],
         ], background_color=constants.LIGHT_FRAME_BG, 
         border_width=0,
         element_justification="center",
@@ -259,7 +259,7 @@ class Layout:
         """Creates the map modes frame for selecting map modes.
         
         Args:
-            map_modes (dict[MapMode]): The possible map modes to choose from when displaying the map.
+            map_modes (dict[str, MapMode]): The possible map modes to choose from when displaying the map.
         
         Returns:
             frame (Frame): The frame containing the map mode buttons.
@@ -294,7 +294,7 @@ class Layout:
         map_mode_buttons = [
             sg.Button(
                 mode.name,
-                key=mode.value,
+                key=mode.value.upper(),
                 button_color=(constants.LIGHT_TEXT, constants.BUTTON_BG),
                 font=("Garamond", 10, "bold"),
                 pad=(15, 15),
