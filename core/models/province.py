@@ -63,7 +63,7 @@ class EUProvince(EUMapEntity):
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
         is_capital (Optional[bool]): If the province is the capital of its owning country.
-        is_hre (Optional[bool]): If the province is within the Holy Roman Empire.
+        hre (Optional[bool]): If the province is within the Holy Roman Empire.
         culture (Optional[str]): The province's culture.
         religion (Optional[str]): The province's religion.
         base_tax (Optional[int]): The province's tax development.
@@ -97,7 +97,7 @@ class EUProvince(EUMapEntity):
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
     is_capital: Optional[bool] = False
-    is_hre: Optional[bool] = False
+    hre: Optional[bool] = False
     culture: Optional[str] = None
     religion: Optional[str] = None
     base_tax: Optional[int] = None
