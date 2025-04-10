@@ -99,7 +99,7 @@ class LayoutHelper:
         relief: str=None,
         size: tuple[int, int]=(None, None),
         expand_x=False,
-        pad: tuple[int, int]=None):
+        pad: tuple[int, int]|tuple[tuple[int, int], tuple[int, int]]=None):
         """
         Creates text with a framed border.
         
@@ -118,6 +118,7 @@ class LayoutHelper:
             size (tuple[int, int]): The `(x, y)` character limit of the text.
             relief (str): Relief style
             expand_x: If True the element will automatically expand in the X direction to fill available space.
+            pad: (tuple[int, int]|tuple[tuple[int, int], tuple[int, int]]): The amount of `(x, y)` or `((left/right), (top/bottom))` padding in pixels. 
         
         Returns:
             frame (Frame): The frame containing the wrapped text.
