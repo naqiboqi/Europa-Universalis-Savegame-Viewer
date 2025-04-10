@@ -268,24 +268,18 @@ class ProvinceLayout:
             "",
             key="-INFO_PROVINCE_HOME_NODE-",
             content_color=constants.LIGHT_TEXT,
+            expand_x=True,
             frame_background_color=constants.BUTTON_BG,
             justification="center",
-            pad=(10, 10),
+            pad=((0, 10), (5, 5)),
             size=(15, 1),
-            relief=sg.RELIEF_FLAT)
+            relief=sg.RELIEF_RIDGE)
 
         estuary_icon = LayoutHelper.create_icon_with_border(
             icon_name="",
             image_key="-INFO_PROVINCE_HOME_NODE-",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(10, 5),
-            image_size=(28, 28))
-
-        goods_modifier_icon = LayoutHelper.create_icon_with_border(
-            icon_name="",
-            image_key="-INFO_PROVINCE_GOODS_PRODUCED_MODIFIER-",
-            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(5, 5),
             image_size=(28, 28))
 
         inland_trade_icon = LayoutHelper.create_icon_with_border(
@@ -305,12 +299,23 @@ class ProvinceLayout:
             image_size=(84, 40))
 
         goods_and_trade_modifiers = sg.Frame("", [
-            [estuary_icon, inland_trade_icon, goods_modifier_icon, center_of_trade_icon]  
-        ], background_color=constants.SUNK_FRAME_BG, 
+            [estuary_icon, inland_trade_icon, sg.Push(constants.SUNK_FRAME_BG), center_of_trade_icon, sg.Push(constants.SUNK_FRAME_BG)]  
+        ], background_color=constants.SUNK_FRAME_BG,
+        key="-INFO_PROVINCE_TRADE_INFO_FRAME-",
         border_width=0,
         element_justification="center", 
         expand_x=True,
-        pad=(5, 5))
+        pad=(0, 0),
+        visible=False)
+
+        goods_and_trade_modifiers = sg.Frame("", [
+            [goods_and_trade_modifiers]
+        ], background_color=constants.SUNK_FRAME_BG,
+        expand_x=True,
+        element_justification="center",
+        pad=((10, 10), (10, 15)),
+        relief=sg.RELIEF_RIDGE,
+        size=(220, 50))
 
         home_trade_icon = LayoutHelper.create_icon_with_border(
             icon_name="trade_office",
@@ -320,15 +325,16 @@ class ProvinceLayout:
 
         trade_influences_frame = sg.Frame("", [
             [home_trade_icon, home_trade_node],
-            [goods_and_trade_modifiers]
+            [sg.Push(constants.DARK_FRAME_BG), goods_and_trade_modifiers, sg.Push(constants.DARK_FRAME_BG)]
         ], background_color=constants.DARK_FRAME_BG,
         border_width=3,
+        expand_x=True,
         pad=(0, 5),
         relief=sg.RELIEF_SUNKEN)
 
         trade_influences_column = sg.Column([
             [trade_influences_frame]
-        ], background_color=constants.LIGHT_FRAME_BG, pad=(10, 0), vertical_alignment="center")
+        ], background_color=constants.LIGHT_FRAME_BG, expand_x=True, pad=(10, 0), vertical_alignment="center")
 
         trade_good_icon = LayoutHelper.create_icon_with_border(
             icon_name="",
@@ -424,7 +430,7 @@ class ProvinceLayout:
         troops_info_column = sg.Column([
             [manpower_label, manpower_icon, manpower_value, 
             sailors_icon, sailors_label, sailors_value]
-        ], background_color=constants.MEDIUM_FRAME_BG)
+        ], background_color=constants.MEDIUM_FRAME_BG, expand_x=True)
 
         garrison_icon = LayoutHelper.create_icon_with_border(
             icon_name="fort_defense",
@@ -443,8 +449,56 @@ class ProvinceLayout:
             [garrison_label, garrison_icon, garrison_value],
         ], background_color=constants.MEDIUM_FRAME_BG, pad=(5, 5))
 
+        autonomy_icon = LayoutHelper.create_icon_with_border(
+            icon_name="local_autonomy",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        autonomy_label, autonomy_value = LayoutHelper.create_text_with_inline_label(
+            "Autonomy",
+            text_key="-INFO_PROVINCE_LOCAL_AUTONOMY-",
+            label_colors=(constants.LIGHT_TEXT, constants.MEDIUM_FRAME_BG),
+            justification="center",
+            text_colors=(constants.GOLD_FRAME_UPPER, constants.SUNK_FRAME_BG),
+            text_field_size=(7, 1))
+
+        unrest_icon = LayoutHelper.create_icon_with_border(
+            icon_name="local_unrest",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        unrest_label, unrest_value = LayoutHelper.create_text_with_inline_label(
+            "Unrest",
+            text_key="-INFO_PROVINCE_LOCAL_UNREST-",
+            label_colors=(constants.LIGHT_TEXT, constants.MEDIUM_FRAME_BG),
+            justification="center",
+            text_colors=(constants.GOLD_FRAME_LOWER, constants.SUNK_FRAME_BG),
+            text_field_size=(7, 1))
+
+        devastation_icon = LayoutHelper.create_icon_with_border(
+            icon_name="local_devastation",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        devastation_label, devastation_value = LayoutHelper.create_text_with_inline_label(
+            "Devastation",
+            text_key="-INFO_PROVINCE_LOCAL_DEVASTATION-",
+            label_colors=(constants.LIGHT_TEXT, constants.MEDIUM_FRAME_BG),
+            justification="center",
+            text_colors=(constants.GOLD_FRAME_LOWER, constants.SUNK_FRAME_BG),
+            text_field_size=(7, 1))
+
+        status_frame = sg.Frame("", [
+            [autonomy_label, autonomy_icon, autonomy_value,
+            unrest_label, unrest_icon, unrest_value,
+            devastation_label, devastation_icon, devastation_value]
+        ], background_color=constants.MEDIUM_FRAME_BG, 
+        element_justification="center",
+        pad=(15, 5),
+        relief=sg.RELIEF_SUNKEN)
+
         military_info_frame = sg.Frame("", [
-            [troops_info_column, defense_info_column]
+            [troops_info_column, defense_info_column],
         ], background_color=constants.MEDIUM_FRAME_BG,
         element_justification="center",
         expand_x=True,
@@ -475,9 +529,42 @@ class ProvinceLayout:
             border_pad=(10, 10),
             image_size=(42, 42))
 
+        hre_icon = LayoutHelper.create_icon_with_border(
+            "",
+            image_key="-INFO_PROVINCE_IS_HRE-",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+
+        hre_frame = sg.Frame("", [
+            [hre_icon]
+        ])
+
+        capital_icon = LayoutHelper.create_icon_with_border(
+            "",
+            image_key="-INFO_PROVINCE_IS_CAPITAL-",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+
+        capital_frame = sg.Frame("", [
+            [capital_icon]
+        ])
+
+        political_frame = sg.Frame("", [
+            [hre_frame, capital_frame]
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        border_width=1,
+        element_justification="center",
+        expand_x=True,
+        key="-INFO_PROVINCE_POLITICAL_FRAME-",
+        relief=sg.RELIEF_RIDGE,
+        visible=True)
+
         return sg.Column([
             [military_header_frame],
-            [military_info_frame, fort_level]
+            [status_frame, political_frame, sg.Push(constants.LIGHT_FRAME_BG)],
+            [military_info_frame, fort_level],
         ], background_color=constants.LIGHT_FRAME_BG, 
         expand_x=True, 
         pad=(0, 0), 

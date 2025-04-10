@@ -198,7 +198,7 @@ class EUWorldData:
             "name": r'name="([^"]+)"',
             "owner": r'owner="([^"]+)"',
             "capital": r'capital="([^"]+)"',
-            "is_hre": r'hre=(yes)',
+            "hre": r'hre=(yes)',
             "culture": r'culture=([\w]+)',
             "religion": r'religion=([\w]+)',
             "base_tax": r'base_tax=([\d.]+)',
@@ -269,7 +269,7 @@ class EUWorldData:
                         current_province_keys.add(key)
                         if key == "owner":
                             country_tag = match.group(1)
-                            ## Check if that tag exists, if not we build a country.
+                            ## Check if that tag exists, if not we build a new country.
                             ## Commonly happens for user created countries or native federations.
                             if not country_tag in self.countries:
                                 country = EUCountry(tag=country_tag, tag_color=MapUtils.seed_color(country_tag))
@@ -278,7 +278,7 @@ class EUWorldData:
                                 country = self.countries[country_tag]
 
                             current_province[key] = self.countries[country_tag]
-                        elif key == "is_hre":
+                        elif key == "hre":
                             current_province[key] = True
                         elif key == "fort_level":
                             continue
