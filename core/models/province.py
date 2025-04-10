@@ -100,21 +100,21 @@ class EUProvince(EUMapEntity):
     hre: Optional[bool] = False
     culture: Optional[str] = None
     religion: Optional[str] = None
-    base_tax: Optional[int] = None
-    base_production: Optional[int] = None
-    base_manpower: Optional[int] = None
+    base_tax: Optional[int] = 0
+    base_production: Optional[int] = 0
+    base_manpower: Optional[int] = 0
     trade_goods: Optional[str] = None
-    trade_power: Optional[float] = None
+    trade_power: Optional[float] = 0.00
     center_of_trade: Optional[int] = None
     trade: Optional[str] = None
-    local_autonomy: Optional[float] = None
-    devastation: Optional[int] = None
-    unrest: Optional[int] = None
-    garrison: Optional[int] = None
+    local_autonomy: Optional[float] = 0.00
+    devastation: Optional[float] = 0.00
+    unrest: Optional[float] = 0.00
+    garrison: Optional[int] = 0
     fort_level: Optional[int] = None
-    native_size: Optional[int] = None
-    native_ferocity: Optional[int] = None
-    native_hostileness: Optional[int] = None
+    native_size: Optional[int] = 0
+    native_ferocity: Optional[int] = 0
+    native_hostileness: Optional[int] = 0
     patrol: Optional[int] = None
 
     @classmethod
