@@ -521,7 +521,7 @@ class ProvinceLayout:
             [military_label, military_icon, sg.Push(background_color=constants.SECTION_BANNER_BG)]
         ], background_color=constants.SECTION_BANNER_BG, 
         expand_x=True, 
-        pad=((15, 15), (0, 10)),
+        pad=((15, 15), (10, 5)),
         relief=sg.RELIEF_SOLID)
 
         fort_level = LayoutHelper.create_icon_with_border(
