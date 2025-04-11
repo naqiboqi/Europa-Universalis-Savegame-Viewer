@@ -249,16 +249,19 @@ class MapDisplayer:
             "-INFO_PROVINCE_OWNER-": province.owner_name,
             "-INFO_PROVINCE_CAPITAL-": province.capital,
             "-INFO_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
-            "-INFO_PROVINCE_TOTAL_DEV-": province.development,
             "-INFO_PROVINCE_REGION_NAME-": self.world_data.province_to_region.get(province.province_id, None).name,
+            "-INFO_PROVINCE_LOCAL_AUTONOMY-": f"{province.local_autonomy}%",
+            "-INFO_PROVINCE_LOCAL_DEVASTATION-": f"{province.devastation}%",
+            "-INFO_PROVINCE_LOCAL_UNREST-": province.unrest,
+            "-INFO_PROVINCE_TOTAL_DEV-": province.development,
             "-INFO_PROVINCE_BASE_TAX-": province.base_tax,
             "-INFO_PROVINCE_BASE_PRODUCTION-": province.base_production,
             "-INFO_PROVINCE_BASE_MANPOWER-": province.base_manpower,
             "-INFO_PROVINCE_TRADE_POWER-": province.trade_power,
+            "-INFO_PROVINCE_HOME_NODE-": MapUtils.format_name(province.trade),
             "-INFO_PROVINCE_GOODS_PRODUCED-": province.goods_produced,
             "-INFO_PROVINCE_LOCAL_MANPOWER-": province.manpower,
             "-INFO_PROVINCE_LOCAL_SAILORS-": province.sailors,
-            "-INFO_PROVINCE_HOME_NODE-": province.trade,
             "-INFO_PROVINCE_SIZE_KM-": province.area_km2,
             "-INFO_PROVINCE_GARRISON_SIZE-": province.garrison,
             "-INFO_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
@@ -325,10 +328,8 @@ class MapDisplayer:
         else:
             trade_info_element.update(visible=False)
 
-        hre_icon = icon_loader.get_icon("hre_province" if province.is_hre else "not_hre_province")
-        hre_frame_element = self.window["-INFO_PROVINCE_IS_HRE_FRAME-"]
+        hre_icon = icon_loader.get_icon("hre_province" if province.hre else "not_hre_province")
         hre_icon_element = self.window["-INFO_PROVINCE_IS_HRE-"]
-        hre_frame_element.update(visible=True)
         hre_icon_element.update(filename=hre_icon)
 
     def update_native_province_details(self, province: EUProvince):
@@ -336,16 +337,17 @@ class MapDisplayer:
         data = {
             "-INFO_NATIVE_PROVINCE_NAME-": province.name,
             "-INFO_NATIVE_PROVINCE_AREA_NAME-": self.world_data.province_to_area.get(province.province_id, None).name, 
+            "-INFO_NATIVE_PROVINCE_COLONIAL_REGION-": self.world_data.province_to_region.get(province.province_id, None).name,
             "-INFO_NATIVE_PROVINCE_TOTAL_DEV-": province.development,
             "-INFO_NATIVE_PROVINCE_BASE_TAX-": province.base_tax,
             "-INFO_NATIVE_PROVINCE_BASE_PRODUCTION-": province.base_production,
             "-INFO_NATIVE_PROVINCE_BASE_MANPOWER-": province.base_manpower,
-            "-INFO_NATIVE_PROVINCE_COLONIAL_REGION-": self.world_data.province_to_region.get(province.province_id, None).name,
             "-INFO_NATIVE_PROVINCE_SIZE_KM-": province.area_km2,
             "-INFO_NATIVE_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
             "-INFO_NATIVE_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
-            "-INFO_NATIVE_PROVINCE_NATIVE_SIZE-": province.native_size,
+            "-INFO_NATIVE_PROVINCE_NATIVE_SIZE-": province.native_size * 1000,
             "-INFO_NATIVE_PROVINCE_NATIVE_HOSTILENESS-": province.native_hostileness,
+            "-INFO_NATIVE_PROVINCE_NATIVE_FEROCITY-": province.native_ferocity
         }
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
@@ -359,6 +361,12 @@ class MapDisplayer:
                 window_element.update(value=attr_value, visible=True)
             else:
                 window[element].update(value=0)
+
+        trade_good_element = self.window["-INFO_NATIVE_PROVINCE_TRADE_GOOD-"]
+        trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
+
+        religion_element = self.window["-INFO_NATIVE_PROVINCE_RELIGION_ICON-"]
+        religion_element.update(filename=icon_loader.get_icon(province.religion), visible=True)
 
     def update_area_details(self, area: EUArea):
         """Updates the information displayed for a specific area in the UI.
@@ -490,6 +498,7 @@ class MapDisplayer:
         self.painter.set_base_world_image(image=self.world_data.world_image)
 
         self.refresh_canvas()
+        self.window["POLITICAL"].update(button_color=(constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG))
         self.window["-SAVEFILE_DATE-"].update(value=f"The World in {self.world_data.current_save_date}")
 
         self.handler = MapHandler(displayer=self, tk_canvas=self.tk_canvas)
@@ -526,23 +535,32 @@ class MapDisplayer:
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
         self.update_canvas()
 
-    def handle_map_mode_change(self, map_mode: MapMode):
+    def handle_map_mode_change(self, map_modes: dict[str, MapMode], new_map_mode: MapMode):
         """Updates the map mode and redraws the map for that mode.
         
         Args:
-            map_mode (MapMode): The new map mod selected by the user.
+            map_modes: (dict[str, MapMode]): The possible map modes, used to determine which buttons to color.
+            map_mode (MapMode): The new map mode selected by the user.
         """
-        if map_mode == self.painter.map_mode:
+        if new_map_mode == self.painter.map_mode:
             return
 
         self.send_message_callback("Loading map....")
         self.display_loading_screen(message="Loading map....")
 
-        self.painter.map_mode = map_mode
+        self.painter.map_mode = new_map_mode
         self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
-
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
+
+        self.color_map_mode_buttons(map_modes)
         self.reset_canvas_to_initial()
+
+    def color_map_mode_buttons(self, map_modes: dict[str, MapMode]):
+        new_map_mode = self.painter.map_mode
+        for map_mode in map_modes:
+            map_mode_button = self.window[map_mode]
+            button_color = (constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG if map_mode == new_map_mode else constants.BUTTON_BG)
+            map_mode_button.update(button_color=button_color)
 
     def handle_search_for(self, values):
         """Handles searching for entities in the world data."""
@@ -608,7 +626,8 @@ class MapDisplayer:
             None
         """
         window = self.window
-        mode_names = {mode.value: mode for mode in self.painter.map_modes}
+        mode_names = {mode.value.upper(): mode for mode in self.painter.map_modes}
+        print(mode_names)
 
         while True:
             event, values = window.read(timeout=1)
@@ -635,7 +654,7 @@ class MapDisplayer:
                 self.handle_border_toggle(values)
 
             if event in mode_names:
-                self.handle_map_mode_change(mode_names[event])
+                self.handle_map_mode_change(mode_names, mode_names[event])
 
             if event in {"-EXACT_MATCHES-", "-SEARCH-"}:
                 self.handle_search_for(values)

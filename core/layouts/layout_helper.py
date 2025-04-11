@@ -152,6 +152,7 @@ class LayoutHelper:
         default_text_value: str="",
         font: tuple[str, int, str]=("Georgia", 12),
         justification: str=None,
+        label_relief: str=sg.RELIEF_FLAT,
         visible_field: bool=True,
         expand_x: bool=False):
         """
@@ -168,6 +169,7 @@ class LayoutHelper:
             font (tuple[str, int, str]|tuple[str, int]): Specifies the font family for the text content
                 (font_name, font_size, "bold"/"italic"/"underline"/"overstrike").
             justification (str): How the string should be alligned ("left"/"right"/"center").
+            label_relief: The relief type to use for the label background.
             visible_field (bool): If the field is initially visible.
             expand_x: If True the element will automatically expand in the X direction to fill available space.
         
@@ -180,7 +182,8 @@ class LayoutHelper:
             font=font, 
             text_color=label_text_color, 
             background_color=label_background,
-            justification=justification)
+            justification=justification,
+            relief=label_relief)
 
         text_color, field_background = text_colors
         value_text = sg.Text(

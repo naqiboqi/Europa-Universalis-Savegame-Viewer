@@ -237,14 +237,15 @@ class ProvinceLayout:
             [goods_produced_label, goods_produced_icon, goods_produced_field],
         ], background_color=constants.DARK_FRAME_BG,
         border_width=3,
-        expand_x=True,  
+        expand_x=True,
+        expand_y=True,
         pad=((10, 0), (0, 0)), 
         relief=sg.RELIEF_SUNKEN,
         vertical_alignment="top")
 
         trade_info_column = sg.Column([
             [trade_info_frame]
-        ], background_color=constants.LIGHT_FRAME_BG, pad=(5, 5), vertical_alignment="center")
+        ], background_color=constants.LIGHT_FRAME_BG, expand_y=True, pad=(5, 5), vertical_alignment="center")
 
         trade_header_label = sg.Text(
             "Trade", 
@@ -370,6 +371,7 @@ class ProvinceLayout:
             [sg.Push(constants.LIGHT_FRAME_BG), trade_good_icon, sg.Push(constants.LIGHT_FRAME_BG)],
             [sg.Push(constants.LIGHT_FRAME_BG), value_frame, sg.Push(constants.LIGHT_FRAME_BG)]
         ], background_color=constants.LIGHT_FRAME_BG,
+        expand_y=True,
         pad=(5, 5),
         relief=sg.RELIEF_FLAT)
 
@@ -534,7 +536,7 @@ class ProvinceLayout:
             image_key="-INFO_PROVINCE_IS_HRE-",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
-            image_size=(28, 28))
+            image_size=(36, 36))
 
         hre_frame = sg.Frame("", [
             [hre_icon]
@@ -545,7 +547,7 @@ class ProvinceLayout:
             image_key="-INFO_PROVINCE_IS_CAPITAL-",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
             border_pad=(5, 5),
-            image_size=(28, 28))
+            image_size=(36, 36))
 
         capital_frame = sg.Frame("", [
             [capital_icon]

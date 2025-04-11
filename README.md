@@ -138,6 +138,10 @@ Pan and zoom a bit to the northwest for **Development**
 
 - [X] Move loading save file functionality to the GUI 
 
+- [ ] Make it so that clicking on a province, area, region also displays its information depending on the map mode
+
+- [ ] Add trade node information panel
+
 - [ ] Add more mapmodes -> (Trade, Terrain, Religion, Culture)
 
 - [ ] Add map-painter functionality to control ownership of provinces and create modded saves

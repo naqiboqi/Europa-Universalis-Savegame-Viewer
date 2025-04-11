@@ -45,9 +45,8 @@ class NativeLayout:
             justification="right",
             text_color=constants.LIGHT_TEXT)
 
-        region_name = sg.Text(
+        spacer_right = sg.Text(
             "",
-            key="-INFO_NATIVE_PROVINCE_REGION_NAME-",
             background_color=constants.TOP_BANNER_BG,
             font=("Georgia", 12),
             justification="right",
@@ -63,7 +62,7 @@ class NativeLayout:
 
             sg.Column([
                 [area_name],
-                [region_name],
+                [spacer_right],
             ], background_color=constants.TOP_BANNER_BG, 
             element_justification="right", 
             expand_x=True)]
@@ -99,7 +98,7 @@ class NativeLayout:
             font=("Georgia", 12),
             frame_background_color=constants.SUNK_FRAME_BG,
             justification="left",
-            key="-INFO_PROVINCE_RELIGION-",
+            key="-INFO_NATIVE_PROVINCE_RELIGION-",
             relief=sg.RELIEF_FLAT,
             size=(20, 1))
 
@@ -118,84 +117,125 @@ class NativeLayout:
                 text_color=constants.LIGHT_TEXT)],
             [religion_info]
         ], background_color=constants.DARK_FRAME_BG,
-        expand_y=True,
-        pad=(0, 0), 
+        pad=(5, 5), 
         relief=sg.RELIEF_SUNKEN,
         vertical_alignment="top")
 
         return sg.Column([
             [demographics_frame]
         ], background_color=constants.MEDIUM_FRAME_BG, 
-        expand_y=True, 
         pad=(10, 10),
         vertical_alignment="top")
 
     @staticmethod
     def create_native_statistics_info_column():
-        """Creates the demographics column section for a province.
+        """Creates the statistics column section for a native/uncolonized province.
 
         Returns:
-            column (Column): The column containing the demographic info.
+            column (Column): The column containing the native statistics.
         """
-        native_size_info = LayoutHelper.create_text_with_frame(
-            "",
-            content_color=constants.LIGHT_TEXT,
+        native_size_label, native_size_value = LayoutHelper.create_text_with_inline_label(
+            "Native size",
+            text_key="-INFO_NATIVE_PROVINCE_NATIVE_SIZE-",
             expand_x=True,
-            font=("Georgia", 12),
-            frame_background_color=constants.SUNK_FRAME_BG,
-            justification="left",
-            key="-INFO_NATIVE_PROVINCE_NATIVE_SIZE-",
-            relief=sg.RELIEF_FLAT,
-            size=(20, 1))
+            font=("Georgia", 12, "bold"),
+            label_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            justification="right",
+            text_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            text_field_size=(5, 1))
 
-        hostile_info = LayoutHelper.create_text_with_frame(
-            "",
-            content_color=constants.LIGHT_TEXT,
+        native_size_icon = LayoutHelper.create_icon_with_border(
+            icon_name="uprising_chance",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(0, 0),
+            image_size=(28, 28))
+
+        native_size_frame = sg.Frame("", [
+            [native_size_label, native_size_icon, sg.Push(constants.SECTION_BANNER_BG), native_size_value]
+        ], background_color=constants.SECTION_BANNER_BG,
+        border_width=2,
+        pad=(10, 10),
+        relief=sg.RELIEF_RIDGE,
+        size=(300, 30))
+
+        hostileness_label, hostileness_value = LayoutHelper.create_text_with_inline_label(
+            "Hostileness",
+            text_key="-INFO_NATIVE_PROVINCE_NATIVE_HOSTILENESS-",
             expand_x=True,
-            font=("Georgia", 12),
-            frame_background_color=constants.SUNK_FRAME_BG,
-            justification="left",
-            key="-INFO_NATIVE_PROVINCE_NATIVE_HOSTILENESS-",
-            relief=sg.RELIEF_FLAT,
-            size=(20, 1))
+            font=("Georgia", 12, "bold"),
+            label_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            justification="right",
+            text_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            text_field_size=(5, 1))
+
+        hostileness_icon = LayoutHelper.create_icon_with_border(
+            icon_name="agressiveness",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(0, 0),
+            image_size=(28, 28))
+
+        hostileness_frame = sg.Frame("", [
+            [hostileness_label, hostileness_icon, sg.Push(constants.SECTION_BANNER_BG), hostileness_value]
+        ], background_color=constants.SECTION_BANNER_BG,
+        border_width=2,
+        pad=(10, 10),
+        relief=sg.RELIEF_RIDGE,
+        size=(300, 30))
+
+        ferocity_label, ferocity_value = LayoutHelper.create_text_with_inline_label(
+            "Hostileness",
+            text_key="-INFO_NATIVE_PROVINCE_NATIVE_FEROCITY-",
+            expand_x=True,
+            font=("Georgia", 12, "bold"),
+            label_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            justification="right",
+            text_colors=(constants.LIGHT_TEXT, constants.SECTION_BANNER_BG),
+            text_field_size=(5, 1))
+
+        ferocity_icon = LayoutHelper.create_icon_with_border(
+            icon_name="ferocity",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(0, 0),
+            image_size=(28, 28))
+
+        ferocity_frame = sg.Frame("", [
+            [ferocity_label, ferocity_icon, sg.Push(constants.SECTION_BANNER_BG), ferocity_value]
+        ], background_color=constants.SECTION_BANNER_BG,
+        border_width=2,
+        pad=(10, 10),
+        relief=sg.RELIEF_RIDGE,
+        size=(300, 30))
 
         native_stats_frame = sg.Frame("", [
-            [sg.Text(
-                "Native Size",
-                background_color=constants.MEDIUM_FRAME_BG,
-                font=("Georgia", 12), 
-                text_color=constants.LIGHT_TEXT)],
-            [native_size_info],
-
-            [sg.Text(
-                "Hostileness", 
-                background_color=constants.MEDIUM_FRAME_BG,
-                font=("Georgia", 12), 
-                text_color=constants.LIGHT_TEXT)],
-            [hostile_info],
-        ], background_color=constants.DARK_FRAME_BG, 
-        expand_y=True,
-        pad=(0, 0), 
+            [native_size_frame],
+            [hostileness_frame],
+            [ferocity_frame]
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        border_width=2,
+        pad=(5, 5), 
         relief=sg.RELIEF_SUNKEN,
         vertical_alignment="top")
 
         return sg.Column([
-            [native_stats_frame]
-        ], background_color=constants.LIGHT_FRAME_BG, 
-        expand_y=True, 
-        pad=(0, 10), 
+            [native_stats_frame],
+        ], background_color=constants.MEDIUM_FRAME_BG, 
+        pad=((15, 0), (10, 10)), 
         vertical_alignment="top")
 
     @staticmethod
     def create_colonial_region_column():
-        """Creates the colonial region column for a native province."""
+        """Creates the colonial region column for a native province.
+        
+        Returns:
+            column (Column): The column containing the colonial region information.
+        """
         uncolonized_text = sg.Text(
             "Uncolonized Land",
             text_color=constants.LIGHT_TEXT,
             background_color=constants.SUNK_FRAME_BG,
             font=("Georgia", 18, "bold"),
             justification="center",
-            pad=((40, 40), (30, 20)),
+            pad=((40, 40), (30, 30)),
             size=(100, 1))
 
         colonial_region_info = sg.Text(
@@ -205,7 +245,7 @@ class NativeLayout:
             text_color=constants.LIGHT_TEXT,
             font=("Georgia", 14),
             justification="center",
-            pad=((40, 40), (20, 30)),
+            pad=((40, 40), (40, 30)),
             size=(30, 1))
 
         colonial_region_frame = sg.Frame("", [
@@ -221,15 +261,60 @@ class NativeLayout:
         element_justification="center")
 
     @staticmethod
-    def create_native_goods():
+    def create_native_trade_goods_column():
+        """Creates the trade goods column for a native province.
+        
+        Returns:
+            column (Column): The column containing the trade good information.
+        """
         trade_good_icon = LayoutHelper.create_icon_with_border(
             icon_name="",
             image_key="-INFO_NATIVE_PROVINCE_TRADE_GOOD-",
             borders=[
-                (constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE),
-                (constants.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
+                (constants.GOLD_FRAME_LOWER, 2, sg.RELIEF_RIDGE),
+                (constants.GOLD_FRAME_UPPER, 2, sg.RELIEF_RIDGE)],
             border_pad=(0, 5),
             image_size=(64, 64))
+
+        trade_good_frame = sg.Frame("", [
+            [sg.Push(constants.MEDIUM_FRAME_BG), trade_good_icon, sg.Push(constants.MEDIUM_FRAME_BG)],
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        pad=(0, 0),
+        relief=sg.RELIEF_FLAT)
+
+        return sg.Column([
+            [trade_good_frame]
+        ],
+        pad=(15, 15),
+        vertical_alignment="top")
+
+    @staticmethod
+    def create_native_religion_icon_column():
+        """Creates the religion column for a native province.
+        
+        Returns:
+            column (Column): The column containing the religion icon.
+        """
+        religion_icon = LayoutHelper.create_icon_with_border(
+            icon_name="",
+            image_key="-INFO_NATIVE_PROVINCE_RELIGION_ICON-",
+            borders=[
+                (constants.GOLD_FRAME_LOWER, 2, sg.RELIEF_RIDGE),
+                (constants.GOLD_FRAME_UPPER, 2, sg.RELIEF_RIDGE)],
+            border_pad=(0, 5),
+            image_size=(64, 64))
+
+        religion_frame = sg.Frame("", [
+            [sg.Push(constants.MEDIUM_FRAME_BG), religion_icon, sg.Push(constants.MEDIUM_FRAME_BG)],
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        pad=(0, 0),
+        relief=sg.RELIEF_FLAT)
+
+        return sg.Column([
+            [religion_frame]
+        ],
+        pad=(15, 15),
+        vertical_alignment="top")
 
     @staticmethod
     def create_native_info_column():
@@ -240,7 +325,6 @@ class NativeLayout:
         Returns:
             column (Column): The column containing the province info.
         """
-        development_info_frame = LayoutHelper.create_development_info_frame(name="NATIVE")
         native_stat_column = NativeLayout.create_native_statistics_info_column()
         demographic_info_column = NativeLayout.create_demographic_info_column()
 
@@ -251,6 +335,7 @@ class NativeLayout:
             pad=(20, 15),
             relief=sg.RELIEF_SOLID,
             justification="center")
+        development_info_frame = LayoutHelper.create_development_info_frame(name="NATIVE_PROVINCE")
 
         area_km2_label = LayoutHelper.create_text_with_frame(
             "Area in km^2",
@@ -272,15 +357,32 @@ class NativeLayout:
             size=(15, 1))
 
         colonial_region_column = NativeLayout.create_colonial_region_column()
-
         geographic_info_frame = NativeLayout.create_geographic_native_info_frame()
+
+        trade_good_column = NativeLayout.create_native_trade_goods_column()
+        religion_icon_column = NativeLayout.create_native_religion_icon_column()
+
+        icon_frame = sg.Frame("", [
+            [religion_icon_column, trade_good_column]
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        border_width=2,
+        pad=(5, 5), 
+        relief=sg.RELIEF_SUNKEN,
+        vertical_alignment="top")
+
+        icon_column = sg.Column([
+            [icon_frame]
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        pad=(5, 10),
+        vertical_alignment="top")
+
         native_info_frame = sg.Frame("", [
             [geographic_info_frame],
             [development_label, development_info_frame,
                 sg.Push(background_color=constants.LIGHT_FRAME_BG),
             area_km2_label, area_km2_value],
             [colonial_region_column],
-            [demographic_info_column, native_stat_column]
+            [native_stat_column, demographic_info_column, icon_column]
         ], background_color=constants.LIGHT_FRAME_BG, 
         border_width=5,
         expand_x=True,

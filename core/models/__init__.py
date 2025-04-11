@@ -18,6 +18,7 @@ Imports:
 
 from .map_entity import EUMapEntity
 from .province import EUProvince, ProvinceType, ProvinceTypeColor
+from .trade_node import EUTradeNode
 from .country import EUCountry
 from .area import EUArea
 from .mapmode import MapMode
@@ -25,9 +26,11 @@ from .region import EURegion
 from .terrain import TerrainType
 
 __all__ = [
+    'EUMapEntity',
     'EUProvince', 
     'ProvinceType', 
     'ProvinceTypeColor', 
+    'EUTradeNode',
     'EUCountry', 
     'EUArea', 
     'MapMode', 
