@@ -18,8 +18,8 @@ Imports:
 
 from .map_entity import EUMapEntity
 from .province import EUProvince, ProvinceType, ProvinceTypeColor
-from .trade_node import EUTradeNode
 from .country import EUCountry
+from .trade_node import EUTradeNode, EUTradeNodeParticipant
 from .area import EUArea
 from .mapmode import MapMode
 from .region import EURegion

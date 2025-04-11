@@ -18,7 +18,16 @@ from PIL import Image
 from typing import Callable, Optional, Union
 
 from .colors import EUColors
-from .models import EUArea, EUCountry, EUProvince, ProvinceType, EURegion, TerrainType
+from .models import (
+    EUArea, 
+    EUCountry, 
+    EUProvince, 
+    ProvinceType,
+    EURegion, 
+    EUTradeNode,
+    EUTradeNodeParticipant,
+    TerrainType)
+
 from .utils import FileUtils, MapUtils
 
 
@@ -43,11 +52,13 @@ class EUWorldData:
         areas (dict[str, EUArea]): A mapping of area names to the `EUArea` that they reperesent.
         countries (dict[str, EUCountry]): A mapping of country tags (in game identifiers) to `EUCountry` .
         provinces (dict[int, EUProvince]): A mapping of province IDs to the that `EUProvince` they represent.
-        terrain (int, TerrainType): A mapping of province Ids to their terrain type.
         regions (dict[str, EURegion]): A mapping of region names to the `EURegion` that they represent.
+        trade_nodes (dict[str, EUTradeNode]): A mapping of region names to the `EUTradeNode` that they represent.
 
-        province_to_area (dict[int, EUArea]): A mapping of province IDs to the `EUArea` that they reside in.
-        province_to_region (dict[int, EURegion]): A mapping of province IDs to the `EURegion` that they reside.
+        province_to_area (dict[int, EUArea]): A mapping of province IDs to the area that they reside in.
+        province_to_region (dict[int, EURegion]): A mapping of province IDs to the region that they reside in.
+        province_to_trade_node (dict[int, EUTradeNode]): A mapping of province IDs to the trade node that they reside in.
+
         world_image (Image.Image | None): The world map image, loaded from a definition file.
 
         default_province_data (dict[int, dict[str, str]]): Default attributes for each province before modifications are loaded from a save file.
@@ -59,16 +70,21 @@ class EUWorldData:
         trade_goods: dict[str, float]: Trade goods and their respective prices loaded from a savefile.
     """
     def __init__(self):
+        ## Current entity data.
         self.areas: dict[str, EUArea] = {}
         self.countries: dict[str, EUCountry] = {}
         self.provinces: dict[int, EUProvince] = {}
-        self.terrain: dict[int, TerrainType] = {}
         self.regions: dict[str, EURegion] = {}
+        self.trade_nodes: dict[str, EUTradeNode] = {}
 
+        ## Mappings.
         self.province_to_area: dict[int, EUArea] = {}
         self.province_to_region: dict[int, EURegion] = {}
+        self.province_to_trade_node: dict[int, EUTradeNode] = {}
+
         self.world_image: Image.Image = None 
 
+        ## Default entity data.
         self.default_province_data: dict[int, dict[str, str]] = {}
         self.province_locations: dict[int, set[tuple[int]]] = {}
         self.current_province_data: dict[int, dict[str, str]] = {}
@@ -78,6 +94,7 @@ class EUWorldData:
         self.current_save_date: str = None
         self.trade_goods: dict[str, float] = {}
 
+        ## Callback method for displaying messages to the GUI.
         self.update_status_callback: Optional[Callable[[str], None]] = None
 
     @classmethod
@@ -93,7 +110,7 @@ class EUWorldData:
         world.countries = world.load_countries(colors)
 
         default_province_data_lines = FileUtils.run_external_reader(folder=maps_folder, filename="province.txt")
-        world.default_province_data = world.load_world_provinces(province_data=default_province_data_lines)
+        world.default_province_data = world.load_world_provinces(savefile_lines=default_province_data_lines)
 
         world.world_image = world.load_world_image(maps_folder)
         world.province_locations = world.get_province_pixel_locations(colors.default_province_colors)
@@ -133,10 +150,10 @@ class EUWorldData:
 
         return countries
 
-    def load_world_provinces(self, province_data: list[str]):
-        """Builds the default **provinces** dictionary from read game data.
+    def load_world_provinces(self, savefile_lines: list[str]):
+        """Loads the default **provinces** dictionary from read game data.
         
-        Reads over the **province_data** and matches the province definition blocks to extract
+        Reads over the **savefile_lines** and matches the province definition blocks to extract
         each variable's value, and assigns it to each province.
         
         Example of part of the definition for a **land** province. Note that a lot
@@ -188,12 +205,12 @@ class EUWorldData:
             }'
 
         Args:
-            province_data (list[str]): The read province data. Is from either default or a savegame.
+            savefile_lines (list[str]): The read savefile lines. Is from either default or a loaded savegame.
         
         Returns:
             provinces (dict[int, dict[str, str]]): A mapping of province IDs to that province's data.
         """
-        provinces: dict[int, dict[str, str]] = {}
+        province_id_pattern = re.compile(r'^-(\d+)={')
         patterns = {
             "name": r'name="([^"]+)"',
             "owner": r'owner="([^"]+)"',
@@ -230,10 +247,11 @@ class EUWorldData:
         compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
         important_province_keys = tuple(patterns.keys()) + tuple(fort_buildings.keys())
 
+        provinces: dict[int, dict[str, str]] = {}
         current_province: dict[str, str] = None
         current_province_keys = set()
 
-        line_iter = iter(province_data)
+        line_iter = iter(savefile_lines)
         try:
             while True:
                 line = next(line_iter).strip()
@@ -243,9 +261,9 @@ class EUWorldData:
                     continue
 
                 ## Check if this line starts a province definition block.
-                prov_id = self.try_extract_prov_id(line)
+                prov_id = self._try_extract_prov_id(province_id_pattern, line)
                 if prov_id is not None:
-                    if current_province and "name" in current_province:
+                    if current_province and "name" in current_province_keys:
                         current_province["province_type"] = self.set_province_type(current_province)
                         provinces[current_province["province_id"]] = current_province
 
@@ -290,7 +308,7 @@ class EUWorldData:
 
         return provinces
 
-    def try_extract_prov_id(self, line: str):
+    def _try_extract_prov_id(self, pattern: re.Pattern, line: str):
         """Checks if the line contains a province definition.
         
         Lines that start a province definition block start with a '-' followed by an integer:
@@ -300,14 +318,17 @@ class EUWorldData:
             ......
             ......
             }'
+            
+            'For a province with `ID` of 1'
         
         Args:
-            line (str): The line to check.
+            pattern (Pattern): The pattern to use for searching.
+            line (str): The line to search through.
         
         Returns:
             int: The province id.
         """
-        match = re.match(r"^-(\d+)={", line)
+        match = pattern.search(line)
         return int(match.group(1)) if match else None
 
     def set_province_type(self, province_data: dict):
@@ -490,7 +511,284 @@ class EUWorldData:
 
         return regions
 
-    def load_trade_goods(self, savefile_lines: list[str]):
+    def build_world(self, save_folder: str, savefile: str):
+        """Builds the **EUProvince**, **EUArea**, **EURegion**, and Country objects by
+        updating the default data with the savefile's data.
+        
+        Populates the **provinces**, **areas**, and **regions** dictionaries to provide
+        easier access.
+        
+        Args:
+            save_folder (str): The folder containing the user save file.
+            save_file (str): The savefile to read.
+        """
+        savefile_lines = FileUtils.run_external_reader(save_folder, savefile)
+        self.current_save_date = savefile_lines[1].split("=")[1].strip()
+        self.current_province_data = self.load_world_provinces(savefile_lines)
+
+        if self.update_status_callback:
+            self.update_status_callback("Building provinces....")
+
+        self._build_provinces()
+
+        if self.update_status_callback:
+            self.update_status_callback("Building areas....")
+        else:
+            print("Building areas....")
+
+        self._build_areas()
+
+        if self.update_status_callback:
+            self.update_status_callback("Building regions....")
+        else:
+            print("Building regions....")
+
+        self._build_regions()
+
+        trade_nodes_data = self._load_trade_nodes(savefile_lines)
+        self._build_trade_nodes(trade_nodes_data)
+
+        self.trade_goods = self._load_trade_goods(savefile_lines)
+
+    def _build_provinces(self):
+        """Builds the world provinces from the `current_province_data` dict."""
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for province_id, province_data in self.current_province_data.items():
+                pixel_locations = self.province_locations.get(province_id)
+                if pixel_locations:
+                    province_data["pixel_locations"] = pixel_locations
+                    futures.append(executor.submit(self._process_province, province_data))
+
+            for future in as_completed(futures):
+                province = future.result()
+                self.provinces[province.province_id] = province
+
+    def _process_province(self, province_data: dict):
+        """Helper method to process a single province.
+
+        Returns:
+            province (EUProvince): The province processed from a `dict`.
+        """
+        province_id = province_data["province_id"]
+        if province_id in self.provinces:
+            return self.provinces[province_id].update_from_dict(province_data)
+
+        return EUProvince.from_dict(province_data)
+
+    def _build_areas(self):
+        """Builds the world areas from the `default_area_data` dict."""
+        if not self.areas:
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._process_area, area_data)
+                    for area_id, area_data in self.default_area_data.items()
+                ]
+
+            for future in as_completed(futures):
+                area = future.result()
+                self.areas[area.area_id] = area
+
+            for area in self.areas.values():
+                for province_id in area.provinces:
+                    self.province_to_area[province_id] = area
+
+    def _process_area(self, area_data: dict):
+        """Helper method to process a single area from a `dict`.
+        
+        Returns:
+            area (EUArea): The area processed from a `dict`.
+        """
+        area_provinces = {
+            province_id: self.provinces[province_id]
+            for province_id in area_data["provinces"]
+                if province_id in self.provinces
+            }
+
+        area_data["provinces"] = area_provinces
+        return EUArea.from_dict(area_data)
+
+    def _build_regions(self):
+        """Builds the world regions from the `default_region_data` dict."""
+        if not self.regions:
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._process_region, region_data)
+                    for region_id, region_data in self.default_region_data.items()
+                ]
+
+            for future in as_completed(futures):
+                region = future.result()
+                self.regions[region.region_id] = region
+
+            for region in self.regions.values():
+                for area in region:
+                    for province_id in area.provinces:
+                        self.province_to_region[province_id] = region
+
+    def _process_region(self, region_data: dict):
+        """Helper method to process a single region.
+
+        Returns:
+            region (EURegion): The region processed from a `dict`."""
+        region_areas = {
+            area_id: self.areas[area_id]
+            for area_id in region_data["areas"]
+                if area_id in self.areas
+        }
+
+        region_data["areas"] = region_areas
+        return EURegion.from_dict(region_data)
+
+    def _load_trade_nodes(self, savefile_lines: list[str]):
+        """Reads over the **savefile_lines** and matches the lines trade node definition blocks to extract
+        each variable's value, and assigns it to each trade node dict.
+        
+        Example of part of the definition for a trade node:
+        
+            'node={
+                definitions="northwest_territories"
+                current=1.900
+                local_value=2.398
+                outgoing=0.498
+                value_added_outgoing=0.498
+                retention=0.792
+                steer_power=0.500
+                ....
+                ....
+                ....
+            }'
+        
+        Args:
+            savefile_lines (list[str]): The read savefile lines. Is from either default or a loaded savegame.
+        
+        Returns:
+            trade_nodes (dict[int, dict[str, str]]): A mapping of trade node IDs to that trade node's data.
+        """
+        trade_node_id_pattern = re.compile(r'definitions="([^"]+)"')
+        patterns = {
+            "current": r'current=([\d.]+)',
+            "local_value": r'local_value=([\d.]+)',
+            "outgoing": r'outgoing=([\d.]+)',
+            "value_added_outgoing": r'value_added_outgoing=([\d.]+)',
+            "retention": r'retention=([\d.]+)',
+            "steer_power": r'steer_power=([\d.]+)',
+            "num_collectors": r'num_collectors=([\d+])',
+            "num_collectors_including_pirates": r'num_collectors_including_pirates=([\d+])',
+            "total": r'total=([\d.]+)',
+            "p_pow": r'p_pow=([\d.]+)',
+            "collector_power": r'collector_power=([\d.]+)',
+            "collector_power_including_pirates": r'collector_power_including_pirates=([\d.]+)',
+            "pull_power": r'pull_power=([\d.]+)',
+            "retain_power": r'retain_power=([\d.]+)',
+            "highest_power": r'highest_power=([\d.]+)',
+        }
+
+        compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
+        important_patterns_keys = tuple(patterns.keys())
+
+        inside_trade_nodes_block = False
+        bracket_depth = 0
+
+        trade_nodes: dict[str, dict] = {}
+        current_node: dict[str, str] = None
+        current_node_keys = set()
+
+        line_iter = iter(savefile_lines)
+        try:
+            while True:
+                line = next(line_iter).strip()
+
+                if line == "trade={":
+                    inside_trade_nodes_block = True
+                    bracket_depth += 1
+                    continue
+
+                if inside_trade_nodes_block:
+                    if "{" in line:
+                        bracket_depth += 1
+
+                    if "}" in line:
+                        bracket_depth -= 1
+                        if bracket_depth == 0:
+                            print("end of trade block")
+                            raise StopIteration
+
+                    if line.startswith("node={"):
+                        if current_node:
+                            trade_nodes[current_node["trade_node_id"]] = current_node
+
+                        current_node = {}
+                        current_node_keys = set()
+                        continue
+
+                    trade_node_id = self._try_extract_trade_node_id(trade_node_id_pattern, line)
+                    if trade_node_id is not None:
+                        current_node = {"trade_node_id": trade_node_id}
+                        current_node_keys = set()
+                        continue
+
+                    if current_node_keys and not any(line.startswith(key) for key in important_patterns_keys):
+                        continue
+
+                    for key, pattern in compiled_patterns.items():
+                        match = pattern.search(line)
+                        if match and not key in current_node_keys:
+                            current_node_keys.add(key)
+
+                            current_node[key] = match.group(1)
+
+        except StopIteration:
+            if current_node:
+                trade_nodes[current_node["trade_node_id"]] = current_node
+
+        return trade_nodes
+
+    def _build_trade_nodes(self, trade_nodes_data: dict[str, dict]):
+        """Builds the world trade nodes from `trade_nodes_data`."""
+        if not self.trade_nodes:
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._process_trade_node, trade_node_data)
+                    for trade_node_id, trade_node_data in trade_nodes_data.items()
+                ]
+
+                for future in as_completed(futures):
+                    trade_node = future.result()
+                    self.trade_nodes[trade_node.trade_node_id] = trade_node
+
+                for trade_node in self.trade_nodes.values():
+                    for province_id in trade_node.provinces:
+                        self.province_to_trade_node[province_id] = trade_node
+
+    def _process_trade_node(self, trade_node_data: dict):
+        """Helper method to process a single trade node.
+
+        Returns:
+            trade_node (EUTradeNode): The trade node processed from a `dict`.
+        """
+        trade_node_id = trade_node_data["trade_node_id"]
+        node_provinces = {
+            province_id: province
+            for province_id, province in self.provinces.items()
+                if province.trade == trade_node_id and
+                province.province_type != ProvinceType.SEA
+        }
+
+        trade_node_data["provinces"] = node_provinces
+        return EUTradeNode.from_dict(trade_node_data)
+
+    def _try_extract_trade_node_id(self, pattern: re.Pattern, line: str):
+        """Checks if the line contains a trade node definition.
+        
+
+        Returns:
+            trade_node_id (str|None): The ID of the current trade node, if it exists.
+        """
+        match = pattern.search(line)
+        return match.group(1) if match else None
+
+    def _load_trade_goods(self, savefile_lines: list[str]):
         """Loads the trade good prices from the savefile.
         
         Args:
@@ -531,111 +829,6 @@ class EUWorldData:
                         break  
 
         return trade_goods
-
-    def build_world(self, save_folder: str, savefile: str):
-        """Builds the **EUProvince**, **EUArea**, **EURegion**, and Country objects by
-        updating the default data with the savefile's data.
-        
-        Populates the **provinces**, **areas**, and **regions** dictionaries to provide
-        easier access.
-        
-        Args:
-            save_folder (str): The folder containing the user save file.
-            save_file (str): The savefile to read.
-        """
-        savefile_lines = FileUtils.run_external_reader(save_folder, savefile)
-        self.current_save_date = savefile_lines[1].split("=")[1].strip()
-        self.current_province_data = self.load_world_provinces(savefile_lines)
-
-        if self.update_status_callback:
-            self.update_status_callback("Building provinces....")
-        else:
-            print("Building provinces....")
-
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for province_id, province_data in self.current_province_data.items():
-                pixel_locations = self.province_locations.get(province_id)
-                if pixel_locations:
-                    province_data["pixel_locations"] = pixel_locations
-                    futures.append(executor.submit(self._process_province, province_data))
-
-            for future in as_completed(futures):
-                province = future.result()
-                self.provinces[province.province_id] = province
-
-        if self.update_status_callback:
-            self.update_status_callback("Building areas....")
-        else:
-            print("Building areas....")
-
-        if not self.areas:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self._process_area, area_data)
-                    for area_id, area_data in self.default_area_data.items()
-                ]
-
-            for future in as_completed(futures):
-                area = future.result()
-                self.areas[area.area_id] = area
-
-            for area in self.areas.values():
-                for province_id in area.provinces:
-                    self.province_to_area[province_id] = area
-
-        if self.update_status_callback:
-            self.update_status_callback("Building regions....")
-        else:
-            print("Building regions....")
-
-        if not self.regions:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self._process_region, region_data)
-                    for region_id, region_data in self.default_region_data.items()
-                ]
-
-            for future in as_completed(futures):
-                region = future.result()
-                self.regions[region.region_id] = region
-
-            for region in self.regions.values():
-                for area in region:
-                    for province_id in area.provinces:
-                        self.province_to_region[province_id] = region
-
-        self.trade_goods = self.load_trade_goods(savefile_lines)
-
-    def _process_province(self, province_data: dict):
-        """Helper method to process a single province."""
-        province_id = province_data["province_id"]
-        if province_id in self.provinces:
-            return self.provinces[province_id].update_from_dict(province_data)
-
-        return EUProvince.from_dict(province_data)
-
-    def _process_area(self, area_data: dict):
-        """Helper method to process a single area."""
-        area_provinces = {
-            province_id: self.provinces[province_id]
-            for province_id in area_data["provinces"]
-                if province_id in self.provinces
-            }
-
-        area_data["provinces"] = area_provinces
-        return EUArea.from_dict(area_data)
-
-    def _process_region(self, region_data: dict):
-        """Helper method to process a single region."""
-        region_areas = {
-            area_id: self.areas[area_id]
-            for area_id in region_data["areas"]
-                if area_id in self.areas
-        }
-
-        region_data["areas"] = region_areas
-        return EURegion.from_dict(region_data)
 
     def search(self, exact_matches_only: bool, search_param: str) -> list[Union[EUProvince, EUArea, EURegion]]:
         """Searches for a location given a name. Can optionally return only exact matches.

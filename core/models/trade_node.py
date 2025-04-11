@@ -3,18 +3,47 @@ This module defines EUTradeNode, which represents a collection of provinces that
 """
 
 
-from dataclasses import dataclass, field
-from enum import Enum
-from math import floor
+from dataclasses import dataclass, field, fields
 from typing import Optional
 
-from .import EUMapEntity, EUProvince
+from .import EUMapEntity, EUCountry, EUProvince
+from ..utils import MapUtils
+
+
+
+@dataclass
+class EUTradeNodeParticipant:
+    country: EUCountry
+    trade_power: float
+    provincial_trade_power: Optional[float] = 0.00
+    ship_trade_power: Optional[float] = 0.00
+    trade_power_share_fraction: Optional[float] = 0.00
+    trade_income: Optional[float] = 0.00
+    has_trader: Optional[bool] = False
+    has_trade_capital: Optional[bool] = False
+    num_light_ships: Optional[int] = 0
+    trading_policy: Optional[str] = None
 
 
 @dataclass
 class EUTradeNode(EUMapEntity):
     trade_node_id: str
     provinces: dict[int, EUProvince]
+
+    total_trade_value: Optional[float] = 0.00
+    local_trade_value: Optional[float] = 0.00
+    total_trade_power: Optional[float] = 0.00
+    provencial_trade_power: Optional[float] = 0.00
+    outgoing_trade_value: Optional[float] = 0.00
+    added_outgoing_trade_value: Optional[float] = 0.00
+    trade_value_retention: Optional[float] = 0.00
+    num_collectors: Optional[int] = 0
+    num_collectors_including_pirates: Optional[float] = 0
+    collectors_trade_power: Optional[float] = 0.00
+    collectors_trade_power_including_pirates: Optional[float] = 0.00
+    retained_trade_power: Optional[float] = 0.00
+    highest_trade_power: Optional[float] = 0.00
+    pulled_trade_power: Optional[float] = 0.00
 
     pixel_locations: Optional[set[tuple[int, int]]] = field(init=False)
 
@@ -23,30 +52,72 @@ class EUTradeNode(EUMapEntity):
         self.pixel_locations = set(loc for province in self.provinces.values() for loc in province.pixel_locations)
         super().__post_init__()
 
-    @property
-    def trade_power(self):
-        """The total trade power of the node."""
-        return round(sum(province.trade_power for province in self), 2)
+    @classmethod
+    def from_dict(cls, data: dict[str, str]):
+        """Builds the trade node from a dictionary."""
+        names = {
+            "trade_node_id": "trade_node_id",
+            "current": "total_trade_value",
+            "local_value": "local_trade_value",
+            "outgoing": "outgoing_trade_value",
+            "added_outgoing": "added_outgoing_trade_value",
+            "retention": "trade_value_retention",
+            "num_collectors": "num_collectors",
+            "num_collectors_including_pirates": "num_collectors_including_pirates",
+            "total": "total_trade_power",
+            "p_pow": "provencial_trade_power",
+            "collector_power": "collectors_trade_power",
+            "collector_power_including_pirates": "collectors_trade_power_including_pirates",
+            "retain_power": "retained_trade_power",
+            "highest_power": "highest_trade_power",
+            "pull_power": "pulled_trade_power",
+        }
+
+        converted_data = {"name": MapUtils.format_name(data["trade_node_id"]), "provinces": data["provinces"]}
+        field_types = {f.name: f.type for f in fields(cls)}
+
+        for raw_key, value in data.items():
+            if raw_key not in names:
+                continue
+
+            key = names[raw_key]
+            if key not in field_types:
+                continue
+
+            field_type = field_types[key]
+            try:
+                if field_type in ["str", "Optional[str]"]:
+                    converted_data[key] = value
+                elif field_type in ["int", "Optional[int]"]:
+                    converted_data[key] = int(float(value))
+                elif field_type in ["float", "Optional[float]"]:
+                    converted_data[key] = float(value)
+                else:
+                    converted_data[key] = value
+            except (ValueError, TypeError) as e:
+                print(f"Error converting {key} with value {value}: {e}")
+
+        return cls(**converted_data)
 
     @property
     def tax_income(self) -> float:
         """The monthly tax income of the trade node in ducats."""
-        pass
+        return None
 
     @property
     def base_production_income(self) -> float:
         """The monthly production income of the trade node before applying the trade good price."""
-        pass
+        return None
 
     @property
     def development(self) -> int:
         """Returns the total development of the trade node."""
-        pass
+        return None
 
     @property
     def goods_produced(self) -> float:
         """The amount of goods produced by the trade node."""
-        pass
+        return None
 
     def __iter__(self):
         for province in self.provinces.values():
