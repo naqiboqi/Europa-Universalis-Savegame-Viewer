@@ -124,7 +124,8 @@ class NativeLayout:
         return sg.Column([
             [demographics_frame]
         ], background_color=constants.MEDIUM_FRAME_BG, 
-        pad=(10, 10),
+        expand_y=True,
+        pad=(0, 10),
         vertical_alignment="top")
 
     @staticmethod
@@ -147,7 +148,7 @@ class NativeLayout:
         native_size_icon = LayoutHelper.create_icon_with_border(
             icon_name="uprising_chance",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(0, 0),
+            border_pad=(5, 5),
             image_size=(28, 28))
 
         native_size_frame = sg.Frame("", [
@@ -171,7 +172,7 @@ class NativeLayout:
         hostileness_icon = LayoutHelper.create_icon_with_border(
             icon_name="agressiveness",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(0, 0),
+            border_pad=(5, 5),
             image_size=(28, 28))
 
         hostileness_frame = sg.Frame("", [
@@ -195,7 +196,7 @@ class NativeLayout:
         ferocity_icon = LayoutHelper.create_icon_with_border(
             icon_name="ferocity",
             borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
-            border_pad=(0, 0),
+            border_pad=(5, 5),
             image_size=(28, 28))
 
         ferocity_frame = sg.Frame("", [
@@ -218,8 +219,9 @@ class NativeLayout:
 
         return sg.Column([
             [native_stats_frame],
-        ], background_color=constants.MEDIUM_FRAME_BG, 
-        pad=((15, 0), (10, 10)), 
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        expand_y=True,
+        pad=((0, 0), (10, 10)), 
         vertical_alignment="top")
 
     @staticmethod
@@ -230,7 +232,7 @@ class NativeLayout:
             column (Column): The column containing the colonial region information.
         """
         uncolonized_text = sg.Text(
-            "Uncolonized Land",
+            "Uncolonized Land.",
             text_color=constants.LIGHT_TEXT,
             background_color=constants.SUNK_FRAME_BG,
             font=("Georgia", 18, "bold"),
@@ -252,13 +254,15 @@ class NativeLayout:
             [uncolonized_text],
             [colonial_region_info]
         ], background_color=constants.SUNK_FRAME_BG,
-        border_width=2,
-        element_justification="center")
+        border_width=3,
+        element_justification="center",
+        expand_y=True)
 
         return sg.Column([
             [colonial_region_frame]
         ], background_color=constants.DARK_FRAME_BG,
-        element_justification="center")
+        element_justification="center",
+        expand_y=True)
 
     @staticmethod
     def create_native_trade_goods_column():
@@ -282,39 +286,36 @@ class NativeLayout:
         pad=(0, 0),
         relief=sg.RELIEF_FLAT)
 
-        return sg.Column([
-            [trade_good_frame]
-        ],
-        pad=(15, 15),
-        vertical_alignment="top")
-
-    @staticmethod
-    def create_native_religion_icon_column():
-        """Creates the religion column for a native province.
-        
-        Returns:
-            column (Column): The column containing the religion icon.
-        """
-        religion_icon = LayoutHelper.create_icon_with_border(
-            icon_name="",
-            image_key="-INFO_NATIVE_PROVINCE_RELIGION_ICON-",
-            borders=[
-                (constants.GOLD_FRAME_LOWER, 2, sg.RELIEF_RIDGE),
-                (constants.GOLD_FRAME_UPPER, 2, sg.RELIEF_RIDGE)],
-            border_pad=(0, 5),
-            image_size=(64, 64))
-
-        religion_frame = sg.Frame("", [
-            [sg.Push(constants.MEDIUM_FRAME_BG), religion_icon, sg.Push(constants.MEDIUM_FRAME_BG)],
+        trade_good_column = sg.Column([
+            [sg.Push(constants.MEDIUM_FRAME_BG), trade_good_frame, sg.Push(constants.MEDIUM_FRAME_BG)]
         ], background_color=constants.MEDIUM_FRAME_BG,
-        pad=(0, 0),
-        relief=sg.RELIEF_FLAT)
-
-        return sg.Column([
-            [religion_frame]
-        ],
         pad=(15, 15),
         vertical_alignment="top")
+
+        trade_good_name = LayoutHelper.create_text_with_frame(
+            "",
+            key="-INFO_NATIVE_PROVINCE_TRADE_GOOD_NAME-",
+            content_color=constants.LIGHT_TEXT,
+            expand_x=True,
+            frame_background_color=constants.BUTTON_BG,
+            justification="center",
+            pad=((0, 20), (5, 5)),
+            size=(15, 1),
+            relief=sg.RELIEF_RIDGE)
+
+        trade_info_frame = sg.Frame("", [
+            [trade_good_column, trade_good_name]
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        border_width=2,
+        pad=(5, 5), 
+        relief=sg.RELIEF_SUNKEN,
+        vertical_alignment="top")
+
+        return sg.Column([
+            [trade_info_frame],
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        pad=(10, 10),
+        vertical_alignment="center")
 
     @staticmethod
     def create_native_info_column():
@@ -359,21 +360,32 @@ class NativeLayout:
         colonial_region_column = NativeLayout.create_colonial_region_column()
         geographic_info_frame = NativeLayout.create_geographic_native_info_frame()
 
-        trade_good_column = NativeLayout.create_native_trade_goods_column()
-        religion_icon_column = NativeLayout.create_native_religion_icon_column()
-
-        icon_frame = sg.Frame("", [
-            [religion_icon_column, trade_good_column]
-        ], background_color=constants.MEDIUM_FRAME_BG,
-        border_width=2,
-        pad=(5, 5), 
-        relief=sg.RELIEF_SUNKEN,
+        trade_header_label = sg.Text(
+            "Trade", 
+            background_color=constants.SECTION_BANNER_BG,
+            font=("Georgia", 12, "bold"),
+            text_color=constants.LIGHT_TEXT)
+        trade_icon = LayoutHelper.create_icon_with_border(
+            icon_name="trade",
+            borders=[(constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE)],
+            border_pad=(5, 5),
+            image_size=(28, 28))
+        trade_header_frame = sg.Frame("", [
+            [trade_header_label, trade_icon, sg.Push(background_color=constants.SECTION_BANNER_BG)]
+        ], background_color=constants.SECTION_BANNER_BG,
+        expand_x=True,
+        pad=(0, 0),
+        relief=sg.RELIEF_SOLID,
         vertical_alignment="top")
 
-        icon_column = sg.Column([
-            [icon_frame]
-        ], background_color=constants.MEDIUM_FRAME_BG,
-        pad=(5, 10),
+        trade_good_column = NativeLayout.create_native_trade_goods_column()
+
+        trade_column = sg.Column([
+            [trade_header_frame],
+            [trade_good_column]
+        ], background_color=constants.LIGHT_FRAME_BG,
+        expand_x=True,
+        pad=(10, 10),
         vertical_alignment="top")
 
         native_info_frame = sg.Frame("", [
@@ -382,7 +394,7 @@ class NativeLayout:
                 sg.Push(background_color=constants.LIGHT_FRAME_BG),
             area_km2_label, area_km2_value],
             [colonial_region_column],
-            [native_stat_column, demographic_info_column, icon_column]
+            [native_stat_column, demographic_info_column, trade_column]
         ], background_color=constants.LIGHT_FRAME_BG, 
         border_width=5,
         expand_x=True,

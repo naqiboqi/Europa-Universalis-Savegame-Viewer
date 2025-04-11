@@ -342,6 +342,7 @@ class MapDisplayer:
             "-INFO_NATIVE_PROVINCE_BASE_TAX-": province.base_tax,
             "-INFO_NATIVE_PROVINCE_BASE_PRODUCTION-": province.base_production,
             "-INFO_NATIVE_PROVINCE_BASE_MANPOWER-": province.base_manpower,
+            "-INFO_NATIVE_PROVINCE_TRADE_GOOD_NAME-": MapUtils.format_name(province.trade_goods),
             "-INFO_NATIVE_PROVINCE_SIZE_KM-": province.area_km2,
             "-INFO_NATIVE_PROVINCE_CULTURE-": MapUtils.format_name(province.culture),
             "-INFO_NATIVE_PROVINCE_RELIGION-": MapUtils.format_name(province.religion),
@@ -365,8 +366,6 @@ class MapDisplayer:
         trade_good_element = self.window["-INFO_NATIVE_PROVINCE_TRADE_GOOD-"]
         trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
 
-        religion_element = self.window["-INFO_NATIVE_PROVINCE_RELIGION_ICON-"]
-        religion_element.update(filename=icon_loader.get_icon(province.religion), visible=True)
 
     def update_area_details(self, area: EUArea):
         """Updates the information displayed for a specific area in the UI.
@@ -559,7 +558,7 @@ class MapDisplayer:
         new_map_mode = self.painter.map_mode
         for map_mode in map_modes:
             map_mode_button = self.window[map_mode]
-            button_color = (constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG if map_mode == new_map_mode else constants.BUTTON_BG)
+            button_color = (constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG if map_mode == new_map_mode.name else constants.BUTTON_BG)
             map_mode_button.update(button_color=button_color)
 
     def handle_search_for(self, values):
@@ -627,7 +626,6 @@ class MapDisplayer:
         """
         window = self.window
         mode_names = {mode.value.upper(): mode for mode in self.painter.map_modes}
-        print(mode_names)
 
         while True:
             event, values = window.read(timeout=1)
