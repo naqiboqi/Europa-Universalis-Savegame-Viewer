@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageTk
 from . import MapHandler, MapPainter, EUColors, EUWorldData
 from . import Layout
 from .layouts import constants
-from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion
+from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion, EUTradeNode
 from .models import MapMode
 from .utils import IconLoader, MapUtils
 
@@ -551,6 +551,7 @@ class MapDisplayer:
         self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         self.map_image = self.original_map.resize(self.map_image.size, Image.Resampling.LANCZOS)
 
+        self.send_message_callback(f"Displaying map {self.painter.map_mode.value.capitalize()}")
         self.color_map_mode_buttons(map_modes)
         self.reset_canvas_to_initial()
 

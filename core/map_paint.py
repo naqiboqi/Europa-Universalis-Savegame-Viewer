@@ -74,6 +74,8 @@ class MapPainter:
             MapMode.AREA: self._draw_map_area,
             MapMode.REGION: self._draw_map_region,
             MapMode.DEVELOPMENT: self._draw_map_development,
+            MapMode.TRADE: self._draw_map_trade,
+            MapMode.CULTURE: self._draw_map_culture,
             MapMode.RELIGION: self._draw_map_religion
         }
 
@@ -124,9 +126,6 @@ class MapPainter:
             "border": Image.fromarray(map_pixels),
             "no_border": Image.fromarray(map_pixels_borderless)
         }
-
-        if self.update_status_callback:
-            self.update_status_callback(f"Displaying map mode {self.map_mode.value}")
 
         return self._world_image
 
@@ -380,10 +379,132 @@ class MapPainter:
         return map_pixels_bordered, map_pixels_borderless
 
     def _draw_map_trade(self):
-        ...
+        """Draws the map in the **Trade** map mode.
+        
+        In this mode, each province is colored based on the trade node that it belongs to.  
+        - **Regions** are assigned a seeded color.  
+        - **Sea** provinces remain blue.  
+        - **Wasteland** provinces remain grey.  
+
+        Returns:
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the trade node map with borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
+        """
+        world_nodes = self.world_data.trade_nodes
+        
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
+
+        all_node_pixels = {
+            node.trade_node_id: np.array(list(node.pixel_locations))
+            for node in world_nodes.values()
+        }
+
+        all_node_border_pixels = {
+            node.trade_node_id: np.array(list(node.border_pixels))
+            for node in world_nodes.values()
+        }
+
+        for trade_node in world_nodes.values():
+            node_pixels = all_node_pixels.get(trade_node.trade_node_id)
+            if node_pixels.size == 0:
+                continue
+
+            node_color = MapUtils.seed_color(name=trade_node.trade_node_id)
+
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = node_pixels.T
+
+            map_pixels_bordered[y_coords, x_coords] = node_color
+            map_pixels_borderless[y_coords, x_coords] = node_color
+
+            border_pixels = all_node_border_pixels.get(trade_node.trade_node_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(node_color)
+
+        wasteland_pixels = set()
+        for province in self.world_data.areas.get("wasteland_area"):
+            if province.pixel_locations:
+                wasteland_pixels.update(province.pixel_locations)
+
+        x_wasteland_coords, y_wasteland_coords = zip(*wasteland_pixels)
+
+        map_pixels_bordered[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
+        map_pixels_borderless[y_wasteland_coords, x_wasteland_coords] = ProvinceTypeColor.WASTELAND.value
+
+        lake_pixels = set()
+        for province in self.world_data.areas.get("lake_area"):
+            if province.pixel_locations:
+                lake_pixels.update(province.pixel_locations)
+
+        x_lake_coords, y_lake_coords = zip(*lake_pixels)
+
+        map_pixels_bordered[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
+        map_pixels_borderless[y_lake_coords, x_lake_coords] = ProvinceTypeColor.SEA.value
+
+        return map_pixels_bordered, map_pixels_borderless
 
     def _draw_map_culture(self):
-        ...
+        """Draws the map in the **Culture** map mode.
+        
+        In this mode, each province is colored based on its dominant culture.  
+        - **Land** provinces are assigned a seeded color.  
+        - **Sea** provinces remain blue.  
+        - **Wasteland** provinces remain grey.  
+
+        Returns:
+            tuple (tuple[NDArray, NDArray]): Contains
+                - map_pixels_bordered: A NumPy array representing the culture map with province borders.
+                - map_pixels_borderless: A NumPy array of the same map without borders.
+        """
+        world_provinces = self.world_data.provinces
+
+        map_pixels_bordered = np.array(self._world_image)
+        map_pixels_borderless = map_pixels_bordered.copy()
+
+        province_type_colors = {
+            ProvinceType.SEA: ProvinceTypeColor.SEA.value,
+            ProvinceType.WASTELAND: ProvinceTypeColor.WASTELAND.value,
+        }
+
+        # Precompute pixel locations.
+        all_province_pixels = {
+            province.province_id: np.array(list(province.pixel_locations))
+            for province in world_provinces.values()}
+
+        all_province_border_pixels = {
+            province.province_id: np.array(list(province.border_pixels))
+            for province in world_provinces.values()}
+
+        for province in world_provinces.values():
+            province_pixels = all_province_pixels.get(province.province_id)
+            if province_pixels.size == 0:
+                continue
+
+            province_type = province.province_type
+            if province_type in province_type_colors:
+                province_color = province_type_colors.get(province_type, None)
+            else:
+                province_culture = province.culture
+                if province_culture:
+                    province_color = MapUtils.seed_color(name=province_culture)
+                else:
+                    province_color = MapUtils.seed_color(name="No Culture")
+
+            # Transpose (N, 2) array into `x` and `y` arrays for vectorized indexing.
+            x_coords, y_coords = province_pixels.T
+
+            map_pixels_bordered[y_coords, x_coords] = province_color
+            map_pixels_borderless[y_coords, x_coords] = province_color
+
+            border_pixels = all_province_border_pixels.get(province.province_id)
+            if border_pixels.size > 0:
+                x_border_coords, y_border_coords = border_pixels.T
+                map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+
+        return map_pixels_bordered, map_pixels_borderless
 
     def _draw_map_religion(self):
         """Draws the map in the **Religion** map mode.

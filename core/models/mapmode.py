@@ -13,12 +13,16 @@ class MapMode(Enum):
     - Area
     - Region
     - Development
+    - Trade
+    - Culture
     - Religion
     """
     POLITICAL = "political"
     AREA = "area"
     REGION = "region"
     DEVELOPMENT = "development"
+    TRADE = "trade"
+    CULTURE = "culture"
     RELIGION = "religion"
 
     @property

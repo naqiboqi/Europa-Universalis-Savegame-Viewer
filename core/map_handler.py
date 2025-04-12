@@ -256,6 +256,27 @@ class MapHandler:
                     else:
                         info = f"The province of {province.name} (Total Development: {province.development})"
 
+                case MapMode.TRADE:
+                    if province.province_type == ProvinceType.SEA:
+                        info = f"The waters of {province.name}"
+                    else:
+                        trade_node = displayer.world_data.province_to_trade_node.get(province.province_id)
+                        if not trade_node:
+                            return
+
+                        info = f"The province of {province.name} (Trade Power: {province.trade_power})"
+                        if province.center_of_trade:
+                            info += f" Has a level {province.center_of_trade} Center of Trade"
+
+                case MapMode.CULTURE:
+                    if province.province_type == ProvinceType.SEA:
+                        info = f"The waters of {province.name}"
+                    else:
+                        province_culture = province.culture
+                        info = (
+                            f"The province of {province.name} " 
+                            f"(Culture: {MapUtils.format_name(province_culture) if province_culture else 'No Culture'})")
+
                 case MapMode.RELIGION:
                     if province.province_type == ProvinceType.SEA:
                         info = f"The waters of {province.name}"
@@ -365,6 +386,14 @@ class MapHandler:
                     return
 
             case MapMode.DEVELOPMENT:
+                selected_item = province
+
+            case MapMode.TRADE:
+                selected_item = self.world_data.province_to_trade_node.get(province.province_id)
+                if not selected_item:
+                    return
+
+            case MapMode.CULTURE:
                 selected_item = province
 
             case MapMode.RELIGION:
