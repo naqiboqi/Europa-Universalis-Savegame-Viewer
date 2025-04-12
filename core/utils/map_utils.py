@@ -78,7 +78,7 @@ class MapUtils:
         return " ".join(word.capitalize() for word in words)
 
     @staticmethod
-    def get_border_color(color: tuple[int, int, int]):
+    def get_border_color(color: tuple[int, int, int], darken_by: int=10):
         """Generates a darker border color based on the given color.
 
         The border color is created by subtracting 50 from each RGB component, 
@@ -86,11 +86,12 @@ class MapUtils:
 
         Args:
             color (tuple[int, int, int]): The original color in RGB format.
+            darken_by (int, optional): The amount to darken each RGB channel. Defaults to 50.
 
         Returns:
             tuple[int, int, int]: The darker border color in RGB format.
         """
-        return tuple(max(0, c - 50) for c in color[:3])
+        return tuple(max(0, c - darken_by) for c in color[:3])
 
     @staticmethod
     def seed_color(name: str):
