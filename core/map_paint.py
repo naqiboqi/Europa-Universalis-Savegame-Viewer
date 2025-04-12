@@ -183,7 +183,7 @@ class MapPainter:
             border_pixels = all_province_border_pixels.get(province.province_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color, darken_by=10)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -232,10 +232,15 @@ class MapPainter:
             map_pixels_bordered[y_coords, x_coords] = area_color
             map_pixels_borderless[y_coords, x_coords] = area_color
 
-            border_pixels = all_area_border_pixels.get(area_id)
-            if border_pixels.size > 0:
-                x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(area_color)
+            province_border_pixels = np.array(list(border_pixel for province in area for border_pixel in province.border_pixels))
+            if province_border_pixels.size > 0:
+                x_province_border_coords, y_province_border_coords = province_border_pixels.T
+                map_pixels_bordered[y_province_border_coords, x_province_border_coords] = MapUtils.get_border_color(area_color)
+
+            area_border_pixels = all_area_border_pixels.get(area_id)
+            if area_border_pixels.size > 0:
+                x_border_coords, y_border_coords = area_border_pixels.T
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(area_color, darken_by=25)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -502,7 +507,7 @@ class MapPainter:
             border_pixels = all_province_border_pixels.get(province.province_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -562,6 +567,6 @@ class MapPainter:
             border_pixels = all_province_border_pixels.get(province.province_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_borderless[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
 
         return map_pixels_bordered, map_pixels_borderless
