@@ -232,6 +232,7 @@ class MapPainter:
             map_pixels_bordered[y_coords, x_coords] = area_color
             map_pixels_borderless[y_coords, x_coords] = area_color
 
+            # Color provincee borders within the area first
             province_border_pixels = np.array(list(border_pixel for province in area for border_pixel in province.border_pixels))
             if province_border_pixels.size > 0:
                 x_province_border_coords, y_province_border_coords = province_border_pixels.T
@@ -287,10 +288,16 @@ class MapPainter:
             map_pixels_bordered[y_coords, x_coords] = region_color
             map_pixels_borderless[y_coords, x_coords] = region_color
 
+            # Color area borders within the region first
+            area_border_pixels = np.array(list(border_pixel for area in region for border_pixel in area.border_pixels))
+            if area_border_pixels.size > 0:
+                x_province_border_coords, y_province_border_coords = area_border_pixels.T
+                map_pixels_bordered[y_province_border_coords, x_province_border_coords] = MapUtils.get_border_color(region_color, 25)
+
             border_pixels = all_region_border_pixels.get(region_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(region_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(region_color, darken_by=35)
 
         wasteland_pixels = set()
         for province in self.world_data.areas.get("wasteland_area"):
@@ -427,7 +434,7 @@ class MapPainter:
             border_pixels = all_node_border_pixels.get(trade_node.trade_node_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(node_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(node_color, darken_by=20)
 
         wasteland_pixels = set()
         for province in self.world_data.areas.get("wasteland_area"):
@@ -507,7 +514,7 @@ class MapPainter:
             border_pixels = all_province_border_pixels.get(province.province_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color, darken_by=15)
 
         return map_pixels_bordered, map_pixels_borderless
 
@@ -567,6 +574,6 @@ class MapPainter:
             border_pixels = all_province_border_pixels.get(province.province_id)
             if border_pixels.size > 0:
                 x_border_coords, y_border_coords = border_pixels.T
-                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color)
+                map_pixels_bordered[y_border_coords, x_border_coords] = MapUtils.get_border_color(province_color, darken_by=15)
 
         return map_pixels_bordered, map_pixels_borderless
