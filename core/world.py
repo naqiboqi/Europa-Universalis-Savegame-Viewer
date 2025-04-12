@@ -545,6 +545,11 @@ class EUWorldData:
 
         self._build_regions()
 
+        if self.update_status_callback:
+            self.update_status_callback("Building trade nodes....")
+        else:
+            print("Building trade nodes....")
+
         trade_nodes_data = self._load_trade_nodes(savefile_lines)
         self._build_trade_nodes(trade_nodes_data)
 
@@ -711,7 +716,6 @@ class EUWorldData:
                     if "}" in line:
                         bracket_depth -= 1
                         if bracket_depth == 0:
-                            print("end of trade block")
                             raise StopIteration
 
                     if line.startswith("node={"):
