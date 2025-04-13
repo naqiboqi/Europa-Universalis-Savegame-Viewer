@@ -2,7 +2,7 @@
 This module defines EUTradeNode, which represents a collection of provinces that contribute to trade in Europa Universalis IV.
 """
 
-
+from collections import OrderedDict
 from dataclasses import dataclass, field, fields
 from typing import Optional
 
@@ -27,8 +27,39 @@ class EUTradeNodeParticipant:
 
 @dataclass
 class EUTradeNode(EUMapEntity):
+    """Represents a trade node on the map.
+    
+    Inherits attributes from `EUMapEntity`.
+
+    Attributes:
+        origin_number (int):
+        trade_node_id (str):
+        provinces (dict[int, EUProvince]):
+        incoming_nodes (list[dict[str, str]]):
+        top_countries (OrderedDict[str, float]):
+
+        total_trade_value (Optional[float]):
+        local_trade_value (Optional[float]):
+        total_trade_power (Optional[float]):
+        provencial_trade_power (Optional[float]):
+        outgoing_trade_value (Optional[float]):
+        added_outgoing_trade_value (Optional[float]):
+        trade_value_retention (Optional[float]):
+        num_collectors (Optional[int]):
+        num_collectors_including_pirates (Optional[float]):
+        collectors_trade_power (Optional[float]):
+        collectors_trade_power_including_pirates (Optional[float]):
+        retained_trade_power (Optional[float]):
+        highest_trade_power (Optional[float]):
+        pulled_trade_power (Optional[float]):
+
+        pixel_locations (Optional[set[tuple[int, int]]]):
+    """
+    origin_number: int
     trade_node_id: str
     provinces: dict[int, EUProvince]
+    incoming_nodes: list[dict[str, str]]
+    top_countries: OrderedDict[str, float]
 
     total_trade_value: Optional[float] = 0.00
     local_trade_value: Optional[float] = 0.00
@@ -49,13 +80,17 @@ class EUTradeNode(EUMapEntity):
 
     def __post_init__(self):
         """Aggregate pixel locations from the contained provinces."""
-        self.pixel_locations = set(loc for province in self.provinces.values() for loc in province.pixel_locations)
+        self.pixel_locations = set(
+            loc for province in self.provinces.values()
+            for loc in province.pixel_locations)
+
         super().__post_init__()
 
     @classmethod
     def from_dict(cls, data: dict[str, str]):
         """Builds the trade node from a dictionary."""
-        names = {
+        attr_names = {
+            "origin_number": "origin_number",
             "trade_node_id": "trade_node_id",
             "current": "total_trade_value",
             "local_value": "local_trade_value",
@@ -73,14 +108,18 @@ class EUTradeNode(EUMapEntity):
             "pull_power": "pulled_trade_power",
         }
 
-        converted_data = {"name": MapUtils.format_name(data["trade_node_id"]), "provinces": data["provinces"]}
+        converted_data = {
+            "name": MapUtils.format_name(data["trade_node_id"]), 
+            "provinces": data["provinces"],
+            "incoming_nodes": data["incoming_nodes"],
+            "top_countries": data["top_countries"]}
         field_types = {f.name: f.type for f in fields(cls)}
 
         for raw_key, value in data.items():
-            if raw_key not in names:
+            if raw_key not in attr_names:
                 continue
 
-            key = names[raw_key]
+            key = attr_names[raw_key]
             if key not in field_types:
                 continue
 
@@ -100,24 +139,29 @@ class EUTradeNode(EUMapEntity):
         return cls(**converted_data)
 
     @property
+    def pulled_trade_value(self):
+        """The monthly amount of trade value pulled from the trade node."""
+        return round((1 - self.retained_trade_power) * self.total_trade_value, 2)
+
+    @property
     def tax_income(self) -> float:
         """The monthly tax income of the trade node in ducats."""
-        return None
+        return 0.00
 
     @property
     def base_production_income(self) -> float:
         """The monthly production income of the trade node before applying the trade good price."""
-        return None
+        return 0.00
 
     @property
     def development(self) -> int:
         """Returns the total development of the trade node."""
-        return None
+        return 0.00
 
     @property
     def goods_produced(self) -> float:
         """The amount of goods produced by the trade node."""
-        return None
+        return 0.00
 
     def __iter__(self):
         for province in self.provinces.values():

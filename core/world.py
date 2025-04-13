@@ -12,7 +12,7 @@ import numpy as np
 import os
 import re
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 from typing import Callable, Optional, Union
@@ -244,6 +244,7 @@ class EUWorldData:
             "fort_19th": 5
         }
 
+        # Store patterns so we don't have to compile constantly.
         compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
         important_province_keys = tuple(patterns.keys()) + tuple(fort_buildings.keys())
 
@@ -391,14 +392,15 @@ class EUWorldData:
         height, width = map_pixels.shape[:2]
 
         province_locations = defaultdict(set)
-        pixel_data = map_pixels[:, :, :3]
-        flat = pixel_data.reshape((-1, 3))
+        pixel_data = map_pixels[:, :, :3] # Only need the RGB channels.
+        flat = pixel_data.reshape((-1, 3)) # Flatten pixels for linear iteration.
 
         for i, pixel in enumerate(flat):
             pixel_tuple = tuple(pixel)
 
             if pixel_tuple in default_province_colors:
                 province_id = default_province_colors[pixel_tuple]
+                # Convert flat array index back to 2D image coordinates for province mapping.
                 x = i % width
                 y = i // width
                 province_locations[province_id].add((x, y))
@@ -413,7 +415,7 @@ class EUWorldData:
         
         Example of an area definition:
         
-            'ile_de_france_area = { #Champagne and Ile de France
+            'ile_de_france_area = {
                 182 183 185 3070 7960 7961 7962 7963 
             }`
         
@@ -462,6 +464,7 @@ class EUWorldData:
                 area_id = None
                 continue
 
+            # Need the province IDs to be ints as that is how they are stored in `self.provinces` dict.
             area_provinces.update(map(int, re.findall(r"\b\d+\b", line)))
 
         return areas
@@ -689,21 +692,31 @@ class EUWorldData:
             "highest_power": r'highest_power=([\d.]+)',
         }
 
+        # Store patterns so we don't have to compile constantly.
         compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
+        top_values_pattern = re.compile(r'\d+\.\d+')
         important_patterns_keys = tuple(patterns.keys())
 
         inside_trade_nodes_block = False
+        # Track bracket depth to find where the "trade" block ends.
         bracket_depth = 0
 
         trade_nodes: dict[str, dict] = {}
+
+        current_origin_number = 0
         current_node: dict[str, str] = None
         current_node_keys = set()
+        current_incoming_nodes: list[dict] = []
+
+        current_node_top_countries: list[str] = []
+        current_node_top_countries_dict = {}
 
         line_iter = iter(savefile_lines)
         try:
             while True:
                 line = next(line_iter).strip()
 
+                # Begin reading the trade block and track depth to figure out where it ends.
                 if line == "trade={":
                     inside_trade_nodes_block = True
                     bracket_depth += 1
@@ -718,17 +731,64 @@ class EUWorldData:
                         if bracket_depth == 0:
                             raise StopIteration
 
+                    if line == "incoming={":
+                        # Expects three consecutive lines: 'added_power=', 'added_value=', 'from_node='
+                        # Shows the incoming trade node data that comes to the `current_node`.
+                        added_power = next(line_iter).strip()
+                        added_value = next(line_iter).strip()
+                        from_node = next(line_iter).strip()
+
+                        current_incoming_nodes.append({
+                            "added_power": float(added_power.split("=")[1]),
+                            "added_value": float(added_value.split("=")[1]),
+                            "from_node": int(from_node.split("=")[1])
+                        })
+                        continue
+
+                    if line == "top_power={":
+                        # Collect country tags for the most prominent countries in the node until reaching closing brace.
+                        # top_power={
+                        #     "ENG"
+                        #     "FLA"
+                        #     "BRB"
+                        #     ...
+                        #     ...
+                        # }
+                        while True:
+                            line = next(line_iter).strip()
+                            if line == "}":
+                                break
+
+                            current_node_top_countries.append(line)
+                        continue
+
+                    if line == "top_power_values={":
+                        # Collect the trade power for each top country in the node, expected in one line:
+                        # top_power_values={
+                        #     128.194 111.503 45.181 ... 2.246 
+                        # }
+                        line = next(line_iter).strip()
+
+                        values = list(map(float, top_values_pattern.findall(line)))
+                        current_node_top_countries_dict = OrderedDict(zip(current_node_top_countries, values))
+                        continue
+
                     if line.startswith("node={"):
+                        # Start of a new trade node. If a previous node exists, finalize and store it.
                         if current_node:
+                            current_node["incoming_nodes"] = current_incoming_nodes
+                            current_node["top_countries"]  = current_node_top_countries_dict
                             trade_nodes[current_node["trade_node_id"]] = current_node
 
                         current_node = {}
                         current_node_keys = set()
+                        current_incoming_nodes = []
                         continue
 
                     trade_node_id = self._try_extract_trade_node_id(trade_node_id_pattern, line)
                     if trade_node_id is not None:
-                        current_node = {"trade_node_id": trade_node_id}
+                        current_origin_number += 1
+                        current_node = {"trade_node_id": trade_node_id, "origin_number": current_origin_number}
                         current_node_keys = set()
                         continue
 
@@ -739,11 +799,13 @@ class EUWorldData:
                         match = pattern.search(line)
                         if match and not key in current_node_keys:
                             current_node_keys.add(key)
-
                             current_node[key] = match.group(1)
 
         except StopIteration:
+            # Make sure to finalize and store the last node (is always the English Channel)
             if current_node:
+                current_node["incoming_nodes"] = current_incoming_nodes
+                current_node["top_countries"]  = current_node_top_countries_dict
                 trade_nodes[current_node["trade_node_id"]] = current_node
 
         return trade_nodes
@@ -784,7 +846,6 @@ class EUWorldData:
 
     def _try_extract_trade_node_id(self, pattern: re.Pattern, line: str):
         """Checks if the line contains a trade node definition.
-        
 
         Returns:
             trade_node_id (str|None): The ID of the current trade node, if it exists.
