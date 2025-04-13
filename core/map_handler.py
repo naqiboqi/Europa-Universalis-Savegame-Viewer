@@ -41,7 +41,8 @@ class MapHandler:
     Attributes:
         displayer (MapDisplayer): The instance of the MapDisplayer responsible for displaying the map.
         tk_canvas (tk.Canvas): The Tkinter canvas on which the map is rendered.
-        world_data (WorldData): The world data associated with the map.
+        world_data (EUWorldData): The world data associated with the map.
+
         disabled (bool): If the handler is disabled, should respond to events or not.
 
         pan_animation_id (int or None): The identifier for the pan animation, if active.
@@ -59,6 +60,7 @@ class MapHandler:
         self.displayer = displayer
         self.world_data = self.displayer.world_data
         self.tk_canvas = tk_canvas
+
         self.disabled = disabled
 
         self.pan_animation_id = None
