@@ -261,6 +261,10 @@ class EUWorldData:
                 if "PROV" in line:
                     continue
 
+                # 'Only' this many acutal provinces exist. The rest are filler.
+                if len(provinces) >= 6414:
+                    raise StopIteration
+
                 ## Check if this line starts a province definition block.
                 prov_id = self._try_extract_prov_id(province_id_pattern, line)
                 if prov_id is not None:
@@ -305,9 +309,7 @@ class EUWorldData:
                             current_province[key] = match.group(1)
 
         except StopIteration:
-            pass
-
-        return provinces
+            return provinces
 
     def _try_extract_prov_id(self, pattern: re.Pattern, line: str):
         """Checks if the line contains a province definition.
