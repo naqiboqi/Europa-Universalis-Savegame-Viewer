@@ -262,8 +262,8 @@ class EUWorldData:
                     continue
 
                 # 'Only' this many acutal provinces exist. The rest are filler.
-                if len(provinces) >= 6414:
-                    raise StopIteration
+                # if len(provinces) >= 6414:
+                #     raise StopIteration
 
                 ## Check if this line starts a province definition block.
                 prov_id = self._try_extract_prov_id(province_id_pattern, line)
@@ -676,7 +676,7 @@ class EUWorldData:
             trade_nodes (dict[int, dict[str, str]]): A mapping of trade node IDs to that trade node's data.
         """
         trade_node_id_pattern = re.compile(r'definitions="([^"]+)"')
-        patterns = {
+        node_patterns = {
             "current": r'current=([\d.]+)',
             "local_value": r'local_value=([\d.]+)',
             "outgoing": r'outgoing=([\d.]+)',
@@ -694,10 +694,24 @@ class EUWorldData:
             "highest_power": r'highest_power=([\d.]+)',
         }
 
+        participant_patterns = {
+            "val": r'val=([\d.]+)',
+            "already_sent": r'alread_sent=([\d.]+)',
+            "power_fraction": r'power_fraction=([\d.]+)',
+            "province_power": r'province_power=([\d.]+)',
+            "light_ship": r'light_ship=([\d+])',
+            "ship_power": r'ship_power=([\d.]+)',
+            "money": r'money=([\d.]+)',
+            "privateer_mission": r'privateer_mission=([\d.]+)',
+            "privateer_money": r'privateer_money=([\d.]+)'
+        }
+
         # Store patterns so we don't have to compile constantly.
-        compiled_patterns = {key: re.compile(value) for key, value in patterns.items()}
+        compiled_node_patterns = {key: re.compile(value) for key, value in node_patterns.items()}
+        compiled_participant_patterns = {key: re.compile(value) for key, value in participant_patterns.items()}
+        country_tag_pattern = re.compile(r'^([A-Z]{3})=\{$')
         top_values_pattern = re.compile(r'\d+\.\d+')
-        important_patterns_keys = tuple(patterns.keys())
+        important_patterns_keys = tuple(node_patterns.keys())
 
         inside_trade_nodes_block = False
         # Track bracket depth to find where the "trade" block ends.
@@ -708,10 +722,11 @@ class EUWorldData:
         current_origin_number = 0
         current_node: dict[str, str] = None
         current_node_keys = set()
-        current_incoming_nodes: list[dict] = []
 
+        current_incoming_nodes: list[dict] = []
         current_node_top_countries: list[str] = []
         current_node_top_countries_dict = {}
+        current_node_participants: list[EUTradeNodeParticipant] = []
 
         line_iter = iter(savefile_lines)
         try:
@@ -735,7 +750,7 @@ class EUWorldData:
 
                     if line == "incoming={":
                         # Expects three consecutive lines: 'added_power=', 'added_value=', 'from_node='
-                        # Shows the incoming trade node data that comes to the `current_node`.
+                        # Shows the incoming trade nodes that go to the current node.
                         added_power = next(line_iter).strip()
                         added_value = next(line_iter).strip()
                         from_node = next(line_iter).strip()
@@ -749,12 +764,14 @@ class EUWorldData:
 
                     if line == "top_power={":
                         # Collect country tags for the most prominent countries in the node until reaching closing brace.
+                        # Example:
+                        #
                         # top_power={
                         #     "ENG"
                         #     "FLA"
                         #     "BRB"
                         #     ...
-                        #     ...
+                        #     "HAI"
                         # }
                         while True:
                             line = next(line_iter).strip()
@@ -762,10 +779,14 @@ class EUWorldData:
                                 break
 
                             current_node_top_countries.append(line)
+
+                        bracket_depth -= 1
                         continue
 
                     if line == "top_power_values={":
-                        # Collect the trade power for each top country in the node, expected in one line:
+                        # Collect the trade power for each top country in the node, expected in one line.
+                        # Example:
+                        #
                         # top_power_values={
                         #     128.194 111.503 45.181 ... 2.246 
                         # }
@@ -780,11 +801,16 @@ class EUWorldData:
                         if current_node:
                             current_node["incoming_nodes"] = current_incoming_nodes
                             current_node["top_countries"]  = current_node_top_countries_dict
+                            current_node["node_participants"] = current_node_participants
                             trade_nodes[current_node["trade_node_id"]] = current_node
 
                         current_node = {}
                         current_node_keys = set()
                         current_incoming_nodes = []
+
+                        current_node_top_countries = []
+                        current_node_top_countries_dict = {}
+                        current_node_participants = []
                         continue
 
                     trade_node_id = self._try_extract_trade_node_id(trade_node_id_pattern, line)
@@ -794,10 +820,55 @@ class EUWorldData:
                         current_node_keys = set()
                         continue
 
+                    # Check if the line starts the definition for a trade node participant block.
+                    # Need to find a possible country tag (three-letter combination).
+                    # Example:
+                    #
+                    # HAI={
+                    #     val=41.570
+                    #     max_pow=26.924
+                    #     max_demand=1.544
+                    #     province_power=21.924
+                    #     power_fraction=0.025
+                    #     money=2.784
+                    #     total=1.947
+                    #     ...
+                    #     ...
+                    #     already_sent=30.688
+                    # }
+                    tag_match = country_tag_pattern.match(line)
+                    if tag_match and tag_match.group(1) in self.countries:
+                        tag = tag_match.group(1)
+                        current_participant = {"tag": tag}
+                        inner_bracket_depth = 1
+
+                        while True:
+                            line = next(line_iter).strip()
+                            if "{" in line:
+                                inner_bracket_depth += 1
+
+                            if "}" in line:
+                                inner_bracket_depth -= 1
+                                # End of the inner participant block.
+                                if inner_bracket_depth == 0:
+                                    bracket_depth -= 1
+                                    break
+
+                            for key, pattern in compiled_participant_patterns.items():
+                                match = pattern.search(line)
+                                if match:
+                                    current_participant[key] = match.group(1)
+
+                        # Must have one of the two keys to be a valid participant, otherwise there would be **way** too many objects.
+                        if ("val" in current_participant or "privateer_mission" in current_participant):
+                            current_node_participants.append(EUTradeNodeParticipant.from_dict(current_participant))
+
+                        continue
+
                     if current_node_keys and not any(line.startswith(key) for key in important_patterns_keys):
                         continue
 
-                    for key, pattern in compiled_patterns.items():
+                    for key, pattern in compiled_node_patterns.items():
                         match = pattern.search(line)
                         if match and not key in current_node_keys:
                             current_node_keys.add(key)
@@ -808,26 +879,35 @@ class EUWorldData:
             if current_node:
                 current_node["incoming_nodes"] = current_incoming_nodes
                 current_node["top_countries"]  = current_node_top_countries_dict
+                current_node["node_participants"] = current_node_participants
                 trade_nodes[current_node["trade_node_id"]] = current_node
 
         return trade_nodes
 
+    def _try_extract_trade_node_id(self, pattern: re.Pattern, line: str):
+        """Checks if the line contains a trade node definition.
+
+        Returns:
+            trade_node_id (str|None): The ID of the current trade node, if it exists.
+        """
+        match = pattern.search(line)
+        return match.group(1) if match else None
+
     def _build_trade_nodes(self, trade_nodes_data: dict[str, dict]):
         """Builds the world trade nodes from `trade_nodes_data`."""
-        if not self.trade_nodes:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self._process_trade_node, trade_node_data)
-                    for trade_node_id, trade_node_data in trade_nodes_data.items()
-                ]
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._process_trade_node, trade_node_data)
+                for trade_node_id, trade_node_data in trade_nodes_data.items()
+            ]
 
-                for future in as_completed(futures):
-                    trade_node = future.result()
-                    self.trade_nodes[trade_node.trade_node_id] = trade_node
+            for future in as_completed(futures):
+                trade_node = future.result()
+                self.trade_nodes[trade_node.trade_node_id] = trade_node
 
-                for trade_node in self.trade_nodes.values():
-                    for province_id in trade_node.provinces:
-                        self.province_to_trade_node[province_id] = trade_node
+            for trade_node in self.trade_nodes.values():
+                for province_id in trade_node.provinces:
+                    self.province_to_trade_node[province_id] = trade_node
 
     def _process_trade_node(self, trade_node_data: dict):
         """Helper method to process a single trade node.
@@ -845,15 +925,6 @@ class EUWorldData:
 
         trade_node_data["provinces"] = node_provinces
         return EUTradeNode.from_dict(trade_node_data)
-
-    def _try_extract_trade_node_id(self, pattern: re.Pattern, line: str):
-        """Checks if the line contains a trade node definition.
-
-        Returns:
-            trade_node_id (str|None): The ID of the current trade node, if it exists.
-        """
-        match = pattern.search(line)
-        return match.group(1) if match else None
 
     def _load_trade_goods(self, savefile_lines: list[str]):
         """Loads the trade good prices from the savefile.
