@@ -11,9 +11,7 @@ icon_loader = IconLoader()
 
 
 class NativeLayout:
-    """Builds UI layouts for displaying native province data, including name, type, 
-    culture, religion, development, trade goods,
-    """
+    """The layout builder for displaying native/uncolonized province information."""
     
     @staticmethod
     def create_geographic_native_info_frame():

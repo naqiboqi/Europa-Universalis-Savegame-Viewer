@@ -22,8 +22,7 @@ icon_loader = IconLoader()
 
 
 class ProvinceLayout:
-    """Builds UI layouts for displaying province data, including name, type, 
-    ownership, development, trade goods, and other relevant attributes.
+    """The layout building for displaying province information.
     """
 
     @staticmethod

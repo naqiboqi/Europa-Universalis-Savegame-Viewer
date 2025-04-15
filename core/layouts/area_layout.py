@@ -23,9 +23,7 @@ icon_loader = IconLoader()
 
 
 class AreaLayout:
-    """Constructs UI layouts for areas, displaying their name and the grouped 
-    provinces they contain.
-    """
+    """The layout building for displaying area information."""
 
     @staticmethod
     def create_geographic_area_info_frame():

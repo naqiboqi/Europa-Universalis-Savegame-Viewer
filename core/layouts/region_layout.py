@@ -24,9 +24,7 @@ icon_loader = IconLoader()
 
 
 class RegionLayout:
-    """Constructs layouts for regions by organizing their areas and the provinces 
-    within them into structured UI panels.
-    """
+    """Layout building for displaying region information."""
 
     @staticmethod
     def create_geographic_region_info_frame():
