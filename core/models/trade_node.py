@@ -4,15 +4,21 @@ This module defines EUTradeNode and EUTradeNodeParticipant, used for storing inf
 
 from collections import OrderedDict
 from dataclasses import dataclass, field, fields
-from typing import Optional
-
-from .import EUMapEntity, EUProvince
-from ..utils import MapUtils
+from typing import Optional, get_type_hints
+from . import EUMapEntity, EUProvince
+from ..utils import MapUtils, resolve_type
 
 
 
 @dataclass
 class EUTradeNodeParticipant:
+    """Represents a participant in a trade node.
+    
+    The participoting country muse have either trade power or ships in the node.
+    
+    Attributes:
+        
+    """
     tag: str
     trade_power: Optional[float] = 0.00
     trade_power_in_node_fraction: Optional[float] = 0.00
@@ -47,23 +53,23 @@ class EUTradeNodeParticipant:
         }
 
         converted_data = {"tag": data["tag"]}
-        field_types = {f.name: f.type for f in fields(cls)}
+        type_hints = get_type_hints(cls)
 
         for raw_key, value in data.items():
             if raw_key not in attr_names:
                 continue
 
             key = attr_names[raw_key]
-            if key not in field_types:
+            if key not in type_hints:
                 continue
 
-            field_type = field_types[key]
+            field_type = resolve_type(type_hints[key])
             try:
-                if field_type in ["str", "Optional[str]"]:
+                if field_type in [str, Optional[str]]:
                     converted_data[key] = value
-                elif field_type in ["int", "Optional[int]"]:
+                elif field_type in [int, Optional[int]]:
                     converted_data[key] = int(float(value))
-                elif field_type in ["float", "Optional[float]"]:
+                elif field_type in [float, Optional[float]]:
                     converted_data[key] = float(value)
                 else:
                     converted_data[key] = value
@@ -166,23 +172,23 @@ class EUTradeNode(EUMapEntity):
             "node_participants": data["node_participants"]
         }
 
-        field_types = {f.name: f.type for f in fields(cls)}
+        type_hints = get_type_hints(cls)
 
         for raw_key, value in data.items():
             if raw_key not in attr_names:
                 continue
 
             key = attr_names[raw_key]
-            if key not in field_types:
+            if key not in type_hints:
                 continue
 
-            field_type = field_types[key]
+            field_type = resolve_type(type_hints[key])
             try:
-                if field_type in ["str", "Optional[str]"]:
+                if field_type in [str, Optional[str]]:
                     converted_data[key] = value
-                elif field_type in ["int", "Optional[int]"]:
+                elif field_type in [int, Optional[int]]:
                     converted_data[key] = int(float(value))
-                elif field_type in ["float", "Optional[float]"]:
+                elif field_type in [float, Optional[float]]:
                     converted_data[key] = float(value)
                 else:
                     converted_data[key] = value

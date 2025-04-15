@@ -5,19 +5,12 @@ Europa Universalis IV.
 
 
 
-from __future__ import annotations
-
 from dataclasses import dataclass, fields
 from enum import Enum
 from math import floor
-from typing import Optional
-from typing import TYPE_CHECKING
-from .import EUMapEntity
-
-
-if TYPE_CHECKING:
-    from . import EUCountry
-    from . import TerrainType
+from typing import Optional, get_type_hints
+from . import EUMapEntity, EUCountry, TerrainType
+from ..utils import resolve_type
 
 
 
@@ -121,21 +114,21 @@ class EUProvince(EUMapEntity):
     def from_dict(cls, data: dict[str, str]):
         """Builds the province from a dictionary."""
         converted_data = {}
-        field_types = {f.name: f.type for f in fields(cls)}
+        type_hints = get_type_hints(cls)
 
         for key, value in data.items():
-            if key not in field_types:
+            if key not in type_hints:
                 continue
 
-            field_type = field_types[key]
+            field_type = resolve_type(type_hints[key])
             try:
-                if field_type in ["str", "Optional[str]"]:
+                if field_type == str:
                     converted_data[key] = value
-                elif field_type in ["int", "Optional[int]"]:
+                elif field_type == int:
                     converted_data[key] = int(float(value))
-                elif field_type in ["float", "Optional[float]"]:
+                elif field_type == float:
                     converted_data[key] = float(value)
-                elif field_type == "ProvinceType":
+                elif field_type == ProvinceType:
                     converted_data[key] = ProvinceType(value)
                 else:
                     converted_data[key] = value
