@@ -32,7 +32,6 @@ def draw_trade_value_pie_bytes(trade_node: EUTradeNode, size: tuple[int, int]=(1
     ax.pie(
         sizes,
         labels=None,
-        autopct='%1.1f%%',
         startangle=90,
         counterclock=False,
         colors=chart_colors)
