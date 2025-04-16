@@ -12,7 +12,7 @@ import os
 
 from .layouts import constants
 from .layouts import LayoutHelper
-from .layouts import ProvinceLayout, NativeLayout, AreaLayout, RegionLayout
+from .layouts import ProvinceLayout, NativeLayout, AreaLayout, RegionLayout, TradeNodeLayout
 from .utils import IconLoader
 
 
@@ -336,7 +336,8 @@ class Layout:
                 ProvinceLayout.create_province_info_column(),
                 NativeLayout.create_native_info_column(),
                 AreaLayout.create_area_info_column(),
-                RegionLayout.create_region_info_column()
+                RegionLayout.create_region_info_column(),
+                TradeNodeLayout.create_trade_node_info_column()
             ]
         ], key="-WORLD_INFO-",
         background_color=constants.DARK_FRAME_BG, 

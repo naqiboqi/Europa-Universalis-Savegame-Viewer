@@ -3,7 +3,7 @@ This module defines EUTradeNode and EUTradeNodeParticipant, used for storing inf
 """
 
 from collections import OrderedDict
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from typing import Optional, get_type_hints
 from . import EUMapEntity, EUProvince
 from ..utils import MapUtils, resolve_type
@@ -77,6 +77,19 @@ class EUTradeNodeParticipant:
                 print(f"Error converting {key} with value {value}: {e}")
 
         return cls(**converted_data)
+
+    @property
+    def has_merchant_in_node(self):
+        """If the country has a merchant in the current node."""
+        return "Yes" if self.has_trader else "No"
+
+    @property
+    def node_merchant_mission(self):
+        """The merchant's current mission in the node. Can either collect income or steer it to an adjencent node."""
+        if self.has_trade_capital or self.total_trade_income:
+            return "Collects"
+
+        return "Steers Trade"
 
 @dataclass
 class EUTradeNode(EUMapEntity):
@@ -189,7 +202,7 @@ class EUTradeNode(EUMapEntity):
                 elif field_type in [int, Optional[int]]:
                     converted_data[key] = int(float(value))
                 elif field_type in [float, Optional[float]]:
-                    converted_data[key] = float(value)
+                    converted_data[key] = round(float(value), 2)
                 else:
                     converted_data[key] = value
             except (ValueError, TypeError) as e:
@@ -198,9 +211,46 @@ class EUTradeNode(EUMapEntity):
         return cls(**converted_data)
 
     @property
-    def pulled_trade_value(self):
-        """The monthly amount of trade value pulled from the trade node."""
-        return round((1 - self.retained_trade_power) * self.total_trade_value, 2)
+    def incoming_value_total(self):
+        """The total incoming trade value from this trade node's incoming nodes."""
+        return round(sum(node["added_value"] for node in self.incoming_nodes), 2)
+
+    @property
+    def remaining_total_value(self):
+        """The remaining trade value after adding the incoming value and subtracting the outgoing value."""
+        return round(self.incoming_value_total + self.local_trade_value - self.outgoing_trade_value, 2)
+
+    @property
+    def num_light_ships(self):
+        """The number of light ships sent by countries to protect trade in this node."""
+        return sum(participant.num_light_ships for participant in self.node_participants)
+
+    @property
+    def total_light_ship_power(self):
+        """The total light ship power in this trade node."""
+        return sum(
+            participant.trade_power or 0.00 for participant in self
+            if participant.privateer_power == 0)
+
+    @property
+    def total_privateer_power(self):
+        """The total privateer power in this trade node."""
+        return sum(
+            participant.privateer_power or 0.00
+            for participant in self)
+
+    @property
+    def privateer_efficiency_modifier(self):
+        """The privateer efficiency modifier in this trade node.
+        
+        A higher modifier means that privateers are more weaker here.
+        """
+        light_ship_power = self.total_light_ship_power
+        privateer_power = self.total_privateer_power
+        if light_ship_power + privateer_power == 0:
+            return 0.00
+
+        return round((light_ship_power / (light_ship_power + privateer_power)) * 100, 2)
 
     @property
     def tax_income(self) -> float:
@@ -223,5 +273,5 @@ class EUTradeNode(EUMapEntity):
         return 0.00
 
     def __iter__(self):
-        for province in self.provinces.values():
-            yield province
+        for participant in self.node_participants:
+            yield participant

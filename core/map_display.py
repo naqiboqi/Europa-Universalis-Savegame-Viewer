@@ -15,6 +15,7 @@ import threading
 import tkinter as tk
 
 from PIL import Image, ImageDraw, ImageFont, ImageTk
+from sys import exit
 from . import MapHandler, MapPainter, EUColors, EUWorldData
 from . import Layout
 from .layouts import constants
@@ -36,15 +37,18 @@ class MapDisplayer:
 
     Attributes:
         painter (MapPainter): The map painter instance responsible for drawing the map.
-        canvas_size (tuple): The dimensions of the display canvas.
+        saves_folder (str): The path of the saves folder, used for selecting files.
+        world_data (EUWorldData): The world data associated with the map.
+
         handler (MapHandler): The event handler for managing interactions.
         image_id (int): The ID of the displayed image in the canvas.
-        original_map (PIL.Image): The original unscaled map image.
-        map_image (PIL.Image): The currently displayed map image.
-        tk_image (tk.PhotoImage): The Tkinter-compatible image for rendering.
-        tk_canvas (tk.Canvas): The window canvas for the current image.
+        original_map (PIL.Image): The original unscaled backend map image.
+        map_image (PIL.Image): The currently displayed backedn map image.
+        tk_image (tk.PhotoImage): The Tkinter-compatible image for displaying.
+        tk_canvas (tk.Canvas): The window's canvas for the displaying the current image.
         window (sg.Window): The PySimpleGUI window for the UI.
 
+        canvas_size (tuple[int, int]): The `(x, y)` dimensions of the display canvas.
         max_scale (float): The maximum zoom level allowed.
         map_scale (float): The current zoom level of the map.
         min_scale (float): The minimum zoom level allowed.
@@ -62,7 +66,6 @@ class MapDisplayer:
         self.saves_folder = saves_folder
         self.world_data = None
 
-        self.canvas_size = ()
         self.handler: MapHandler = None
         self.image_id = None
         self.original_map = None
@@ -71,6 +74,7 @@ class MapDisplayer:
         self.tk_canvas = None
         self.window = None
 
+        self.canvas_size: tuple[int, int] = None
         self.max_scale = 5.0
         self.map_scale = 1.0
         self.min_scale = 1.0
@@ -85,7 +89,7 @@ class MapDisplayer:
     def send_message_callback(self, message: str):
         """Thread-safe callback to request a message be displayed in the GUI.
 
-        Posts a custom event to the PySimpleGUI window so the message can be handled
+        Posts a event to the PySimpleGUI window so the message can be handled
         and displayed in the main thread.
 
         Args:
@@ -96,7 +100,7 @@ class MapDisplayer:
     def send_message_to_multiline(self, message: str):
         """Displays a message in the multiline element of the GUI.
 
-        Should only be called from the main thread.
+        Should only be called from the main thread, either directly or through `send_message_callback`.
 
         Args:
             message (str): The message to display.
@@ -109,9 +113,9 @@ class MapDisplayer:
         return ImageTk.PhotoImage(image)
 
     def scale_image_to_fit(self, image: Image.Image):
-        """Scales the image to fit within the canvas.
+        """Scales the map to fit within the canvas.
         
-        Sets the new size of the image and also sets the minimum and maximum scales for the canvas.
+        Sets the new size of the map and also sets the minimum and maximum zoom levels.
         
         Args:
             image (Image): The image to scale.
@@ -161,7 +165,6 @@ class MapDisplayer:
 
         text_center_x = (canvas_size[0] - text_width) // 2
         text_center_y = (canvas_size[1] - text_height) // 2
-
         draw.text((text_center_x, text_center_y), text=message, fill="white", font=font)
 
         self.map_image = map_image
@@ -186,10 +189,7 @@ class MapDisplayer:
         self.window.refresh()
 
     def reset_canvas_to_initial(self):
-        """Resets the canvas to its initial zoom and pan settings.
-        
-        Centers the map and zooms out to the minimum level.
-        """
+        """Resets the canvas to its initial zoom and pan settings."""
         self.offset_x = 0
         self.offset_y = 0
         self.map_image = self.scale_image_to_fit(self.original_map)
@@ -199,7 +199,7 @@ class MapDisplayer:
     def refresh_canvas(self):
         """Refreshes the canvas after loading a new savefile.
         
-        Draws the map for the new savefile and resets the canvas to the minimum zoom level and default pan location.
+        Draws the map for the new savefile and calls `rest_canvas_to_inital` to reset pan and zoom.
         """
         self.original_map = self.painter.get_cached_map_image(borders=self.show_map_borders)
         self.map_image = self.scale_image_to_fit(self.original_map)
@@ -217,17 +217,20 @@ class MapDisplayer:
             window (Window): The updated PySimpleGUI window.
         """
         if isinstance(selected_item, EUProvince):
-            self.update_province_details(selected_item)
+            self._update_province_details(selected_item)
 
         elif isinstance(selected_item, EUArea):
-            self.update_area_details(selected_item)
+            self._update_area_details(selected_item)
 
         elif isinstance(selected_item, EURegion):
-            self.update_region_details(selected_item)
+            self._update_region_details(selected_item)
+
+        elif isinstance(selected_item, EUTradeNode):
+            self._update_trade_node_details(selected_item)
 
         return self.window.refresh()
 
-    def update_province_details(self, province: EUProvince):
+    def _update_province_details(self, province: EUProvince):
         """Checks the type of the province and calls the appropriate `update....province_details()` method."""
         if province.province_type == ProvinceType.OWNED:
             self.update_owned_province_details(province)
@@ -270,6 +273,7 @@ class MapDisplayer:
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
 
@@ -353,6 +357,7 @@ class MapDisplayer:
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
         window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=True)
 
@@ -366,8 +371,7 @@ class MapDisplayer:
         trade_good_element = self.window["-INFO_NATIVE_PROVINCE_TRADE_GOOD-"]
         trade_good_element.update(filename=icon_loader.get_icon(province.trade_goods), visible=True)
 
-
-    def update_area_details(self, area: EUArea):
+    def _update_area_details(self, area: EUArea):
         """Updates the information displayed for a specific area in the UI.
 
         This method retrieves the relevant data for an area, such as its name, region,
@@ -379,8 +383,8 @@ class MapDisplayer:
         """
         window = self.window
 
-        area_province = list(area.provinces.values())[0]
         if area.is_land_area:
+            area_province = list(area.provinces.values())[0]
             data = {
                 "-INFO_AREA_NAME-" : area.name,
                 "-INFO_AREA_REGION_NAME-": self.world_data.province_to_region.get(area_province.province_id, None).name,
@@ -399,6 +403,7 @@ class MapDisplayer:
             window["-REGION_INFO_COLUMN-"].update(visible=False)
             window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+            window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=True)
 
             for element, attr_value in data.items():
@@ -432,7 +437,7 @@ class MapDisplayer:
             total_income_element = window["-INFO_AREA_INCOME-"]
             total_income_element.update(value=round(area.tax_income + total_production_income, 2))
 
-    def update_region_details(self, region: EURegion):
+    def _update_region_details(self, region: EURegion):
         """Updates the information displayed for a specific region in the UI.
         
         This method retrieves the relevant data for an region, such as its name, total development, and income. 
@@ -460,6 +465,7 @@ class MapDisplayer:
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=False)
+            window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
             window["-REGION_INFO_COLUMN-"].update(visible=True)
 
             for element, attr_value in data.items():
@@ -491,6 +497,64 @@ class MapDisplayer:
 
             total_income_element = window["-INFO_REGION_INCOME-"]
             total_income_element.update(value=round(region.tax_income + total_production_income, 2))
+
+    def _update_trade_node_details(self, trade_node: EUTradeNode):
+        """Updates the information displayed for a specific trade node in the UI.
+        
+        This method retrieves the relevant data for an trade node, such as its name, total development, and incoming and outgoing trade value. 
+        It also updates the trade node's table with information for each country that contributes trade to the node.
+
+        Args:
+            trade_node (EUTradeNode): The trade node to be displayed.
+        """
+        window = self.window
+        node_province = list(trade_node.provinces.values())[0]
+        
+        data = {
+            "-INFO_TRADE_NODE_NAME-": trade_node.name,
+            "-INFO_TRADE_NODE_REGION_NAME-": f"{self.world_data.province_to_region.get(node_province.province_id).name} Charter",
+            "-INFO_TRADE_NODE_PRIVATEER_EFFICIENCY-": trade_node.privateer_efficiency_modifier,
+            "-INFO_TRADE_NODE_NUM_LIGHT_SHIPS-": trade_node.num_light_ships,
+            "-INFO_TRADE_NODE_INCOMING_VALUE-": trade_node.incoming_value_total,
+            "-INFO_TRADE_NODE_LOCAL_VALUE-": trade_node.local_trade_value,
+            "-INFO_TRADE_NODE_OUTGOING_VALUE-": trade_node.outgoing_trade_value,
+            "-INFO_TRADE_NODE_TOTAL_REMAINING_VALUE-": trade_node.remaining_total_value,
+        }
+
+        window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-REGION_INFO_COLUMN-"].update(visible=False)
+        window["-TRADE_NODE_INFO_COLUMN-"].update(visible=True)
+
+        for element, attr_value in data.items():
+            if attr_value is not None:
+                try:
+                    window[element].update(value=attr_value, visible=True)
+                except (AttributeError, TypeError):
+                    window[element].update(values=attr_value, visible=True)
+
+        
+
+        participant_rows = []
+        for participant in trade_node:
+            country = self.world_data.countries.get(participant.tag)
+            country_name = country.name if country.name else country.tag
+
+            row = [
+                country_name,
+                participant.has_merchant_in_node,
+                participant.node_merchant_mission,
+                participant.total_trade_income,
+                participant.ship_trade_power,
+                participant.trade_power
+            ]
+
+            participant_rows.append(row)
+
+        if not participant_rows:
+            participant_rows = [["No participants in this node..."], ["..."]]
+        window["-INFO_TRADE_NODE_PARTICIPANTS_TABLE-"].update(values=participant_rows)
 
     def handle_setup_complete(self):
         """Handles display adjustments after game and save data is loaded for the first time."""
@@ -556,6 +620,13 @@ class MapDisplayer:
         self.reset_canvas_to_initial()
 
     def color_map_mode_buttons(self, map_modes: dict[str, MapMode]):
+        """Colors the map mode buttons depending on which map mode is the current one.
+        
+        The current map mode will be highlighted in a brighter blue.
+        
+        Args:
+            map_modes (dict[str, MapMode]): The possible map modes.
+        """
         new_map_mode = self.painter.map_mode
         for map_mode in map_modes:
             map_mode_button = self.window[map_mode]
@@ -563,7 +634,12 @@ class MapDisplayer:
             map_mode_button.update(button_color=button_color)
 
     def handle_search_for(self, values):
-        """Handles searching for entities in the world data."""
+        """Handles searching for entities in the world data.
+        
+        Updates the window's results field to show the entities that match the user's search.
+        If there are any matches, the user can click its row within results and choose to go to its loation
+        and display more information via the `GO TO` button.
+        """
         self.window["-CLEAR-"].update(visible=True)
         exact_matches_only = values["-EXACT_MATCH-"]
         search_param = values["-SEARCH-"].strip().lower()
@@ -586,7 +662,10 @@ class MapDisplayer:
             self.window["-GOTO-"].update(visible=False)
 
     def handle_result_select(self, values):
-        """Handles selection of a search result."""
+        """Handles selection of a search result.
+        
+        Sets the current `selected_item`, that the user can visit via the `GO TO` button.
+        """
         selected = values["-RESULTS-"]
         if selected:
             item_name = selected[0]
@@ -597,7 +676,7 @@ class MapDisplayer:
             self.selected_item = selected_item
 
     def handle_go_to(self):
-        """Handles navigation to the selected entity location."""
+        """Handles navigation to the selected entity location and displays its information in the details panel."""
         if self.selected_item:
             self.handler.go_to_entity_location(self.selected_item)
             self.window = self.update_details_from_selected_item(self.selected_item)
@@ -621,9 +700,6 @@ class MapDisplayer:
         The loop continues to run until the window is closed or the user selects "Exit".
         It updates the window dynamically based on the events triggered by the user, 
         such as searching for provinces, going to specific entity locations, or changing map modes.
-        
-        Returns:
-            None
         """
         window = self.window
         mode_names = {mode.value.upper(): mode for mode in self.painter.map_modes}
@@ -633,6 +709,7 @@ class MapDisplayer:
             if event in {sg.WIN_CLOSED, "Exit", "-EXIT-"}:
                 break
 
+            # Always listen for these events, as they are also used for setup (when the handler is disabled).
             if event == "-SEND_MESSAGE-":
                 message = values[event]
                 self.send_message_to_multiline(message=message)
@@ -646,6 +723,7 @@ class MapDisplayer:
             if event == "-LOAD_SAVEFILE-":
                 self.handle_load_savefile()
 
+            # Following events are dependent on the handler are disabled during setup.
             if not self.handler or getattr(self.handler, "disabled", False):
                 continue
 
@@ -690,7 +768,7 @@ class MapDisplayer:
         default_savefile_path = os.path.join(self.saves_folder, "default_1444.eu4")
         if not os.path.exists(default_savefile_path):
             self.send_message_callback("Can't find default game data.... closing program.")
-            SystemExit
+            exit(f"Error: Can't find default game data at {default_savefile_path}")
             return
 
         self.send_message_callback("Loading game data....")
@@ -710,7 +788,7 @@ class MapDisplayer:
         """Creates the layout that will be used for the UI and sets the canvas size.
         
         Returns:
-            layout (list[list]): The layout for the Window.
+            layout (list[list[...]]): The layout for the Window.
         """
         self.set_canvas_size()
         return Layout.build_layout(self.canvas_size, self.painter.map_modes)
@@ -756,7 +834,7 @@ class MapDisplayer:
 
         self.window = window
         self.window.move_to_center()
-        self.window["-SAVEFILE_DATE-"].update(value=f"")
+        self.window["-SAVEFILE_DATE-"].update(value="")
 
         self.tk_canvas = window["-CANVAS-"].TKCanvas
         self.display_loading_screen(message="Loading game data....")
@@ -766,6 +844,7 @@ class MapDisplayer:
 
         self.display_loading_screen(message="Loading game data....")
 
+        # Run setup in the background so the GUI doesn't freeze.
         threading.Thread(target=self._load_game_data_async, args=(maps_folder, tags_folder), daemon=True).start()
 
         self.ui_read_loop()
