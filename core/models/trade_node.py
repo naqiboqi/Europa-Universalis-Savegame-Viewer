@@ -17,7 +17,19 @@ class EUTradeNodeParticipant:
     The participoting country muse have either trade power or ships in the node.
     
     Attributes:
-        
+        Attributes:
+        tag (str): The country tag identifying the participant.
+        trade_power (Optional[float]): The total trade power the participant exerts in the node.
+        trade_power_in_node_fraction (Optional[float]): The participant's share of total trade power in the node, as a fraction.
+        steered_trade_value (Optional[float]): The total trade value being steered away from the node by this participant.
+        provincial_trade_power (Optional[float]): The trade power contribution from owned provinces within the node.
+        num_light_ships (Optional[int]): The number of light ships assigned to protect trade in this node.
+        ship_trade_power (Optional[float]): The trade power contributed by light ships.
+        total_trade_income (Optional[float]): The participant's total income from this trade node.
+        privateer_power (Optional[float]): The trade power contributed by privateer fleets.
+        privateer_income (Optional[float]): The income earned from privateering in this node.
+        has_trader (Optional[bool]): Whether the participant has a merchant assigned to the node.
+        has_trade_capital (Optional[bool]): Whether the participant's trade capital is located in this node.
     """
     tag: str
     trade_power: Optional[float] = 0.00
@@ -100,28 +112,30 @@ class EUTradeNode(EUMapEntity):
     Inherits attributes from `EUMapEntity`.
 
     Attributes:
-        origin_number (int):
-        trade_node_id (str):
-        provinces (dict[int, EUProvince]):
-        incoming_nodes (list[dict[str, str]]):
-        top_countries (OrderedDict[str, float]):
+        origin_number (int): Unique integer identifier for the node's origin.
+        trade_node_id (str): String ID representing the trade node's internal name.
+        provinces (dict[int, EUProvince]): Mapping of province IDs to their corresponding province objects within the trade node.
+        incoming_nodes (list[dict[str, str]]): List of dictionaries detailing incoming trade connections from other nodes.
+        top_countries (OrderedDict[str, float]): An ordered mapping of country tags to their trade power, sorted descending.
+        node_participants (list[EUTradeNodeParticipant]): List of countries actively participating in this trade node.
 
-        total_trade_value (Optional[float]):
-        local_trade_value (Optional[float]):
-        total_trade_power (Optional[float]):
-        provencial_trade_power (Optional[float]):
-        outgoing_trade_value (Optional[float]):
-        added_outgoing_trade_value (Optional[float]):
-        trade_value_retention (Optional[float]):
-        num_collectors (Optional[int]):
-        num_collectors_including_pirates (Optional[float]):
-        collectors_trade_power (Optional[float]):
-        collectors_trade_power_including_pirates (Optional[float]):
-        retained_trade_power (Optional[float]):
-        highest_trade_power (Optional[float]):
-        pulled_trade_power (Optional[float]):
+        total_trade_value (Optional[float]): Total trade value present in the node, including both retained and outgoing amounts.
+        local_trade_value (Optional[float]): Portion of trade value retained locally in the node.
+        total_trade_power (Optional[float]): Sum of trade power exerted by all participants in the node.
+        provencial_trade_power (Optional[float]): Trade power contributed directly by provinces.
+        outgoing_trade_value (Optional[float]): Portion of the node's trade value that is being transferred to downstream nodes.
+        added_outgoing_trade_value (Optional[float]): Additional trade value being pushed out after modifiers.
+        trade_value_retention (Optional[float]): Percentage of trade value retained versus sent outward.
 
-        pixel_locations (Optional[set[tuple[int, int]]]):
+        num_collectors (Optional[int]): Number of merchants actively collecting trade from this node.
+        num_collectors_including_pirates (Optional[float]): Number of collectors, including privateers or piracy effects.
+        collectors_trade_power (Optional[float]): Total trade power from active collectors.
+        collectors_trade_power_including_pirates (Optional[float]): Total collector trade power, factoring in piracy.
+        retained_trade_power (Optional[float]): Trade power portion effectively securing retained trade value.
+        highest_trade_power (Optional[float]): The single highest trade power held by a country in this node.
+        pulled_trade_power (Optional[float]): Trade power drawn from incoming nodes.
+
+        pixel_locations (Optional[set[tuple[int, int]]]): The set of (x, y) coordinates occupied by the trade node.
     """
     origin_number: int
     trade_node_id: str
@@ -137,6 +151,7 @@ class EUTradeNode(EUMapEntity):
     outgoing_trade_value: Optional[float] = 0.00
     added_outgoing_trade_value: Optional[float] = 0.00
     trade_value_retention: Optional[float] = 0.00
+
     num_collectors: Optional[int] = 0
     num_collectors_including_pirates: Optional[float] = 0
     collectors_trade_power: Optional[float] = 0.00
@@ -229,7 +244,7 @@ class EUTradeNode(EUMapEntity):
     def total_light_ship_power(self):
         """The total light ship power in this trade node."""
         return sum(
-            participant.trade_power or 0.00 for participant in self
+            participant.ship_trade_power or 0.00 for participant in self
             if participant.privateer_power == 0)
 
     @property

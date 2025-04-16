@@ -22,8 +22,7 @@ icon_loader = IconLoader()
 
 
 class ProvinceLayout:
-    """The layout building for displaying province information.
-    """
+    """The layout builder for displaying province information."""
 
     @staticmethod
     def create_geographic_province_info_frame():
