@@ -80,7 +80,7 @@ class Layout:
             justification="center",
             no_scrollbar=True,
             pad=(5, 5),
-            size=(Layout.CANVAS_WIDTH_MAX // 20, 1),
+            size=(Layout.CANVAS_WIDTH_MAX // 15, 1),
             text_color=constants.LIGHT_TEXT,
             write_only=True)
 
