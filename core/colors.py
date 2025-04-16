@@ -14,9 +14,16 @@ import re
 
 
 class EUColors:
+    """Gets and stores the default colors for each country (tag) and province from the game files.
+    
+    Attributes:
+        default_province_colors (dict[tuple[int, int, int]]): The default color for each province and its province ID.
+        tag_colors (dict[str, tuple[int, int, int]]): The color for each country (tag).
+        tag_names (dict[str, str]): The name of each country and its definition file.
+        """
     def __init__(self):
-        self.default_province_colors: dict[tuple[int], int] = {}
-        self.tag_colors: dict[str, tuple[int]] = {}
+        self.default_province_colors: dict[tuple[int, int, int], int] = {}
+        self.tag_colors: dict[str, tuple[int, int, int]] = {}
         self.tag_names: dict[str, str] = {} 
 
     @classmethod
@@ -49,7 +56,7 @@ class EUColors:
         Returns:
             colors (dict[tuple[int]], int): The unique color mapped to the province ID.
         """
-        colors: dict[tuple[int], int] = {}
+        colors: dict[tuple[int, int, int], int] = {}
         with open(os.path.join(maps_folder, "definition.csv"), "r", encoding="latin-1") as file:
             reader = csv.reader(file, delimiter=";")
             for row in reader:
@@ -103,7 +110,7 @@ class EUColors:
         Returns:
             colors (dict[str, tuple[int, int, int]]): The color for each tag. 
         """
-        colors: dict[str, tuple[int]] = {}
+        colors: dict[str, tuple[int, int, int]] = {}
         color_pattern = r"color\s*=\s*\{\s*(\d+)\s*(\d+)\s*(\d+)\s*\}"
         for tag, country_name in self.tag_names.items():
             try:
