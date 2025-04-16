@@ -127,7 +127,7 @@ class EUProvince(EUMapEntity):
                 elif field_type == int:
                     converted_data[key] = int(float(value))
                 elif field_type == float:
-                    converted_data[key] = float(value)
+                    converted_data[key] = round(float(value), 2)
                 elif field_type == ProvinceType:
                     converted_data[key] = ProvinceType(value)
                 else:
@@ -138,21 +138,21 @@ class EUProvince(EUMapEntity):
         return cls(**converted_data)
 
     def update_from_dict(self, data: dict):
-        field_types = {f.name: f.type for f in fields(self)}
+        type_hints = get_type_hints(self)
 
         for key, value in data.items():
-            if key not in field_types:
+            if key not in type_hints:
                 continue
 
-            field_type = field_types[key]
+            field_type = resolve_type(type_hints[key])
             try:
-                if field_type in ["str", "Optional[str]"]:
+                if field_type == str:
                     setattr(self, key, value)
-                elif field_type in ["int", "Optional[int]"]:
+                elif field_type == int:
                     setattr(self, key, int(float(value)))
-                elif field_type in ["float", "Optional[float]"]:
-                    setattr(self, key, float(value))
-                elif field_type == "ProvinceType":
+                elif field_type == float:
+                    setattr(self, key, round(float(value), 2))
+                elif field_type == ProvinceType:
                     setattr(self, key, ProvinceType(value))
                 else:
                     setattr(self, key, value)
