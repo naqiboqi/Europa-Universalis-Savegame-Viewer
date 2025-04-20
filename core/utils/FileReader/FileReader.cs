@@ -5,12 +5,13 @@ namespace FileReader {
     public class FileReader {
         private static IEnumerable<string?> ReadFile(string path) {
             if (!File.Exists(path)) {
-                throw new FileNotFoundException();
+                throw new FileNotFoundException($"The file at {path} was not found.");
             }
 
             using var reader = new StreamReader(path, Encoding.GetEncoding("latin1"));
-            while (!reader.EndOfStream) {
-                yield return reader.ReadLine();
+            string? line;
+            while ((line = reader.ReadLine()) != null) {
+                yield return line;
             }
         }
 
