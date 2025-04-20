@@ -21,7 +21,7 @@ from . import Layout
 from .layouts import constants
 from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion, EUTradeNode
 from .models import MapMode
-from .utils import IconLoader, MapUtils
+from .utils import draw_trade_value_pie_bytes, IconLoader, MapUtils
 
 
 icon_loader = IconLoader()
@@ -171,6 +171,17 @@ class MapDisplayer:
         self.update_canvas(offset_x=0, offset_y=0)
 
         self.window.refresh()
+
+    def clear_ui_window(self):
+        for key in self.window.AllKeysDict:
+            if not isinstance(key, str):
+                continue
+
+            element = self.window[key]
+            if isinstance(element, sg.Text):
+                element.update(value="")
+            if isinstance(element, sg.Input):
+                element.update(value="")
 
     def update_canvas(self, offset_x: int=None, offset_y: int=None):
         """Updates the canvas by applying all pan and/or zoom adjustments to the image.
@@ -513,12 +524,12 @@ class MapDisplayer:
         data = {
             "-INFO_TRADE_NODE_NAME-": trade_node.name,
             "-INFO_TRADE_NODE_REGION_NAME-": f"{self.world_data.province_to_region.get(node_province.province_id).name} Charter",
-            "-INFO_TRADE_NODE_PRIVATEER_EFFICIENCY-": trade_node.privateer_efficiency_modifier,
+            "-INFO_TRADE_NODE_PRIVATEER_EFFICIENCY-": f"{trade_node.privateer_efficiency_modifier:.2f}",
             "-INFO_TRADE_NODE_NUM_LIGHT_SHIPS-": trade_node.num_light_ships,
-            "-INFO_TRADE_NODE_INCOMING_VALUE-": trade_node.incoming_value_total,
-            "-INFO_TRADE_NODE_LOCAL_VALUE-": trade_node.local_trade_value,
-            "-INFO_TRADE_NODE_OUTGOING_VALUE-": trade_node.outgoing_trade_value,
-            "-INFO_TRADE_NODE_TOTAL_REMAINING_VALUE-": trade_node.remaining_total_value,
+            "-INFO_TRADE_NODE_INCOMING_VALUE-": f"+{trade_node.incoming_value_total:.2f}",
+            "-INFO_TRADE_NODE_LOCAL_VALUE-": f"+{trade_node.local_trade_value:.2f}",
+            "-INFO_TRADE_NODE_OUTGOING_VALUE-": f"-{trade_node.outgoing_trade_value:.2f}",
+            "-INFO_TRADE_NODE_TOTAL_REMAINING_VALUE-": f"{trade_node.remaining_total_value:.2f}",
         }
 
         window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
@@ -534,7 +545,9 @@ class MapDisplayer:
                 except (AttributeError, TypeError):
                     window[element].update(values=attr_value, visible=True)
 
-        
+        # trade_power_pie = draw_trade_value_pie_bytes(trade_node=trade_node)
+        # if trade_power_pie:
+        #     window["-INFO_TRADE_NODE_RETAINED_PIE-"].update(data=trade_power_pie)
 
         participant_rows = []
         for participant in trade_node:
@@ -553,7 +566,7 @@ class MapDisplayer:
             participant_rows.append(row)
 
         if not participant_rows:
-            participant_rows = [["No participants in this node..."], ["..."]]
+            participant_rows = [["No", "Partipants", "In", "This", "Trade", "Node"], []]
         window["-INFO_TRADE_NODE_PARTICIPANTS_TABLE-"].update(values=participant_rows)
 
     def handle_setup_complete(self):
@@ -582,6 +595,8 @@ class MapDisplayer:
         new_savefile = sg.popup_get_file("Select a savefile to load", file_types=(("EU4 Save", "*.eu4"),))
         if new_savefile:
             self.handler.disabled = True
+
+            self.clear_ui_window()
             self.send_message_callback(rf"Loading new savefile: {new_savefile}....")
             self.display_loading_screen(message="Loading map....")
 
@@ -780,6 +795,7 @@ class MapDisplayer:
         self.world_data = world
 
         self.painter.world_data = self.world_data
+        self.painter.colors = colors
         self.painter.update_status_callback = self.send_message_callback
 
         self.window.write_event_value("-SETUP_COMPLETE-", None)

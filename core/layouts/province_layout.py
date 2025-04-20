@@ -549,7 +549,7 @@ class ProvinceLayout:
 
         capital_frame = sg.Frame("", [
             [capital_icon]
-        ])
+        ], visible=False)
 
         political_frame = sg.Frame("", [
             [hre_frame, capital_frame]

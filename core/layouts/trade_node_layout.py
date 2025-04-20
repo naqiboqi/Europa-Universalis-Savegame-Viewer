@@ -123,7 +123,8 @@ class TradeNodeLayout:
             [privateer_frame, light_ships_frame]
         ], background_color=constants.DARK_FRAME_BG,
         expand_y=True,
-        pad=((5, 5), (10, 10)))
+        pad=((5, 5), (10, 10)),
+        vertical_alignment="bottom")
 
     @staticmethod
     def create_trade_node_value_column():
@@ -194,58 +195,48 @@ class TradeNodeLayout:
         return sg.Column([
             [node_values_frame]
         ], background_color=constants.DARK_FRAME_BG,
-        pad=((5, 5), (10, 10)))
+        pad=((5, 5), (10, 10)),
+        vertical_alignment="bottom")
 
     @staticmethod
     def create_trade_node_chart_column():
         retained_value_label = sg.Text(
-            "Retained Value",
+            "Retained Trade Value",
             background_color=constants.DARK_FRAME_BG,
             font=("Georgia", 14),
             justification="center",
             expand_x=True,
-            size=(15, 1),
+            pad=(10, 0),
+            size=(20, 1),
             text_color=constants.LIGHT_TEXT)
         retained_value_graph_image = sg.Image(
             filename=icon_loader.get_icon(""), 
             key="-INFO_TRADE_NODE_RETAINED_PIE-",
-            size=(100, 100))
+            pad=(0, 0),
+            size=(150, 150))
+
+        retained_value_graph_frame = LayoutHelper.add_border(
+            layout=[[retained_value_graph_image]],
+            borders=[
+                (constants.GOLD_FRAME_LOWER, 1, sg.RELIEF_RIDGE),
+                (constants.GOLD_FRAME_UPPER, 1, sg.RELIEF_RIDGE)],
+            pad=(5, 5))
 
         retained_value_frame = sg.Frame("", [
             [retained_value_label],
-            [sg.Push(), retained_value_graph_image, sg.Push()]
-        ], background_color=constants.DARK_FRAME_BG,
-        border_width=0,
-        element_justification="center",
-        expand_x=True)
-
-        trade_power_label = sg.Text(
-            "Trade Power",
-            background_color=constants.DARK_FRAME_BG,
-            font=("Georgia", 14),
-            justification="center",
-            expand_x=True,
-            size=(15, 1),
-            text_color=constants.LIGHT_TEXT)
-        trade_power_graph_image = sg.Image(
-            filename=icon_loader.get_icon(""), 
-            key="-INFO_TRADE_NODE_RETAINED_PIE-",
-            size=(100, 100))
-
-        trade_power_frame = sg.Frame("", [
-            [trade_power_label],
-            [sg.Push(), trade_power_graph_image, sg.Push()]
+            [sg.Push(constants.DARK_FRAME_BG), retained_value_graph_frame, sg.Push(constants.DARK_FRAME_BG)]
         ], background_color=constants.DARK_FRAME_BG,
         border_width=0,
         element_justification="center",
         expand_x=True)
 
         return sg.Column([
-            [retained_value_frame, trade_power_frame]
+            [retained_value_frame]
         ], background_color=constants.DARK_FRAME_BG,
         expand_x=True,
         expand_y=True,
-        pad=((5, 10), (10, 10)))
+        pad=((5, 10), (10, 10)),
+        vertical_alignment="center")
 
     @staticmethod
     def create_countries_table_header():
@@ -411,18 +402,19 @@ class TradeNodeLayout:
 
         trade_node_value_column = TradeNodeLayout.create_trade_node_value_column()
         trade_node_ships_column = TradeNodeLayout.create_trade_node_ships_column()
-        trade_center_frame = sg.Frame("", [
-            [trade_node_value_column, trade_node_ships_column]
-        ], background_color=constants.DARK_FRAME_BG,
-        border_width=0,
-        pad=(10, 10))
-
         graphs_column = TradeNodeLayout.create_trade_node_chart_column()
+        trade_center_frame = sg.Frame("", [
+            [trade_node_value_column, trade_node_ships_column, sg.Push(constants.DARK_FRAME_BG  ), graphs_column]
+        ], background_color=constants.DARK_FRAME_BG,
+        border_width=2,
+        expand_x=True,
+        pad=((10, 10), (5, 10)),
+        relief=sg.RELIEF_SUNKEN)
 
         node_countries_table = TradeNodeLayout.create_trade_node_participants_table()
         trade_node_info_frame = sg.Frame("", [
             [trade_node_header_column],
-            [trade_center_frame, graphs_column],
+            [trade_center_frame],
             [node_countries_table],
         ], background_color=constants.LIGHT_FRAME_BG,
         border_width=5,

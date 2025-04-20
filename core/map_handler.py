@@ -266,9 +266,7 @@ class MapHandler:
                         if not trade_node:
                             return
 
-                        info = f"The province of {province.name} (Trade Power: {province.trade_power})"
-                        if province.center_of_trade:
-                            info += f" Has a level {province.center_of_trade} Center of Trade"
+                        info = f"The province of {province.name} belogns to {trade_node.name}. It provides {province.trade_power} trade power to the node."
 
                 case MapMode.CULTURE:
                     if province.province_type == ProvinceType.SEA:
