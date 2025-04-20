@@ -4,6 +4,7 @@
 *.csproj
 *.dll
 *.exe
+saves/*.eu4
 **/__pycache__
 workspace.xml
 eu4_savegame.sln
