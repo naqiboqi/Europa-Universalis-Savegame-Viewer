@@ -138,7 +138,10 @@ class EUProvince(EUMapEntity):
         return cls(**converted_data)
 
     def update_from_dict(self, data: dict):
-        type_hints = get_type_hints(self)
+        """Updates the province based on data from a dictionary."""
+        type_hints = {}
+        for obj in self.__class__.mro():
+            type_hints.update(get_type_hints(obj))
 
         for key, value in data.items():
             if key not in type_hints:
