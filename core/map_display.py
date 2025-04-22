@@ -21,7 +21,7 @@ from . import Layout
 from .layouts import constants
 from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion, EUTradeNode
 from .models import MapMode
-from .utils import draw_trade_value_pie_bytes, IconLoader, MapUtils
+from .utils import IconLoader, MapUtils
 
 
 icon_loader = IconLoader()
