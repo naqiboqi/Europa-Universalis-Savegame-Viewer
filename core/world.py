@@ -107,7 +107,7 @@ class EUWorldData:
         """
         world = cls()
 
-        world.countries = world.load_countries(colors)
+        world.countries = world.load_default_countries(colors)
 
         default_province_data_lines = FileUtils.run_external_reader(folder=maps_folder, filename="province.txt")
         world.default_province_data = world.load_world_provinces(savefile_lines=default_province_data_lines)
@@ -121,8 +121,8 @@ class EUWorldData:
 
         return world
 
-    def load_countries(self, colors: EUColors):
-        """Builds the **countries** dictionary with game countries.
+    def load_default_countries(self, colors: EUColors):
+        """Builds the **countries** dictionary from the default game data.
         
         Each country has a unique three letter **tag** that will be used to identify which
         provinces it owns and an RGB color that will show which provinces it owns on the map.
@@ -145,7 +145,7 @@ class EUWorldData:
 
             countries[country_tag] = EUCountry(
                 tag=country_tag, 
-                tag_color=tag_color, 
+                map_color=tag_color, 
                 name=EUCountry.fix_name(country_name))
 
         return countries
@@ -261,10 +261,6 @@ class EUWorldData:
                 if "PROV" in line:
                     continue
 
-                # 'Only' this many acutal provinces exist. The rest are filler.
-                # if len(provinces) >= 6414:
-                #     raise StopIteration
-
                 ## Check if this line starts a province definition block.
                 prov_id = self._try_extract_prov_id(province_id_pattern, line)
                 if prov_id is not None:
@@ -295,13 +291,15 @@ class EUWorldData:
                             ## Check if that tag exists, if not we build a new country.
                             ## Commonly happens for user created countries or native federations.
                             if not country_tag in self.countries:
-                                country = EUCountry(tag=country_tag, tag_color=MapUtils.seed_color(country_tag))
+                                country = EUCountry(name=country_tag, tag=country_tag, map_color=MapUtils.seed_color(country_tag))
                                 self.countries[country_tag] = country
                             else:
                                 country = self.countries[country_tag]
 
                             current_province[key] = self.countries[country_tag]
                         elif key == "hre":
+                            current_province[key] = True
+                        elif key == "capital":
                             current_province[key] = True
                         elif key == "fort_level":
                             continue
@@ -537,23 +535,23 @@ class EUWorldData:
         self._build_provinces()
 
         if self.update_status_callback:
+            self.update_status_callback("Building countries....")
+
+        countries_data = self._load_countries(savefile_lines)
+        self._build_countries(countries_data)
+
+        if self.update_status_callback:
             self.update_status_callback("Building areas....")
-        else:
-            print("Building areas....")
 
         self._build_areas()
 
         if self.update_status_callback:
             self.update_status_callback("Building regions....")
-        else:
-            print("Building regions....")
 
         self._build_regions()
 
         if self.update_status_callback:
             self.update_status_callback("Building trade nodes....")
-        else:
-            print("Building trade nodes....")
 
         trade_nodes_data = self._load_trade_nodes(savefile_lines)
         self._build_trade_nodes(trade_nodes_data)
@@ -585,6 +583,160 @@ class EUWorldData:
             return self.provinces[province_id].update_from_dict(province_data)
 
         return EUProvince.from_dict(province_data)
+
+    def _load_countries(self, savefile_lines: list[str]):
+        colors_pattern = re.compile(r'\d+')
+        country_tag_pattern = re.compile(r'^([A-Z]{1}[A-Z0-9]{2})=\{$')
+
+        country_patterns = {
+            "name": r'\bname="([^"]+)"',
+            "government_rank": r'government_rank=([\d+])',
+            "government_name": r'government_name="([^"]+)"',
+            "capital": r'capital=(\d+)',
+            "trade_port": r'trade_port=(\d+)',
+            "primary_culture": r'primary_culture=([^"]+)',
+            "religion": r'religion=([^"]+)',
+            "technology_group": r'technology_group=([^"]+)',
+            "current_power_projection": r'current_power_projection=([\d.]+)',
+            "great_power_score": r'great_power_score=([\d]+)',
+            "prestige": r'prestige=([\d.]+)',
+            "stability": r'stability=([\d.]+)',
+            "legitimacy": r'legitimacy=([\d.]+)',
+            "republican_tradition": r'republican_tradition=([\d.]+)',
+            "devotion": r'devotion=([\d.]+)',
+            "meritocracy": r'meritocracy=([\d.]+)'
+        }
+        # Store patterns so we don't have to compile constantly.
+        compiled_country_patterns = {key: re.compile(value) for key, value in country_patterns.items()}
+
+        inside_countries_block = False
+        # Track bracket depth to see where the "countries" block ends.
+        bracket_depth = 0
+
+        countries: dict[str, dict] = {}
+
+        current_country = None
+        current_country_keys = set()
+
+        line_iter = iter(savefile_lines)
+
+        try:
+            while True:
+                line = next(line_iter).strip()
+
+                if line == "countries={":
+                    inside_countries_block = True
+                    bracket_depth += 1
+                    continue
+
+                if inside_countries_block:
+                    if "{" in line:
+                        bracket_depth += 1
+
+                    if "}" in line:
+                        bracket_depth -= 1
+                        if bracket_depth == 0:
+                            raise StopIteration
+
+                    country_tag = self._try_extract_country_tag(country_tag_pattern, line)
+                    if country_tag is not None and bracket_depth == 2:
+                        if current_country is not None and current_country["tag"] not in countries:
+                            countries[current_country["tag"]] = current_country
+
+                        current_country = {"tag": country_tag}
+                        current_country_keys = set()
+                        continue
+
+                    if not current_country:
+                        continue
+
+                    if line == "map_color={":
+                        line = next(line_iter).strip()
+                        map_color = tuple(map(float, colors_pattern.findall(line)))
+                        current_country["map_color"] = map_color
+                        continue
+
+                    # Not worrying about these for now...
+                    if line == "active_relations={":
+                        inner_bracket_depth = 1
+
+                        while True:
+                            line = next(line_iter)
+                            if "{" in line:
+                                inner_bracket_depth += 1
+
+                            if "}" in line:
+                                inner_bracket_depth -= 1
+
+                            if inner_bracket_depth == 0:
+                                bracket_depth -= 1
+                                break
+
+                        continue
+
+                    if line == "technology={":
+                        adm_tech = next(line_iter).strip()
+                        dip_tech = next(line_iter).strip()
+                        mil_tech = next(line_iter).strip()
+
+                        current_country["technology_levels"] = {
+                            "adm_tech": int(adm_tech.split("=")[1]),
+                            "dip_tech": int(dip_tech.split("=")[1]),
+                            "mil_tech": int(mil_tech.split("=")[1])
+                        }
+                        continue
+
+                    if line == "subjects={":
+                        line = next(line_iter).strip()
+                        subjects = set(country_tag_pattern.findall(line))
+                        current_country["subjects"] = subjects
+                        continue
+
+                    if line == "transfer_trade_power_from={":
+                        transfers = set(country_tag_pattern.findall(line))
+                        current_country["transfer_trade_power_from"] = transfers
+                        continue
+
+                    if line == "allies={":
+                        line = next(line_iter).strip()
+                        allies = set(country_tag_pattern.findall(line))
+                        current_country["allies"] = allies
+                        continue
+
+                    if bracket_depth == 2:
+                        for key, pattern in compiled_country_patterns.items():
+                            match = pattern.search(line)
+                            if match and not key in current_country_keys:
+                                current_country_keys.add(key)
+                                current_country[key] = match.group(1)
+
+        except StopIteration:
+            if current_country:
+                countries[current_country["tag"]] = current_country
+
+        return countries
+
+    def _build_countries(self, countries_data: dict[str, dict]):
+        """Builds the world countries from `countries_data`."""
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._process_country, country_data)
+                for country_tag, country_data in countries_data.items()
+            ]
+
+            for future in as_completed(futures):
+                country = future.result()
+                self.countries[country.tag] = country
+
+    def _process_country(self, country_data: dict):
+        """Helper method to process a single country.
+
+        Returns:
+            country (EUCountry): The country processed from a `dict`.
+        """
+        country_tag = country_data["tag"]
+        country = self.countries.get(country_tag)
+        return country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
 
     def _build_areas(self):
         """Builds the world areas from the `default_area_data` dict."""
@@ -650,6 +802,15 @@ class EUWorldData:
         region_data["areas"] = region_areas
         return EURegion.from_dict(region_data)
 
+    def _try_extract_country_tag(self, tag_pattern: re.Pattern, line: str):
+        """Checks if the line contains a country tag.
+
+        Returns:
+            tag (str|None): The ID tag the current country, if it exists.
+        """
+        match = tag_pattern.match(line)
+        return match.group(1) if match else None
+
     def _load_trade_nodes(self, savefile_lines: list[str]):
         """Reads over the **savefile_lines** and matches the lines trade node definition blocks to extract
         each variable's value, and assigns it to each trade node dict.
@@ -683,8 +844,8 @@ class EUWorldData:
             "value_added_outgoing": r'value_added_outgoing=([\d.]+)',
             "retention": r'retention=([\d.]+)',
             "steer_power": r'steer_power=([\d.]+)',
-            "num_collectors": r'num_collectors=([\d+])',
-            "num_collectors_including_pirates": r'num_collectors_including_pirates=([\d+])',
+            "num_collectors": r'num_collectors=(\d+)',
+            "num_collectors_including_pirates": r'num_collectors_including_pirates=(\d+)',
             "total": r'total=([\d.]+)',
             "p_pow": r'p_pow=([\d.]+)',
             "collector_power": r'collector_power=([\d.]+)',
@@ -699,7 +860,7 @@ class EUWorldData:
             "already_sent": r'alread_sent=([\d.]+)',
             "power_fraction": r'power_fraction=([\d.]+)',
             "province_power": r'province_power=([\d.]+)',
-            "light_ship": r'light_ship=([\d+])',
+            "light_ship": r'light_ship=(\d+)',
             "ship_power": r'ship_power=([\d.]+)',
             "money": r'money=([\d.]+)',
             "privateer_mission": r'privateer_mission=([\d.]+)',
