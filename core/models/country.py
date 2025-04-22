@@ -99,7 +99,7 @@ class EUCountry:
                 elif field_type == int:
                     setattr(self, key, int(float(value)))
                 elif field_type == float:
-                    setattr(self, key, round(float(value)), 2)
+                    setattr(self, key, round(float(value), 2))
                 else:
                     setattr(self, key, value)
             except (ValueError, TypeError) as e:
