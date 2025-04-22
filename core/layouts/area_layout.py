@@ -23,7 +23,7 @@ icon_loader = IconLoader()
 
 
 class AreaLayout:
-    """The layout building for displaying area information."""
+    """The layout builder for displaying area information."""
 
     @staticmethod
     def create_geographic_area_info_frame():
