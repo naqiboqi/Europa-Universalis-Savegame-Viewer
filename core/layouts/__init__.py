@@ -23,6 +23,7 @@ from .native_layout import NativeLayout
 from .area_layout import AreaLayout
 from .region_layout import RegionLayout
 from .trade_node_layout import TradeNodeLayout
+from .country_layout import CountryLayout
 
 __all__ = [
     "LayoutHelper",
@@ -30,5 +31,6 @@ __all__ = [
     "NativeLayout",
     "AreaLayout",
     "RegionLayout",
-    "TradeNodeLayout"
+    "TradeNodeLayout",
+    "CountryLayout"
 ]
