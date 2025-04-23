@@ -170,7 +170,7 @@ class MapPainter:
             province_type = province.province_type
             if province_type == ProvinceType.OWNED:
                 owner_country = province.owner
-                province_color = owner_country.tag_color
+                province_color = owner_country.map_color
             else:
                 province_color = province_type_colors.get(province_type, None)
 

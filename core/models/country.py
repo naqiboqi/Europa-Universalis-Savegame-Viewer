@@ -17,11 +17,28 @@ class EUCountry:
     """Represents a country on the map.
     
     Attributes:
-        tag (str): The three-letter identifier used internally by EU4.
-        map_color (tuple[int, int, int]): The RGB color of the country used on the map.
-        name (Optional[str]): The name of the country. 
-            Is optional as some countries have dynamic names
-            (and I am not sure how to get them from savefiles yet).
+        tag (str): The three-letter identifier used internally by EU4 to reference the country.
+        name (str): The display name of the country.
+        map_color (tuple[int]): The RGB color tuple representing the country's color on the map.
+        government_rank (Optional[int]): The country's government rank (default is 1).
+        government_name (Optional[str]): The type or name of the country's government.
+        capital_province (Optional[int]): The province ID of the country's capital.
+        trade_port (Optional[int]): The province ID of the country's designated trade port.
+        primary_culture (Optional[str]): The primary culture assigned to the country.
+        religion (Optional[str]): The official state religion of the country.
+        technology_group (Optional[str]): The technology group the country belongs to.
+        technology_levels (Optional[dict[str, int]]): A dictionary holding the country's administrative,
+            diplomatic, and military technology levels. Defaults to zero for all three.
+        current_power_projection (Optional[float]): The current power projection value (default 0.0).
+        great_power_score (Optional[float]): The country’s score used for great power ranking (default 0.0).
+        prestige (Optional[float]): The prestige value of the country (default 0.0).
+        stability (Optional[int]): The country's current stability level (default 0).
+        legitimacy (Optional[float]): The legitimacy of the current monarchy (default 0.0).
+        republican_tradition (Optional[float]): The republican tradition value (default 0.0).
+        devotion (Optional[float]): The devotion value for theocratic governments (default 0.0).
+        meritocracy (Optional[float]): The meritocracy value for Celestial Empire governments (default 0.0).
+        subjects (Optional[set[str]]): A set of country tags representing this country’s subjects.
+        allies (Optional[set[str]]): A set of country tags representing this country’s allies.
     """
     tag: str
     name: str
@@ -29,10 +46,10 @@ class EUCountry:
     government_rank: Optional[int] = 1
     government_name: Optional[str] = None
     capital_province: Optional[int] = 0
-    trade_port_province: Optional[int] = 0
+    trade_port: Optional[int] = 0
 
     primary_culture: Optional[str] = None
-    primary_religion: Optional[str] = None
+    religion: Optional[str] = None
     technology_group: Optional[str] = None
     technology_levels: Optional[dict[str, int]] = field(default_factory=lambda: {
         "adm_tech": 0,
@@ -40,7 +57,7 @@ class EUCountry:
         "mil_tech": 0
     })
 
-    power_projection: Optional[float] = 0.00
+    current_power_projection: Optional[float] = 0.00
     great_power_score: Optional[float] = 0.00
     prestige: Optional[float] = 0.00
     stability: Optional[int] = 0
