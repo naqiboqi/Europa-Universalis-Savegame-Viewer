@@ -45,7 +45,7 @@ class EUCountry:
     map_color: tuple[int]
     government_rank: Optional[int] = 1
     government_name: Optional[str] = None
-    capital_province: Optional[int] = 0
+    capital: Optional[int] = 0
     trade_port: Optional[int] = 0
 
     primary_culture: Optional[str] = None
@@ -68,6 +68,8 @@ class EUCountry:
 
     subjects: Optional[set[str]] = None
     allies: Optional[set[str]] = None
+
+    bounding_box: Optional[tuple[int, int, int, int]] = None
 
     @staticmethod
     def fix_name(country_name: str):

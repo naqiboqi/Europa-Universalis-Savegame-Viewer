@@ -261,6 +261,9 @@ class EUWorldData:
                 if "PROV" in line:
                     continue
 
+                if line == "countries={":
+                    raise StopIteration
+
                 ## Check if this line starts a province definition block.
                 prov_id = self._try_extract_prov_id(province_id_pattern, line)
                 if prov_id is not None:
@@ -298,8 +301,6 @@ class EUWorldData:
 
                             current_province[key] = self.countries[country_tag]
                         elif key == "hre":
-                            current_province[key] = True
-                        elif key == "capital":
                             current_province[key] = True
                         elif key == "fort_level":
                             continue
@@ -586,7 +587,8 @@ class EUWorldData:
 
     def _load_countries(self, savefile_lines: list[str]):
         colors_pattern = re.compile(r'\d+')
-        country_tag_pattern = re.compile(r'^([A-Z]{1}[A-Z0-9]{2})=\{$')
+        country_definition_pattern = re.compile(r'^([A-Z]{1}[A-Z0-9]{2})=\{$')
+        country_tag_pattern = re.compile(r'([A-Z]{1}[A-Z0-9]{2})')
 
         country_patterns = {
             "name": r'\bname="([^"]+)"',
@@ -638,7 +640,7 @@ class EUWorldData:
                         if bracket_depth == 0:
                             raise StopIteration
 
-                    country_tag = self._try_extract_country_tag(country_tag_pattern, line)
+                    country_tag = self._try_extract_country_tag(country_definition_pattern, line)
                     if country_tag is not None and bracket_depth == 2:
                         if current_country is not None and current_country["tag"] not in countries:
                             countries[current_country["tag"]] = current_country
@@ -693,6 +695,7 @@ class EUWorldData:
                         continue
 
                     if line == "transfer_trade_power_from={":
+                        line = next(line_iter).strip()
                         transfers = set(country_tag_pattern.findall(line))
                         current_country["transfer_trade_power_from"] = transfers
                         continue
@@ -736,7 +739,25 @@ class EUWorldData:
         """
         country_tag = country_data["tag"]
         country = self.countries.get(country_tag)
-        return country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
+        country = country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
+
+        def _country_bounding_box(tag: str):
+            owned_provinces = [
+                prov for prov in self.provinces.values()
+                if prov.province_type == ProvinceType.OWNED and
+                prov.owner.tag == tag]
+
+            if not owned_provinces:
+                return None
+
+            min_x = min(p.bounding_box[0] for p in owned_provinces)
+            max_x = max(p.bounding_box[1] for p in owned_provinces)
+            min_y = min(p.bounding_box[2] for p in owned_provinces)
+            max_y = max(p.bounding_box[3] for p in owned_provinces)
+            return (min_x, max_x, min_y, max_y)
+
+        country.bounding_box = _country_bounding_box(country_tag)
+        return country
 
     def _build_areas(self):
         """Builds the world areas from the `default_area_data` dict."""
@@ -1129,7 +1150,7 @@ class EUWorldData:
 
         return trade_goods
 
-    def search(self, exact_matches_only: bool, search_param: str) -> list[Union[EUProvince, EUArea, EURegion]]:
+    def search(self, exact_matches_only: bool, search_param: str) -> list[EUProvince|EUCountry|EUArea|EURegion]:
         """Searches for a location given a name. Can optionally return only exact matches.
         
         Args:
@@ -1144,6 +1165,7 @@ class EUWorldData:
 
         all_items = []
         all_items.extend(self.provinces.values())
+        all_items.extend(self.countries.values())
         all_items.extend(self.areas.values())
         all_items.extend(self.regions.values())
 
