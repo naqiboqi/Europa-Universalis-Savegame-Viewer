@@ -19,7 +19,14 @@ from sys import exit
 from . import MapHandler, MapPainter, EUColors, EUWorldData
 from . import Layout
 from .layouts import constants
-from .models import EUMapEntity, EUProvince, ProvinceType, EUArea, EURegion, EUTradeNode
+from .models import (
+    EUMapEntity, 
+    EUProvince, ProvinceType, 
+    EUArea, 
+    EURegion, 
+    EUTradeNode,
+    EUCountry)
+
 from .models import MapMode
 from .utils import IconLoader, MapUtils
 
@@ -239,6 +246,9 @@ class MapDisplayer:
         elif isinstance(selected_item, EUTradeNode):
             self._update_trade_node_details(selected_item)
 
+        elif isinstance(selected_item, EUCountry):
+            self._update_country_details(selected_item)
+
         return self.window.refresh()
 
     def _update_province_details(self, province: EUProvince):
@@ -284,6 +294,7 @@ class MapDisplayer:
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-COUNTRY_INFO_COLUMN-"].update(visible=False)
         window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-PROVINCE_INFO_COLUMN-"].update(visible=True)
@@ -368,6 +379,7 @@ class MapDisplayer:
 
         window["-REGION_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-COUNTRY_INFO_COLUMN-"].update(visible=False)
         window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
         window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=True)
@@ -415,6 +427,7 @@ class MapDisplayer:
             window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
+            window["-COUNTRY_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=True)
 
             for element, attr_value in data.items():
@@ -477,6 +490,7 @@ class MapDisplayer:
             window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
             window["-AREA_INFO_COLUMN-"].update(visible=False)
             window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
+            window["-COUNTRY_INFO_COLUMN-"].update(visible=False)
             window["-REGION_INFO_COLUMN-"].update(visible=True)
 
             for element, attr_value in data.items():
@@ -520,7 +534,7 @@ class MapDisplayer:
         """
         window = self.window
         node_province = list(trade_node.provinces.values())[0]
-        
+
         data = {
             "-INFO_TRADE_NODE_NAME-": trade_node.name,
             "-INFO_TRADE_NODE_REGION_NAME-": f"{self.world_data.province_to_region.get(node_province.province_id).name} Charter",
@@ -536,6 +550,7 @@ class MapDisplayer:
         window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
         window["-AREA_INFO_COLUMN-"].update(visible=False)
         window["-REGION_INFO_COLUMN-"].update(visible=False)
+        window["-COUNTRY_INFO_COLUMN-"].update(visible=False)
         window["-TRADE_NODE_INFO_COLUMN-"].update(visible=True)
 
         for element, attr_value in data.items():
@@ -544,10 +559,6 @@ class MapDisplayer:
                     window[element].update(value=attr_value, visible=True)
                 except (AttributeError, TypeError):
                     window[element].update(values=attr_value, visible=True)
-
-        # trade_power_pie = draw_trade_value_pie_bytes(trade_node=trade_node)
-        # if trade_power_pie:
-        #     window["-INFO_TRADE_NODE_RETAINED_PIE-"].update(data=trade_power_pie)
 
         participant_rows = []
         for participant in trade_node:
@@ -568,6 +579,26 @@ class MapDisplayer:
         if not participant_rows:
             participant_rows = [["No", "Partipants", "In", "This", "Trade", "Node"], []]
         window["-INFO_TRADE_NODE_PARTICIPANTS_TABLE-"].update(values=participant_rows)
+
+    def _update_country_details(self, country: EUCountry):
+        """Updates the information displayed for a specific country in the UI.
+
+        Args:
+            country (EUCountry): The trade node to be displayed.
+        """
+        window = self.window
+
+        data = {
+            
+        }
+
+        window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-NATIVE_PROVINCE_INFO_COLUMN-"].update(visible=False)
+        window["-AREA_INFO_COLUMN-"].update(visible=False)
+        window["-REGION_INFO_COLUMN-"].update(visible=False)
+        window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
+        window["-COUNTRY_INFO_COLUMN-"].update(visible=True)
+
 
     def handle_setup_complete(self):
         """Handles display adjustments after game and save data is loaded for the first time."""
@@ -645,7 +676,9 @@ class MapDisplayer:
         new_map_mode = self.painter.map_mode
         for map_mode in map_modes:
             map_mode_button = self.window[map_mode]
-            button_color = (constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG if map_mode == new_map_mode.name else constants.BUTTON_BG)
+            button_color = (
+                constants.LIGHT_TEXT, constants.SELECTED_BUTTON_BG
+                if map_mode == new_map_mode.name else constants.BUTTON_BG)
             map_mode_button.update(button_color=button_color)
 
     def handle_search_for(self, values):
@@ -664,11 +697,10 @@ class MapDisplayer:
             self.window["-CLEAR-"].update(visible=False)
             return
 
-        matches = self.world_data.search(
-            exact_matches_only=exact_matches_only, search_param=search_param)
+        matches = self.world_data.search(exact_matches_only=exact_matches_only, search_param=search_param)
         self.search_results = matches
 
-        name_matches = [item.name for item in self.search_results]
+        name_matches = [f"{item.name} [{item.__class__.__name__[2:]}]" for item in self.search_results]
         if name_matches:
             self.window["-RESULTS-"].update(values=name_matches, visible=True)
             self.window["-GOTO-"].update(visible=True)
@@ -683,12 +715,15 @@ class MapDisplayer:
         """
         selected = values["-RESULTS-"]
         if selected:
-            item_name = selected[0]
-            selected_item = next((
-                item for item in self.search_results
-                if item.name.lower() == item_name.lower()), None)
+            label = selected[0]
+            # Find the index of the selected label in the currently displayed results
+            all_labels = [f"{item.name} [{item.__class__.__name__[2:]}]" for item in self.search_results]
 
-            self.selected_item = selected_item
+            try:
+                index = all_labels.index(label)
+                self.selected_item = self.search_results[index]
+            except ValueError:
+                self.selected_item = None
 
     def handle_go_to(self):
         """Handles navigation to the selected entity location and displays its information in the details panel."""

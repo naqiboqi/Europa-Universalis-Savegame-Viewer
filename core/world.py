@@ -742,6 +742,7 @@ class EUWorldData:
         country = country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
 
         def _country_bounding_box(tag: str):
+            """Returns the bounding box for a country by checking its owned provinces."""
             owned_provinces = [
                 prov for prov in self.provinces.values()
                 if prov.province_type == ProvinceType.OWNED and
@@ -1158,13 +1159,15 @@ class EUWorldData:
             search_param (str): The name to search for.
         
         Returns:
-            matches (list[EUProvince]): The provinces that match the search param."""
+            matches (list[EUProvince]): The provinces that match the search param.
+        """
         search_param = search_param.strip().lower()
         if not search_param:
             return []
 
         all_items = []
-        all_items.extend(self.provinces.values())
+        all_items.extend(prov for prov in self.provinces.values()
+            if prov.province_type == ProvinceType.OWNED or prov.province_type == ProvinceType.NATIVE)
         all_items.extend(self.countries.values())
         all_items.extend(self.areas.values())
         all_items.extend(self.regions.values())
