@@ -22,7 +22,64 @@ icon_loader = IconLoader()
 
 class CountryLayout:
     """The layout building for displaying area information."""
+    
+    @staticmethod
+    def create_country_header_frame():
+        """Creates the header frame for a country.
 
+        Returns:
+            frame (Frame): The frame containing the country header.
+        """
+        country_name = sg.Text(
+            "",
+            key="-INFO_COUNTRY_NAME-",
+            background_color=constants.RED_BANNER_BG,
+            font=("Georgia", 14),
+            justification="left",
+            text_color=constants.LIGHT_TEXT)
+
+        government_name = sg.Text(
+            "", 
+            key="-INFO_COUNTRY_GOVERNMENT_NAME-",
+            background_color=constants.RED_BANNER_BG,
+            font=("Georgia", 12),
+            justification="left",
+            text_color=constants.LIGHT_TEXT)
+
+        spacer_right_1 = sg.Text(
+            "",
+            background_color=constants.RED_BANNER_BG,
+            font=("Georgia", 14),
+            justification="right")
+
+        spacer_right_2 = sg.Text(
+            "",
+            background_color=constants.RED_BANNER_BG,
+            font=("Georgia", 12),
+            justification="right")
+
+        left_column = sg.Column([
+                [country_name],
+                [government_name]
+            ], background_color=constants.RED_BANNER_BG,
+            element_justification="left",
+            expand_x=True)
+
+        right_column = sg.Column([
+                [spacer_right_1],
+                [spacer_right_2]
+            ], background_color=constants.RED_BANNER_BG,
+            element_justification="right",
+            expand_x=True)
+
+        return sg.Frame("", [
+            [left_column, sg.Push(background_color=constants.RED_BANNER_BG), right_column]
+        ], background_color=constants.RED_BANNER_BG,
+        border_width=4,
+        expand_x=True,
+        pad=(5, 5),
+        relief=sg.RELIEF_RAISED,
+        vertical_alignment="center")
 
     @staticmethod
     def create_country_info_column():
@@ -59,7 +116,10 @@ class CountryLayout:
             relief=sg.RELIEF_SUNKEN,
             size=(15, 1))
 
+        header = CountryLayout.create_country_header_frame()
+
         country_info_frame = sg.Frame("", [
+            [header],
             [development_label, development_info_frame,
                 sg.Push(background_color=constants.LIGHT_FRAME_BG),
             area_km2_label, area_km2_value],
