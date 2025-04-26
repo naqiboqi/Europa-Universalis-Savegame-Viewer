@@ -358,6 +358,11 @@ class MapDisplayer:
         hre_icon_element = self.window["-INFO_PROVINCE_IS_HRE-"]
         hre_icon_element.update(filename=hre_icon)
 
+        if province.is_capital:
+            capital_icon = icon_loader.get_icon("capital")
+            capital_element = self.window["-INFO_PROVINCE_IS_CAPTIAL-"]
+            capital_element.update(filename=capital_icon)
+
     def update_native_province_details(self, province: EUProvince):
         window = self.window
         data = {
@@ -584,12 +589,15 @@ class MapDisplayer:
         """Updates the information displayed for a specific country in the UI.
 
         Args:
-            country (EUCountry): The trade node to be displayed.
+            country (EUCountry): The country to be displayed.
         """
         window = self.window
+        world = self.world_data
 
         data = {
-            
+            "-INFO_COUNTRY_NAME-": country.name or country.tag,
+            "-INFO_COUNTRY_GOVERNMENT_NAME-": MapUtils.format_name(country.government_name),
+            "-INFO_COUNTRY_SIZE_KM-": round(sum(province.area_km2 for province in world.provinces.values() if province.owner == country), 2)
         }
 
         window["-PROVINCE_INFO_COLUMN-"].update(visible=False)
@@ -599,6 +607,12 @@ class MapDisplayer:
         window["-TRADE_NODE_INFO_COLUMN-"].update(visible=False)
         window["-COUNTRY_INFO_COLUMN-"].update(visible=True)
 
+        for element, attr_value in data.items():
+            if attr_value is not None:
+                try:
+                    window[element].update(value=attr_value, visible=True)
+                except (AttributeError, TypeError):
+                    window[element].update(values=attr_value, visible=True)
 
     def handle_setup_complete(self):
         """Handles display adjustments after game and save data is loaded for the first time."""

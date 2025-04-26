@@ -3,17 +3,21 @@ This module defines EUCountry, which represents a country in
 Europa Universalis IV.
 """
 
-
+import importlib
 import re
 
 from dataclasses import dataclass, field
-from typing import Optional, get_type_hints
+from typing import Optional, get_type_hints, TYPE_CHECKING
+from . import EUMapEntity
 from ..utils import resolve_type
 
 
+if TYPE_CHECKING:
+    from . import EUProvince
+
 
 @dataclass
-class EUCountry:
+class EUCountry(EUMapEntity):
     """Represents a country on the map.
     
     Attributes:
@@ -43,6 +47,7 @@ class EUCountry:
     tag: str
     name: str
     map_color: tuple[int]
+    owned_provinces: dict[int, "EUProvince"] = field(default_factory=dict)
     government_rank: Optional[int] = 1
     government_name: Optional[str] = None
     capital: Optional[int] = 0
@@ -69,7 +74,12 @@ class EUCountry:
     subjects: Optional[set[str]] = None
     allies: Optional[set[str]] = None
 
-    bounding_box: Optional[tuple[int, int, int, int]] = None
+    pixel_locations: Optional[set[tuple[int, int]]] = field(init=False)
+
+    def __post_init__(self):
+        """Aggregate pixel locations from the contained provinces."""
+        self.pixel_locations = set(loc for province in self for loc in province.pixel_locations)
+        super().__post_init__()
 
     @staticmethod
     def fix_name(country_name: str):
@@ -82,7 +92,9 @@ class EUCountry:
     def from_dict(cls, data: dict):
         """Builds the country from a dictionary."""
         converted_data = {"name": data.get("name") or data.get("tag")}
-        type_hints = get_type_hints(cls)
+
+        eu_province_module = importlib.import_module(".province", package="core.models")
+        type_hints = get_type_hints(cls, globalns={"EUProvince": eu_province_module.EUProvince})
 
         for key, value in data.items():
             if key not in type_hints:
@@ -105,7 +117,8 @@ class EUCountry:
 
     def update_from_dict(self, data: dict):
         """Updates the country based on data from a dictionary."""
-        type_hints = get_type_hints(self)
+        eu_province_module = importlib.import_module(".province", package="core.models")
+        type_hints = get_type_hints(self, globalns={"EUProvince": eu_province_module.EUProvince})
 
         for key, value in data.items():
             if key not in type_hints:
@@ -124,7 +137,36 @@ class EUCountry:
             except (ValueError, TypeError) as e:
                 print(f"Error converting {key} with value {value}: {e}")
 
+        if not self.pixel_locations:
+            self.__post_init__()
+
         return self
+
+    @property
+    def development(self):
+        """The total development of the country."""
+        return sum(province.development for province in self)
+
+    @property
+    def tax_income(self):
+        """The monthly tax income of the country in ducats."""
+        annual_income = sum(province.base_tax * 0.5 * province.autonomy_modifier for province in self)
+        return round(annual_income, 2)
+
+    @property
+    def base_production_income(self):
+        """The monthly production income of the country before applying the trade good price."""
+        annual_income = sum(province.goods_produced * province.autonomy_modifier for province in self)
+        return round(annual_income, 2)
+
+    @property
+    def goods_produced(self):
+        """The amount of goods produced by the country. Is based on the province's `base_production`."""
+        return round(sum(province.goods_produced for province in self), 2)
+
+    def __iter__(self):
+        for province in self.owned_provinces.values():
+            yield province
 
     def __str__(self):
         return f"The country of {self.name} (TAG: {self.tag})"

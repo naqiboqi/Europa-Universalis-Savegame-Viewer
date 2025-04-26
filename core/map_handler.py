@@ -24,7 +24,7 @@ import tkinter as tk
 from PIL import Image
 from typing import TYPE_CHECKING
 from .models import MapMode
-from .models import EUProvince, ProvinceType, EUArea, EURegion
+from .models import EUProvince, ProvinceType, EUArea, EURegion, EUCountry
 from .utils import MapUtils
 
 
@@ -150,20 +150,31 @@ class MapHandler:
 
         return None
 
-    def go_to_entity_location(self, destination: EUProvince|EUArea|EURegion=None):
+    def go_to_entity_location(self, destination: EUProvince|EUArea|EURegion|EUCountry):
+        if not destination or not hasattr(destination, "bounding_box"):
+            return
+
         if self.pan_animation_id:
             self.tk_canvas.after_cancel(self.pan_animation_id)
 
         displayer = self.displayer
+        canvas_width, canvas_height = self.displayer.canvas_size
+
         bbox = destination.bounding_box
         if not bbox:
             return
+
+        left, right, top, bottom = bbox
+
+        if isinstance(destination, EUCountry):
+            if abs(right - left) >= canvas_width or abs(bottom - top) >= canvas_height:
+                capital = destination.owned_provinces.get(destination.capital)
+                bbox = capital.bounding_box
 
         min_x, max_x, min_y, max_y = bbox
         center_x = (min_x + max_x) // 2
         center_y = (min_y + max_y) // 2
 
-        canvas_width, canvas_height = self.displayer.canvas_size
 
         target_offset_x = (canvas_width // 2) - (center_x * displayer.map_scale)
         target_offset_y = (canvas_height // 2) - (center_y * displayer.map_scale)

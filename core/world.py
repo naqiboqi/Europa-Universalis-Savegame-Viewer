@@ -739,26 +739,14 @@ class EUWorldData:
         """
         country_tag = country_data["tag"]
         country = self.countries.get(country_tag)
-        country = country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
 
-        def _country_bounding_box(tag: str):
-            """Returns the bounding box for a country by checking its owned provinces."""
-            owned_provinces = [
-                prov for prov in self.provinces.values()
-                if prov.province_type == ProvinceType.OWNED and
-                prov.owner.tag == tag]
+        owned_provinces = {
+            province.province_id: province for province in self.provinces.values()
+            if province.province_type == ProvinceType.OWNED and province.owner.tag == country_tag
+        }
+        country_data["owned_provinces"] = owned_provinces
 
-            if not owned_provinces:
-                return None
-
-            min_x = min(p.bounding_box[0] for p in owned_provinces)
-            max_x = max(p.bounding_box[1] for p in owned_provinces)
-            min_y = min(p.bounding_box[2] for p in owned_provinces)
-            max_y = max(p.bounding_box[3] for p in owned_provinces)
-            return (min_x, max_x, min_y, max_y)
-
-        country.bounding_box = _country_bounding_box(country_tag)
-        return country
+        return country.update_from_dict(country_data) if country else EUCountry.from_dict(country_data)
 
     def _build_areas(self):
         """Builds the world areas from the `default_area_data` dict."""
