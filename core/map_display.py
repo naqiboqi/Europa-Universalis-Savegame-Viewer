@@ -354,14 +354,19 @@ class MapDisplayer:
         else:
             trade_info_element.update(visible=False)
 
-        hre_icon = icon_loader.get_icon("hre_province" if province.hre else "not_hre_province")
-        hre_icon_element = self.window["-INFO_PROVINCE_IS_HRE-"]
-        hre_icon_element.update(filename=hre_icon)
+        if province.hre:
+            hre_icon = icon_loader.get_icon("hre_province")
+            self.window["-INFO_PROVINCE_IS_HRE_FRAME-"].update(visible=True)
+            self.window["-INFO_PROVINCE_IS_HRE-"].update(filename=hre_icon)
+        else:
+            self.window["-INFO_PROVINCE_IS_HRE_FRAME-"].update(visible=False)
 
         if province.is_capital:
             capital_icon = icon_loader.get_icon("capital")
-            capital_element = self.window["-INFO_PROVINCE_IS_CAPTIAL-"]
-            capital_element.update(filename=capital_icon)
+            self.window["-INFO_PROVINCE_IS_CAPITAL_FRAME-"].update(visible=True)
+            self.window["-INFO_PROVINCE_IS_CAPITAL-"].update(filename=capital_icon)
+        else:
+            self.window["-INFO_PROVINCE_IS_CAPITAL_FRAME-"].update(visible=False)
 
     def update_native_province_details(self, province: EUProvince):
         window = self.window
@@ -898,6 +903,7 @@ class MapDisplayer:
             return_keyboard_events=True)
 
         self.window = window
+        self.window.TKroot.iconbitmap(icon_loader.get_icon(icon_name="compass_taskbar", extension=".ico"))
         self.window.move_to_center()
         self.window["-SAVEFILE_DATE-"].update(value="")
 

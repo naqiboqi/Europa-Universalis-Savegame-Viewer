@@ -52,7 +52,7 @@ class IconLoader:
             self.default = os.path.join(self.icons_folder, "Unknown.png")
             self._initialized = True
 
-    def get_icon(self, icon_name: str):
+    def get_icon(self, icon_name: str, extension: str=".png"):
         """Retrieves the absolute path of the requested icon, caching it for future use.
 
         If the icon is not found in the designated folder, the method returns 
@@ -60,13 +60,14 @@ class IconLoader:
 
         Args:
             icon_name (str): The name of the icon file (without the extension).
+            extension (str): The extenison of the icon file (".png", ".jpeg", .etc). Is `.png` by default.
 
         Returns:
             str: The absolute path to the requested icon, or the default image 
                 if the icon is not found.
         """
-        if not icon_name.lower().endswith(".png"):
-            icon_name += ".png"
+        if not icon_name.lower().endswith(extension):
+            icon_name += extension
 
         if icon_name in self.cache:
             return self.cache[icon_name]
