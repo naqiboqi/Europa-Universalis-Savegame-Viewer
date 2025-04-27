@@ -538,7 +538,9 @@ class ProvinceLayout:
 
         hre_frame = sg.Frame("", [
             [hre_icon]
-        ])
+        ], background_color=constants.MEDIUM_FRAME_BG, 
+        key="-INFO_PROVINCE_IS_HRE_FRAME-", 
+        visible=False)
 
         capital_icon = LayoutHelper.create_icon_with_border(
             "",
@@ -549,7 +551,9 @@ class ProvinceLayout:
 
         capital_frame = sg.Frame("", [
             [capital_icon]
-        ], visible=False)
+        ], background_color=constants.MEDIUM_FRAME_BG,
+        key="-INFO_PROVINCE_IS_CAPITAL_FRAME-", 
+        visible=False)
 
         political_frame = sg.Frame("", [
             [hre_frame, capital_frame]

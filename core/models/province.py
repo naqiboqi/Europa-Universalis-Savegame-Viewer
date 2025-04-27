@@ -55,7 +55,6 @@ class EUProvince(EUMapEntity):
         terrain_type (TerrainType): The type of terrain the province has (e.g. grasslands, steppe, glacial, etc.).
         owner (Optional[EUCountry]): The province's owner.
         capital (Optional[str]): The province's capital city.
-        is_capital (Optional[bool]): If the province is the capital of its owning country.
         hre (Optional[bool]): If the province is within the Holy Roman Empire.
         culture (Optional[str]): The province's culture.
         religion (Optional[str]): The province's religion.
@@ -89,7 +88,6 @@ class EUProvince(EUMapEntity):
     terrain_type: Optional[TerrainType] = None
     owner: Optional[EUCountry] = None
     capital: Optional[str] = None
-    is_capital: Optional[bool] = False
     hre: Optional[bool] = False
     culture: Optional[str] = None
     religion: Optional[str] = None
@@ -176,6 +174,13 @@ class EUProvince(EUMapEntity):
         return "-"
 
     @property
+    def is_capital(self):
+        """If the province is the capital of its owning country."""
+        if self.owner:
+            return self.owner.capital == self.province_id
+        return False
+
+    @property
     def development(self):
         """Returns the total development of the province.
         
@@ -223,6 +228,9 @@ class EUProvince(EUMapEntity):
     def sailors(self):
         """The amount of sailors contributed by the province. Is based on the province's `base_production`."""
         return floor(self.base_production * 30 * self.autonomy_modifier)
+
+    def __eq__(self, other: "EUProvince"):
+        return self.province_id == other.province_id
 
     def __str__(self):
         return f"Province: {self.name} with ID {self.province_id}"
