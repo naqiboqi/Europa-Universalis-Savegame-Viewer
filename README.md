@@ -1,4 +1,4 @@
-## **EU4 Savegame Parser & Map Renderer**
+## **Europa Universalis IV Savegame Viewer**
 
 Allows you to parse Europa Universalis IV (.eu4) save files and generates the world map. Display all sorts of information about the world's provinces and areas.
 
