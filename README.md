@@ -89,9 +89,9 @@ Now we get information about its name, a table with the areas that reside in it,
 
 * Here we can see all sorts of colors!
 
-    * I'm not going to list all of them but to start, the bright red near the top center is **England**, muted yellow near the bottom center is **Castille**. The red to **Castille**'s left is its sister nation **Aragon**, and to **Castille**'s right is **Portugal**. To **Castille**'s northeast you see a messy blob consisting of blue **France** and its vassals and appenages (white **Armagnac**, peach **Orleans**, tourquoise **Bourbonnais**, etc. etc.)
+    * I'm not going to list all of them but to start, the bright red near the top center is **England**, muted yellow near the bottom center is **Castille**. The red to **Castille**'s left is its sister nation **Aragon**, and to **Castille**'s right is **Portugal**. To **Castille**'s northeast you see a messy blob consisting of blue **France** and its vassals and appenages (white **Armagnac**, peach **Orleans**, turquoise **Bourbonnais**, etc. etc.)
 
-* To select a different map mode, you can choose on of the options in the map mode frame on the right.
+* To select a different map mode, you can choose one of the options in the map mode frame on the right.
 
 * When changing map modes, the GUI will freeze for a moment as the map is redrawn. Don't fret!
 
@@ -113,7 +113,7 @@ Let's pan a bit to the south for **Region**
 
 ![alt text](/images/region_map_mode.png)
 
-- Breaks the map up into regions, or groups of areas. Second-largest subdivision in the game after superregions (which are essentially continents, and not yet implemented....)
+- Breaks the map up into regions, or groups of areas. Second-largest subdivision in the game after super-regions (which are essentially continents, and not yet implemented....)
 
 Pan and zoom a bit to the northwest for **Development**
 
@@ -127,7 +127,7 @@ Pan and zoom a bit to the northwest for **Development**
 
 ![alt text](/images/religion_map_mode.png)
 
-* Colors each provice with a seeded color based on its dominant religion
+* Colors each province with a seeded color based on its dominant religion
 
 * Here we see light-purple as Catholic, medium-purple as Orthodox, red as Sunni Islam, neon-green as Coptic, and violet as Apostolic.  
 
@@ -138,11 +138,11 @@ Pan and zoom a bit to the northwest for **Development**
 
 - [X] Move loading save file functionality to the GUI 
 
-- [ ] Make it so that clicking on a province, area, region also displays its information depending on the map mode
+- [X] Make it so that clicking on a province, area, region also displays its information depending on the map mode
 
-- [ ] Add trade node information panel
+- [X] Add trade node information panel
 
-- [ ] Add more mapmodes -> (Trade, Terrain, Religion, Culture)
+- [X] Add more map modes -> (Trade, Terrain, Religion, Culture)
 
 - [ ] Add map-painter functionality to control ownership of provinces and create modded saves
 
